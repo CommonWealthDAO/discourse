@@ -132,6 +132,7 @@ class SessionController < ApplicationController
 
     params.require(:sso)
     params.require(:sig)
+    params.require(:tokens)
 
     begin
       sso = DiscourseConnect.parse(request.query_string, secure_session: secure_session)
@@ -222,6 +223,13 @@ class SessionController < ApplicationController
         # but it the edge case of never supporting redirects back to
         # any url with `/session/sso` in it anywhere is reasonable
         return_path = path("/") if return_path.include?(path("/session/sso"))
+
+        # override Discourse redirect_path if a custom one was passed
+        if params.key?("return_path")
+          return_path = params[:return_path]
+        end
+
+        return_path = "#{return_path}?tokens=#{params[:tokens]}"
 
         redirect_to return_path, allow_other_host: true
       else
