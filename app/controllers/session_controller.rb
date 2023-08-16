@@ -26,8 +26,7 @@ class SessionController < ApplicationController
 
     destination_url = cookies[:destination_url] || session[:destination_url]
     return_path = params[:return_path] || path("/")
-    commonwealth_msg = params[:msg] || ""
-    commonwealth_sig = params[:sig] || ""
+    commonwealth_access_token = params[:access_token] || ""
 
     if destination_url && return_path == path("/")
       uri = URI.parse(destination_url)
@@ -39,7 +38,7 @@ class SessionController < ApplicationController
 
     sso = DiscourseConnect.generate_sso(return_path, secure_session: secure_session)
     connect_verbose_warn { "Verbose SSO log: Started SSO process\n\n#{sso.diagnostics}" }
-    redirect_to "#{sso_url(sso)}&cw_msg=#{commonwealth_msg}}&cw_sig=#{commonwealth_sig}}", allow_other_host: true
+    redirect_to "#{sso_url(sso)}&cw_access_token=#{commonwealth_access_token}}", allow_other_host: true
   end
 
   def sso_provider(payload = nil, confirmed_2fa_during_login = false)
@@ -132,7 +131,6 @@ class SessionController < ApplicationController
 
     params.require(:sso)
     params.require(:sig)
-    params.require(:tokens)
 
     begin
       sso = DiscourseConnect.parse(request.query_string, secure_session: secure_session)
@@ -223,13 +221,6 @@ class SessionController < ApplicationController
         # but it the edge case of never supporting redirects back to
         # any url with `/session/sso` in it anywhere is reasonable
         return_path = path("/") if return_path.include?(path("/session/sso"))
-
-        # override Discourse redirect_path if a custom one was passed
-        if params.key?("return_path")
-          return_path = params[:return_path]
-        end
-
-        return_path = "#{return_path}?tokens=#{params[:tokens]}"
 
         redirect_to return_path, allow_other_host: true
       else
