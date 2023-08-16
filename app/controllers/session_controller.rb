@@ -222,6 +222,11 @@ class SessionController < ApplicationController
         # any url with `/session/sso` in it anywhere is reasonable
         return_path = path("/") if return_path.include?(path("/session/sso"))
 
+         # override Discourse redirect_path if a custom one was passed
+        if params.key?("return_path")
+          return_path = params[:return_path]
+        end
+
         redirect_to return_path, allow_other_host: true
       else
         render_sso_error(text: I18n.t("discourse_connect.not_found"), status: 500)
