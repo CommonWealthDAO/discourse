@@ -117,8 +117,10 @@ RSpec.describe SessionController do
             [user_security_key.credential_id],
           )
           secure_session = SecureSession.new(session["secure_session_id"])
-          expect(response_body_parsed["challenge"]).to eq(Webauthn.challenge(user, secure_session))
-          expect(Webauthn.rp_id(user, secure_session)).to eq(Discourse.current_hostname)
+          expect(response_body_parsed["challenge"]).to eq(
+            DiscourseWebauthn.challenge(user, secure_session),
+          )
+          expect(DiscourseWebauthn.rp_id).to eq(Discourse.current_hostname)
         end
       end
     end
@@ -2350,10 +2352,12 @@ RSpec.describe SessionController do
     end
 
     context "when rate limited" do
+      before { RateLimiter.enable }
+
+      use_redis_snapshotting
+
       it "rate limits login" do
         SiteSetting.max_logins_per_ip_per_hour = 2
-        RateLimiter.enable
-        RateLimiter.clear_all!
         EmailToken.confirm(email_token.token)
 
         2.times do
@@ -2371,9 +2375,6 @@ RSpec.describe SessionController do
       end
 
       it "rate limits second factor attempts by IP" do
-        RateLimiter.enable
-        RateLimiter.clear_all!
-
         6.times do |x|
           post "/session.json",
                params: {
@@ -2400,8 +2401,6 @@ RSpec.describe SessionController do
       end
 
       it "rate limits second factor attempts by login" do
-        RateLimiter.enable
-        RateLimiter.clear_all!
         EmailToken.confirm(email_token.token)
 
         6.times do |x|
@@ -2644,44 +2643,47 @@ RSpec.describe SessionController do
       )
     end
 
-    it "should correctly rate limits" do
-      RateLimiter.enable
-      RateLimiter.clear_all!
+    describe "rate limiting" do
+      before { RateLimiter.enable }
 
-      user = Fabricate(:user)
+      use_redis_snapshotting
 
-      3.times do
+      it "should correctly rate limits" do
+        user = Fabricate(:user)
+
+        3.times do
+          post "/session/forgot_password.json", params: { login: user.username }
+          expect(response.status).to eq(200)
+          expect(response.parsed_body["error"]).not_to be_present
+        end
+
         post "/session/forgot_password.json", params: { login: user.username }
-        expect(response.status).to eq(200)
-        expect(response.parsed_body["error"]).not_to be_present
-      end
+        expect(response.status).to eq(422)
 
-      post "/session/forgot_password.json", params: { login: user.username }
-      expect(response.status).to eq(422)
+        3.times do
+          post "/session/forgot_password.json",
+               params: {
+                 login: user.username,
+               },
+               headers: {
+                 "REMOTE_ADDR" => "10.1.1.1",
+               }
 
-      3.times do
+          expect(response.status).to eq(200)
+          expect(response.parsed_body["error"]).not_to be_present
+        end
+
         post "/session/forgot_password.json",
              params: {
                login: user.username,
              },
              headers: {
-               "REMOTE_ADDR" => "10.1.1.1",
+               "REMOTE_ADDR" => "100.1.1.1",
              }
 
-        expect(response.status).to eq(200)
-        expect(response.parsed_body["error"]).not_to be_present
+        # not allowed, max 6 a day
+        expect(response.status).to eq(422)
       end
-
-      post "/session/forgot_password.json",
-           params: {
-             login: user.username,
-           },
-           headers: {
-             "REMOTE_ADDR" => "100.1.1.1",
-           }
-
-      # not allowed, max 6 a day
-      expect(response.status).to eq(422)
     end
 
     context "for a non existant username" do

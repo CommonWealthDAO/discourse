@@ -6,6 +6,11 @@
 
 be:
   js:
+    admin:
+      site_settings:
+        chat_separate_sidebar_mode:
+          always: "заўсёды"
+          never: "ніколі"
     chat:
       create: "стварыць"
       cancel: "адмяніць"
@@ -62,6 +67,7 @@ be:
         never: "ніколі"
       settings:
         followed: "рэгістрацыя"
+        threading_disabled: "Адключана"
         notifications: "Натыфікацыі"
         preview: "папярэдні прагляд"
         save: "захаваць"
@@ -91,6 +97,9 @@ be:
         title: "Загаловак"
         settings: "Налады"
         last_reply: "апошні адказ"
+        notifications:
+          tracking:
+            title: "Сачыць"
       draft_channel_screen:
         header: "новае паведамленне"
         cancel: "адмяніць"

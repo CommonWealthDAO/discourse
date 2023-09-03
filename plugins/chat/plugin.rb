@@ -24,6 +24,7 @@ register_svg_icon "file-image"
 
 # route: /admin/plugins/chat
 add_admin_route "chat.admin.title", "chat"
+hide_plugin
 
 GlobalSetting.add_default(:allow_unsecure_chat_uploads, false)
 
@@ -32,6 +33,7 @@ module ::Chat
 end
 
 require_relative "lib/chat/engine"
+require_relative "lib/chat/types/array"
 
 after_initialize do
   register_seedfu_fixtures(Rails.root.join("plugins", "chat", "db", "fixtures"))
@@ -46,6 +48,7 @@ after_initialize do
   UserUpdater::OPTION_ATTR.push(:ignore_channel_wide_mention)
   UserUpdater::OPTION_ATTR.push(:chat_email_frequency)
   UserUpdater::OPTION_ATTR.push(:chat_header_indicator_preference)
+  UserUpdater::OPTION_ATTR.push(:chat_separate_sidebar_mode)
 
   register_reviewable_type Chat::ReviewableMessage
 
@@ -63,6 +66,7 @@ after_initialize do
     User.prepend Chat::UserExtension
     Jobs::UserEmail.prepend Chat::UserEmailExtension
     Plugin::Instance.prepend Chat::PluginInstanceExtension
+    Jobs::ExportCsvFile.class_eval { prepend Chat::MessagesExporter }
   end
 
   if Oneboxer.respond_to?(:register_local_handler)
@@ -235,7 +239,25 @@ after_initialize do
 
   add_to_serializer(:current_user, :chat_channels) do
     structured = Chat::ChannelFetcher.structured(self.scope)
-    Chat::ChannelIndexSerializer.new(structured, scope: self.scope, root: false).as_json
+
+    structured[:unread_thread_overview] = ::Chat::TrackingStateReportQuery.call(
+      guardian: self.scope,
+      channel_ids: structured[:public_channels].map(&:id),
+      include_threads: true,
+      include_read: false,
+      include_last_reply_details: true,
+    ).thread_unread_overview_by_channel
+
+    category_ids = structured[:public_channels].map { |c| c.chatable_id }
+    post_allowed_category_ids =
+      Category.post_create_allowed(self.scope).where(id: category_ids).pluck(:id)
+
+    Chat::ChannelIndexSerializer.new(
+      structured,
+      scope: self.scope,
+      root: false,
+      post_allowed_category_ids: post_allowed_category_ids,
+    ).as_json
   end
 
   add_to_serializer(
@@ -275,6 +297,12 @@ after_initialize do
 
   add_to_serializer(:current_user_option, :chat_header_indicator_preference) do
     object.chat_header_indicator_preference
+  end
+
+  add_to_serializer(:user_option, :chat_separate_sidebar_mode) { object.chat_separate_sidebar_mode }
+
+  add_to_serializer(:current_user_option, :chat_separate_sidebar_mode) do
+    object.chat_separate_sidebar_mode
   end
 
   RETENTION_SETTINGS_TO_USER_OPTION_FIELDS = {
@@ -398,7 +426,6 @@ after_initialize do
   end
 
   on(:category_updated) do |category|
-    # TODO(roman): remove early return after 2.9 release.
     # There's a bug on core where this event is triggered with an `#update` result (true/false)
     if category.is_a?(Category) && category_channel = Chat::Channel.find_by(chatable: category)
       if category_channel.auto_join_users

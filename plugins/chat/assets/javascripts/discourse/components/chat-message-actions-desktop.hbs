@@ -3,6 +3,7 @@
     {{did-insert this.setup}}
     {{did-update this.setup this.chat.activeMessage.model.id}}
     {{on "mouseleave" this.onMouseleave}}
+    {{on "wheel" this.onWheel passive=true}}
     {{will-destroy this.teardown}}
     class={{concat-class
       "chat-message-actions-container"
@@ -10,11 +11,18 @@
     }}
     data-id={{this.message.id}}
   >
-    <div class="chat-message-actions">
+    <div
+      class={{concat-class
+        "chat-message-actions"
+        (unless
+          this.messageInteractor.secondaryActions.length
+          "has-no-secondary-actions"
+        )
+      }}
+    >
       {{#if this.shouldRenderFavoriteReactions}}
         {{#each
-          this.messageInteractor.emojiReactions
-          key="emoji"
+          this.messageInteractor.emojiReactions key="emoji"
           as |reaction|
         }}
           <ChatMessageReaction
@@ -28,18 +36,18 @@
 
       {{#if this.messageInteractor.canInteractWithMessage}}
         <DButton
-          @class="btn-flat react-btn"
           @action={{this.messageInteractor.openEmojiPicker}}
           @icon="discourse-emojis"
           @title="chat.react"
           @forwardEvent={{true}}
+          class="btn-flat react-btn"
         />
       {{/if}}
 
       {{#if this.messageInteractor.canBookmark}}
         <DButton
-          @class="btn-flat bookmark-btn"
           @action={{this.messageInteractor.toggleBookmark}}
+          class="btn-flat bookmark-btn"
         >
           <BookmarkIcon @bookmark={{this.message.bookmark}} />
         </DButton>
@@ -47,24 +55,24 @@
 
       {{#if this.messageInteractor.canReply}}
         <DButton
-          @class="btn-flat reply-btn"
           @action={{this.messageInteractor.reply}}
           @icon="reply"
           @title="chat.reply"
+          class="btn-flat reply-btn"
         />
       {{/if}}
 
       {{#if
         (and
           this.messageInteractor.message
-          this.messageInteractor.secondaryButtons.length
+          this.messageInteractor.secondaryActions.length
         )
       }}
         <DropdownSelectBox
-          @class="more-buttons"
+          @class="more-buttons secondary-actions"
           @options={{hash icon="ellipsis-v" placement="left"}}
-          @content={{this.messageInteractor.secondaryButtons}}
-          @onChange={{action this.messageInteractor.handleSecondaryButtons}}
+          @content={{this.messageInteractor.secondaryActions}}
+          @onChange={{action this.messageInteractor.handleSecondaryActions}}
         />
       {{/if}}
     </div>

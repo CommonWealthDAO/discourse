@@ -1,5 +1,4 @@
 import { getOwner } from "discourse-common/lib/get-owner";
-import I18n from "I18n";
 import ChatMessagesManager from "discourse/plugins/chat/discourse/lib/chat-messages-manager";
 import { escapeExpression } from "discourse/lib/utilities";
 import { tracked } from "@glimmer/tracking";
@@ -43,13 +42,12 @@ export default class ChatThread {
     this.draft = args.draft;
     this.staged = args.staged;
     this.replyCount = args.reply_count;
-    this.originalMessage = ChatMessage.create(channel, args.original_message);
 
-    this.title =
-      args.title ||
-      `${I18n.t("chat.thread.default_title", {
-        thread_id: this.id,
-      })}`;
+    this.originalMessage = args.original_message
+      ? ChatMessage.create(channel, args.original_message)
+      : null;
+
+    this.title = args.title;
 
     if (args.current_user_membership) {
       this.currentUserMembership = UserChatThreadMembership.create(
@@ -58,9 +56,7 @@ export default class ChatThread {
     }
 
     this.tracking = new ChatTrackingState(getOwner(this));
-    if (args.preview) {
-      this.preview = ChatThreadPreview.create(args.preview);
-    }
+    this.preview = ChatThreadPreview.create(args.preview);
   }
 
   async stageMessage(message) {
@@ -68,33 +64,14 @@ export default class ChatThread {
     message.staged = true;
     message.draft = false;
     message.createdAt ??= moment.utc().format();
-    await message.cook();
+    message.thread = this;
 
     this.messagesManager.addMessages([message]);
-  }
-
-  get lastMessage() {
-    return this.messagesManager.findLastMessage();
-  }
-
-  lastUserMessage(user) {
-    return this.messagesManager.findLastUserMessage(user);
+    message.manager = this.messagesManager;
   }
 
   get routeModels() {
     return [...this.channel.routeModels, this.id];
-  }
-
-  get messages() {
-    return this.messagesManager.messages;
-  }
-
-  set messages(messages) {
-    this.messagesManager.messages = messages;
-  }
-
-  get selectedMessages() {
-    return this.messages.filter((message) => message.selected);
   }
 
   get escapedTitle() {

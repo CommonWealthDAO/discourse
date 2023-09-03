@@ -18,7 +18,7 @@ gl:
       no_day: "%B %Y"
   date:
     month_names:
-    - null
+    -
     - Xaneiro
     - Febreiro
     - Marzo
@@ -274,7 +274,6 @@ gl:
     more_replies:
       one: "%{count} resposta máis"
       other: "%{count} respostas máis"
-    loading: "Cargando discusión..."
     permalink: "Ligazón permanente"
     imported_from: "Este é un tema de discusión complementario da entrada %{link}"
     in_reply_to: "▶ %{username}"
@@ -547,7 +546,6 @@ gl:
   meta_category_description: "Discusións sobre este sitio, a súa organización, como funciona e como se pode mellorar."
   staff_category_name: "Equipo"
   staff_category_description: "Categoría privada para discusións do equipo. Os temas son visíbeis unicamente para administradores e moderadores."
-  admin_quick_start_title: "LER PRIMEIRO: Guía de comezo rápido para administradores"
   category:
     topic_prefix: "Acerca da categoría %{category}"
     replace_paragraph: "(Substitúa este parágrafo cunha breve descrición da súa nova categoría. Este texto aparecerá na área de selección de categoría, así que procure que non supere os 200 caracteres.)"
@@ -1380,11 +1378,8 @@ gl:
     allowed_crawler_user_agents: "Axentes de usuario de rastreadores web aos que se lles debería permitir o acceso ao sitio. AVISO! AO CONFIGURAR ISTO, VETARÁ TODOS OS RASTREXADORES NON LISTADOS AQUÍ!"
     blocked_crawler_user_agents: "Palabra única insensíbel a maiúsculas e minúsculas na cadea de axente de usuario que identifica rastrexadores web que non deberían ter permitido o acceso ao sitio. Non se lle aplica se está definida a listaxe de permitidos."
     slow_down_crawler_rate: "Se slow_down_crawler_user_agents está especificado, este valor aplicarase a todos os rastrexadores (número de segundos de demora entre respostas)"
-    content_security_policy: "Activar a política de seguridade de contido (CSP)"
-    content_security_policy_report_only: "Activar só o informe de política de seguridade de contido"
     content_security_policy_collect_reports: "Activar a recolección de informes de violación de CSP en /csp_reports"
     content_security_policy_frame_ancestors: "Restrinxir quen pode incorporar este sitio en iframes mediante CSP. O control de servidores permitidos en <a href='%{base_path}/admin/customize/embedding'>Incorporación</a>"
-    content_security_policy_script_src: "Fontes de script adicionais permitidas. O servidor actual e a rede de distribución de contido CDN inclúense de xeito predeterminado. Consulte <a href='https://meta.discourse.org/t/mitigate-xss-attacks-with-content-security-policy/104243' target='_blank'>Mitigar os ataques XSS coa política de seguridade de contido.</a>"
     invalidate_inactive_admin_email_after_days: "As contas administrativas que non visiten o sitio neste número de días terán que volver validar o seu enderezo electrónico antes de iniciar sesión. Estabelecer en 0 para desactivalo."
     top_menu: "Determinar que elementos aparecen no menú de navegación da páxina de inicio e en que orde. Exemplo últimos|recentes|senler|categorías|destacados|publicados|marcadores"
     post_menu: "Determinar os elementos que aparecen no menú de publicación e en que orde. Exemplo: gústame|editar|denunciar|eliminar|compartir|gardar en marcadores|responder"
@@ -1482,7 +1477,6 @@ gl:
     enable_safe_mode: "Permitir que os usuarios entren no modo seguro para depurar complementos."
     rate_limit_create_topic: "Despois de crear un tema, os usuarios deben agardar (n) segundos antes de crear un outro."
     rate_limit_create_post: "Despois de publicar, os usuarios deben agardar (n) segundos antes de crear unha outra publicación."
-    rate_limit_new_user_create_topic: "Despois de crear un tema, os novos usuarios deben agardar (n) segundos antes de crear un outro."
     rate_limit_new_user_create_post: "Despois de publicar, os novos usuarios deben agardar (n) segundos antes de crear unha outra publicación."
     max_likes_per_day: "Número máximo de gústame por usuario e día."
     max_flags_per_day: "Número máximo de denuncias por usuario e día."
@@ -1557,7 +1551,6 @@ gl:
     tl3_requires_likes_given: "Número mínimo de gústame que un usuario debe dar nos últimos (período nc3) días para poder ser promovido ao nivel de confianza 3."
     tl3_requires_likes_received: "Número mínimo de gústame que un usuario debe recibir nos últimos (período nc3) días para poder ser promovido ao nivel de confianza 3."
     tl3_links_no_follow: "Non retirar rel=nofollow das ligazóns publicadas por usuarios con nivel de confianza 3."
-    trusted_users_can_edit_others: "Permitir aos usuarios con altos niveis de confianza editar contido doutros usuarios"
     min_trust_to_create_topic: "O nivel de confianza mínimo requirido para crear un novo tema."
     allow_flagging_staff: "De estar activado, os usuarios poden denunciar publicacións feitas desde contas do equipo."
     min_trust_to_edit_wiki_post: "O nivel de confianza mínimo requirido para editar unha publicación marcada como wiki."
@@ -1588,7 +1581,6 @@ gl:
     title_min_entropy: "A entropía mínima (caracteres únicos) que se require para o título do tema."
     body_min_entropy: "A entropía mínima (caracteres únicos) que se require para o corpo dunha publicación."
     allow_uppercase_posts: "Permitir todas en maiúsculas no título dun tema ou no corpo dunha publicación."
-    max_consecutive_replies: "Número de publicacións continuadas que un usuario ten que facer antes de que se lle prohiba engadir outra resposta."
     enable_filtered_replies_view: 'O botón «(n) respostas» contrae todas as demais publicacións e só amosa a publicación actual e as súas respostas.'
     title_fancy_entities: "Converter caracteres ASCII en entidades HTML elegantes no título dos temas, como SmartyPants <a href='https://daringfireball.net/projects/smartypants/' target='_blank'>https://daringfireball.net/projects/smartypants/</a>"
     min_title_similar_length: "A lonxitude mínima dun título antes de se comprobar para temas similares."
@@ -1767,7 +1759,6 @@ gl:
     share_anonymized_statistics: "Compartir estatísticas de uso anonimizadas."
     auto_handle_queued_age: "Xestione automaticamente rexistros que levan moitos días en espera de seren revisados. As alertas ignoraranse. Rexeitaranse as publicacións e os usuarios en cola. Estabelecer en 0 para desactivar esta funcionalidade."
     svg_icon_subset: "Engada 5 iconas FontAwesome adicionais que lle gustaría incluír nos seus recursos. Use o prefixo «fa-» para iconas sólidas, «far-» para iconas normais e «fab-» para iconas de marca."
-    max_prints_per_hour_per_user: "Número máximo de accesos/impresións de páxina (estabelecer en 0 para desactivar)"
     full_name_required: "O nome completo no perfil do usuario é obrigatorio."
     enable_names: "Mostrar o nome completo do usuario no seu perfil, tarxeta de usuario e correos electrónicos. Desactivar para agochar o nome completo en todas as partes."
     display_name_on_posts: "Mostrar o nome completo de usuario nas súas publicacións, ademais do seu @nomedeusuario."
@@ -1786,7 +1777,6 @@ gl:
     allowed_href_schemes: "Esquemas permitidos en ligazóns ademais de http e https."
     embed_post_limit: "Número máximo de publicacións que incorporar."
     embed_username_required: "O nome de usuario para a creación de temas é obrigatorio."
-    show_create_topics_notice: "Se o sitio ten menos de 5 temas públicos, amosará un aviso pedindo aos administradores que creen algúns temas."
     delete_drafts_older_than_n_days: "Eliminar borradores con máis de (n) días de antigüidade."
     prevent_anons_from_downloading_files: "Evitar que usuarios anónimos descarguen anexos."
     slug_generation_method: "Escolla un método de xeración de abreviacións. Con «codificado» xerarase unha cadea con codificación porcentual, con «ningún» desactivarase a abreviación amigábel."
@@ -1850,7 +1840,6 @@ gl:
     retain_web_hook_events_period_days: "Número de días para reter rexistros de eventos de web hook."
     retry_web_hook_events: "Volver tentar automaticamente 4 veces os eventos de web hook frustrados. Os intervalos entre os novos intentos son de 1, 5, 25 e 125 minutos."
     revoke_api_keys_days: "Número de días antes de que unha chave API sen usar sexa revogada automaticamente (0 para nunca)"
-    allow_user_api_keys: "Permitir a xeración de chaves API de usuario"
     allow_user_api_key_scopes: "Listaxe de ámbitos permitidos para as chaves API de usuario"
     allowed_user_api_auth_redirects: "URL permitido para redireccionar a autenticación das chaves API de usuario. O símbolo do comodín pódese utilizar para que coincida calquera parte súa (ex.: www.exemplo.com/*)."
     allowed_user_api_push_urls: "Enderezos URL permitidos para que servidor envíe á API de usuario"
@@ -1909,7 +1898,6 @@ gl:
       pop3_polling_password_is_empty: "Debe estabelecer un «contrasinal de usuario de recollida pop3» antes de activar a recollida POP3."
       pop3_polling_authentication_failed: "Erro na autenticación POP3. Verifique as súas credenciais POP3."
       reply_by_email_address_is_empty: "Debe habilitar «responder vía correo electrónico» antes de activar resposta por correo electrónico."
-      email_polling_disabled: "Debe activar ou a recollida manual ou POP3 antes de activar a resposta por correo electrónico."
       user_locale_not_enabled: "Debe activar primeiro «permitir usuario local» antes de activar esta opción."
       invalid_regex: "A expresión regular non é válida ou non está permitida."
       email_editable_enabled: "Debe desactivar «correo electrónico editable» antes de activar esta opción."
@@ -2093,18 +2081,6 @@ gl:
   admin:
     email:
       sent_test: "enviado!"
-    user:
-      merge_user:
-        updating_username: "Actualizando nome de usuario..."
-        changing_post_ownership: "Cambiando o propietario da publicación ..."
-        merging_given_daily_likes: "Combinando os gústame diarios..."
-        merging_post_timings: "Combinando os intres de publicación..."
-        merging_user_visits: "Combinando as visitas de usuario..."
-        updating_site_settings: "Actualizando a configuración do sitio..."
-        updating_user_stats: "Actualizando as estatísticas de usuario..."
-        merging_user_attributes: "Combinando os atributos de usuario..."
-        updating_user_ids: "Actualizando os id de usuario..."
-        deleting_source_user: "Eliminando o usuario orixe..."
   user:
     deactivated: "Desactivado debido a excesivos correos devoltos con «%{email}»."
     deactivated_by_staff: "Desactivado polo equipo"
@@ -3736,8 +3712,6 @@ gl:
         description: "Restaurar a publicación para que todos os usuarios a poidan ver."
       delete_single:
         title: "Eliminar"
-      delete:
-        title: "Eliminar..."
       delete_and_ignore_replies:
         confirm: "Confirma que quere eliminar as respostas desta publicación tamén?"
       delete_and_agree_replies:
@@ -3760,7 +3734,6 @@ gl:
       approve_user:
         title: "Aprobar usuario"
       reject_user:
-        title: "Eliminar usuario..."
         delete:
           title: "Eliminar usuario"
           description: "O usuario será eliminado do foro."

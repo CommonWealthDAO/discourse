@@ -1,4 +1,4 @@
-{{! template-lint-disable no-down-event-binding }}
+{{! template-lint-disable no-pointer-down-event-binding }}
 {{! template-lint-disable no-invalid-interactive }}
 
 <div class="chat-composer__wrapper">
@@ -9,7 +9,7 @@
         this.currentMessage
         this.currentMessage.inReplyTo
       }}
-      @cancelAction={{this.onCancel}}
+      @cancelAction={{this.composer.cancel}}
     />
   {{/if}}
 
@@ -46,7 +46,7 @@
 
         <div
           class="chat-composer__input-container"
-          {{on "click" this.focusTextarea}}
+          {{on "click" this.composer.focus}}
         >
           <DTextarea
             id={{this.composerId}}
@@ -96,6 +96,7 @@
           disabled={{or this.disabled (not this.sendEnabled)}}
           tabindex={{if this.sendEnabled 0 -1}}
           {{on "click" this.onSend}}
+          {{on "mousedown" this.trapMouseDown}}
           {{on "focus" (fn this.computeIsFocused true)}}
           {{on "blur" (fn this.computeIsFocused false)}}
         />
@@ -109,7 +110,7 @@
       @onUploadChanged={{this.onUploadChanged}}
       @existingUploads={{this.currentMessage.uploads}}
       @uploadDropZone={{@uploadDropZone}}
-      @composerInputEl={{this.textareaInteractor.textarea}}
+      @composerInputEl={{this.composer.textarea.element}}
     />
   {{/if}}
 

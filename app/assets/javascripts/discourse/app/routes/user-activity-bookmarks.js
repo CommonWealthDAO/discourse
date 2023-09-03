@@ -25,7 +25,6 @@ export default DiscourseRoute.extend({
 
     this.session.setProperties({
       bookmarksModel: null,
-      bookmarkListScrollPosition: null,
     });
 
     controller.set("loading", true);
@@ -51,12 +50,6 @@ export default DiscourseRoute.extend({
 
   titleToken() {
     return I18n.t("user_action_groups.3");
-  },
-
-  @action
-  didTransition() {
-    this.controllerFor("user-activity")._showFooter();
-    return true;
   },
 
   @action

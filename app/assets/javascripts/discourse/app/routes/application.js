@@ -3,7 +3,6 @@ import Category from "discourse/models/category";
 import Composer from "discourse/models/composer";
 import DiscourseRoute from "discourse/routes/discourse";
 import I18n from "I18n";
-import OpenComposer from "discourse/mixins/open-composer";
 import { ajax } from "discourse/lib/ajax";
 import { findAll } from "discourse/models/login-method";
 import { getOwner } from "discourse-common/lib/get-owner";
@@ -13,6 +12,11 @@ import mobile from "discourse/lib/mobile";
 import { inject as service } from "@ember/service";
 import { setting } from "discourse/lib/computed";
 import showModal from "discourse/lib/show-modal";
+import { action } from "@ember/object";
+import KeyboardShortcutsHelp from "discourse/components/modal/keyboard-shortcuts-help";
+import NotActivatedModal from "../components/modal/not-activated";
+import ForgotPassword from "discourse/components/modal/forgot-password";
+import deprecated from "discourse-common/lib/deprecated";
 
 function unlessReadOnly(method, message) {
   return function () {
@@ -34,13 +38,28 @@ function unlessStrictlyReadOnly(method, message) {
   };
 }
 
-const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
+const ApplicationRoute = DiscourseRoute.extend({
   siteTitle: setting("title"),
   shortSiteDescription: setting("short_site_description"),
   documentTitle: service(),
   dialog: service(),
   composer: service(),
   modal: service(),
+  loadingSlider: service(),
+  router: service(),
+
+  @action
+  loading(transition) {
+    if (this.loadingSlider.enabled) {
+      this.loadingSlider.transitionStarted();
+      transition.promise.finally(() => {
+        this.loadingSlider.transitionEnded();
+      });
+      return false;
+    } else {
+      return true; // Use native ember loading implementation
+    }
+  },
 
   actions: {
     toggleAnonymous() {
@@ -107,7 +126,7 @@ const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
       }
 
       if (xhrOrErr && xhrOrErr.status === 404) {
-        return this.transitionTo("exception-unknown");
+        return this.router.transitionTo("exception-unknown");
       }
 
       exceptionController.setProperties({
@@ -130,15 +149,11 @@ const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
     ),
 
     showForgotPassword() {
-      getOwner(this).lookup("controller:forgot-password").setProperties({
-        offerHelp: null,
-        helpSeen: false,
-      });
-      showModal("forgot-password", { title: "forgot_password.title" });
+      this.modal.show(ForgotPassword);
     },
 
     showNotActivated(props) {
-      showModal("not-activated", { title: "log_in" }).setProperties(props);
+      this.modal.show(NotActivatedModal, { model: props });
     },
 
     showUploadSelector() {
@@ -146,9 +161,7 @@ const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
     },
 
     showKeyboardShortcutsHelp() {
-      showModal("keyboard-shortcuts-help", {
-        title: "keyboard_shortcuts_help.title",
-      });
+      this.modal.show(KeyboardShortcutsHelp);
     },
 
     // Close the current modal, and destroy its state.
@@ -177,44 +190,36 @@ const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
       user.checkEmail();
     },
 
-    changeBulkTemplate(w) {
-      const controllerName = w.replace("modal/", "");
-      const controller = getOwner(this).lookup("controller:" + controllerName);
-      this.render(w, {
-        into: "modal/topic-bulk-actions",
-        outlet: "bulkOutlet",
-        controller: controller ? controllerName : "topic-bulk-actions",
+    createNewTopicViaParams(title, body, categoryId, tags) {
+      deprecated(
+        "createNewTopicViaParam on the application route is deprecated. Use the composer service instead",
+        { id: "discourse.createNewTopicViaParams" }
+      );
+      getOwner(this).lookup("service:composer").openNewTopic({
+        title,
+        body,
+        categoryId,
+        tags,
       });
     },
 
-    createNewTopicViaParams(title, body, category_id, tags) {
-      this.openComposerWithTopicParams(
-        this.controllerFor("discovery/topics"),
-        title,
-        body,
-        category_id,
-        tags
-      );
-    },
-
     createNewMessageViaParams({
-      recipients = [],
+      recipients = "",
       topicTitle = "",
       topicBody = "",
       hasGroups = false,
     } = {}) {
-      this.openComposerWithMessageParams({
+      deprecated(
+        "createNewMessageViaParams on the application route is deprecated. Use the composer service instead",
+        { id: "discourse.createNewMessageViaParams" }
+      );
+      getOwner(this).lookup("service:composer").openNewMessage({
         recipients,
-        topicTitle,
-        topicBody,
+        title: topicTitle,
+        body: topicBody,
         hasGroups,
       });
     },
-  },
-
-  renderTemplate() {
-    this.render("application");
-    this.render("modal", { into: "application", outlet: "modal" });
   },
 
   handleShowLogin() {

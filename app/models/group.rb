@@ -165,7 +165,18 @@ class Group < ActiveRecord::Base
             if user.blank?
               sql = "groups.visibility_level = :public"
             elsif is_staff
-              sql = "groups.visibility_level IN (:public, :logged_on_users, :members, :staff)"
+              sql = <<~SQL
+                groups.visibility_level IN (:public, :logged_on_users, :members, :staff)
+                OR
+                groups.id IN (
+                  SELECT g.id
+                    FROM groups g
+                    JOIN group_users gu ON gu.group_id = g.id
+                    AND gu.user_id = :user_id
+                    AND gu.owner
+                  WHERE g.visibility_level = :owners
+                )
+              SQL
             else
               sql = <<~SQL
           groups.id IN (
@@ -209,8 +220,18 @@ class Group < ActiveRecord::Base
             if user.blank?
               sql = "groups.members_visibility_level = :public"
             elsif is_staff
-              sql =
-                "groups.members_visibility_level IN (:public, :logged_on_users, :members, :staff)"
+              sql = <<~SQL
+                groups.members_visibility_level IN (:public, :logged_on_users, :members, :staff)
+                OR
+                groups.id IN (
+                  SELECT g.id
+                    FROM groups g
+                    JOIN group_users gu ON gu.group_id = g.id
+                    AND gu.user_id = :user_id
+                    AND gu.owner
+                  WHERE g.members_visibility_level = :owners
+                )
+              SQL
             else
               sql = <<~SQL
           groups.id IN (
@@ -254,12 +275,12 @@ class Group < ActiveRecord::Base
   scope :messageable,
         lambda { |user|
           where(
-            "messageable_level in (:levels) OR
+            "groups.messageable_level in (:levels) OR
           (
-            messageable_level = #{ALIAS_LEVELS[:members_mods_and_admins]} AND id in (
+            groups.messageable_level = #{ALIAS_LEVELS[:members_mods_and_admins]} AND groups.id in (
             SELECT group_id FROM group_users WHERE user_id = :user_id)
           ) OR (
-            messageable_level = #{ALIAS_LEVELS[:owners_mods_and_admins]} AND id in (
+            groups.messageable_level = #{ALIAS_LEVELS[:owners_mods_and_admins]} AND groups.id in (
             SELECT group_id FROM group_users WHERE user_id = :user_id AND owner IS TRUE)
           )",
             levels: alias_levels(user),
@@ -269,14 +290,14 @@ class Group < ActiveRecord::Base
 
   def self.mentionable_sql_clause(include_public: true)
     clause = +<<~SQL
-      mentionable_level in (:levels)
+      groups.mentionable_level in (:levels)
       OR (
-        mentionable_level = #{ALIAS_LEVELS[:members_mods_and_admins]}
-        AND id in (
+        groups.mentionable_level = #{ALIAS_LEVELS[:members_mods_and_admins]}
+        AND groups.id in (
           SELECT group_id FROM group_users WHERE user_id = :user_id)
       ) OR (
-        mentionable_level = #{ALIAS_LEVELS[:owners_mods_and_admins]}
-        AND id in (
+        groups.mentionable_level = #{ALIAS_LEVELS[:owners_mods_and_admins]}
+        AND groups.id in (
           SELECT group_id FROM group_users WHERE user_id = :user_id AND owner IS TRUE)
       )
       SQL
@@ -959,15 +980,19 @@ class Group < ActiveRecord::Base
   end
 
   def flair_type
-    return :icon if flair_icon.present?
-    return :image if flair_upload.present?
+    if flair_icon.present?
+      :icon
+    elsif flair_upload.present?
+      :image
+    end
   end
 
   def flair_url
-    return flair_icon if flair_type == :icon
-    return upload_cdn_path(flair_upload.url) if flair_type == :image
-
-    nil
+    if flair_type == :icon
+      flair_icon
+    elsif flair_type == :image
+      upload_cdn_path(flair_upload.url)
+    end
   end
 
   %i[muted regular tracking watching watching_first_post].each do |level|

@@ -13,6 +13,8 @@ import { schedule } from "@ember/runloop";
 import { topicTitleDecorators } from "discourse/components/topic-title";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
 import { htmlSafe } from "@ember/template";
+import { inject as service } from "@ember/service";
+import { getOwner } from "@ember/application";
 
 export function showEntrance(e) {
   let target = $(e.target);
@@ -34,12 +36,29 @@ export function showEntrance(e) {
 }
 
 export function navigateToTopic(topic, href) {
-  this.appEvents.trigger("header:update-topic", topic);
+  const owner = getOwner(this);
+  const router = owner.lookup("service:router");
+  const session = owner.lookup("service:session");
+  const siteSettings = owner.lookup("service:site-settings");
+  const appEvents = owner.lookup("service:appEvents");
+
+  if (siteSettings.page_loading_indicator !== "slider") {
+    // With the slider, it feels nicer for the header to update once the rest of the topic content loads,
+    // so skip setting it early.
+    appEvents.trigger("header:update-topic", topic);
+  }
+
+  session.set("lastTopicIdViewed", {
+    topicId: topic.id,
+    historyUuid: router.location.getState?.().uuid,
+  });
+
   DiscourseURL.routeTo(href || topic.get("url"));
   return false;
 }
 
 export default Component.extend({
+  router: service(),
   tagName: "tr",
   classNameBindings: [":topic-list-item", "unboundClassNames", "topic.visited"],
   attributeBindings: ["data-topic-id", "role", "ariaLevel:aria-level"],
@@ -59,6 +78,9 @@ export default Component.extend({
         htmlSafe(template(this, RUNTIME_OPTIONS))
       );
       schedule("afterRender", () => {
+        if (this.isDestroyed || this.isDestroying) {
+          return;
+        }
         if (this.selected && this.selected.includes(this.topic)) {
           this.element.querySelector("input.bulk-select").checked = true;
         }
@@ -262,7 +284,10 @@ export default Component.extend({
       }
     }
 
-    if (classList.contains("raw-topic-link")) {
+    if (
+      classList.contains("raw-topic-link") ||
+      classList.contains("post-activity")
+    ) {
       if (wantsNewWindow(e)) {
         return true;
       }
@@ -297,6 +322,13 @@ export default Component.extend({
 
   unhandledRowClick() {},
 
+  keyDown(e) {
+    if (e.key === "Enter" && e.target.classList.contains("post-activity")) {
+      e.preventDefault();
+      return this.navigateToTopic(this.topic, e.target.getAttribute("href"));
+    }
+  },
+
   navigateToTopic,
 
   highlight(opts = { isLastViewedTopic: false }) {
@@ -321,7 +353,14 @@ export default Component.extend({
 
   _highlightIfNeeded: on("didInsertElement", function () {
     // highlight the last topic viewed
-    if (this.session.get("lastTopicIdViewed") === this.get("topic.id")) {
+    const lastViewedTopicInfo = this.session.get("lastTopicIdViewed");
+
+    const isLastViewedTopic =
+      lastViewedTopicInfo?.topicId === this.topic.id &&
+      lastViewedTopicInfo?.historyUuid ===
+        this.router.location.getState?.().uuid;
+
+    if (isLastViewedTopic) {
       this.session.set("lastTopicIdViewed", null);
       this.highlight({ isLastViewedTopic: true });
     } else if (this.get("topic.highlight")) {

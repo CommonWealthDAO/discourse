@@ -1,7 +1,7 @@
 .menu-panel.slide-in {
   position: fixed;
   right: 0;
-  box-shadow: shadow("header");
+  box-shadow: var(--shadow-header);
 
   .panel-body {
     width: 100%;
@@ -17,11 +17,12 @@
   top: 100%; // directly underneath .panel
   right: -10px; // 10px to the right of .panel - adjust as needed
   max-height: 80vh;
+  border-radius: var(--d-border-radius-large);
 }
 
 .menu-panel {
   border: 1px solid var(--primary-low);
-  box-shadow: shadow("menu-panel");
+  box-shadow: var(--shadow-menu-panel);
   background-color: var(--secondary);
   z-index: z("header");
   padding: 0.5em;
@@ -100,6 +101,7 @@
   right: 0;
   width: 320px;
   padding: 0;
+  border-top-right-radius: 0px;
 
   .panel-body-bottom {
     flex: 0;
@@ -122,6 +124,7 @@
       display: flex;
       padding: 0.857em;
       position: relative;
+      border-radius: 0px;
 
       .d-icon {
         color: var(--primary-medium);
@@ -257,7 +260,13 @@
 }
 
 .hamburger-panel {
+  // remove once glimmer search menu in place
   a.widget-link {
+    width: 100%;
+    box-sizing: border-box;
+    @include ellipsis;
+  }
+  a.search-link {
     width: 100%;
     box-sizing: border-box;
     @include ellipsis;
@@ -279,7 +288,35 @@
 }
 
 .menu-panel {
+  // remove once glimmer search menu in place
   .widget-link,
+  .categories-link {
+    padding: 0.25em 0.5em;
+    display: block;
+    color: var(--primary);
+    &:hover,
+    &:focus {
+      background-color: var(--d-hover);
+      outline: none;
+    }
+
+    .d-icon {
+      color: var(--primary-medium);
+    }
+
+    .new {
+      font-size: var(--font-down-1);
+      margin-left: 0.5em;
+      color: var(--primary-med-or-secondary-med);
+    }
+
+    &.show-help,
+    &.filter {
+      color: var(--tertiary);
+    }
+  }
+
+  .search-link,
   .categories-link {
     padding: 0.25em 0.5em;
     display: block;

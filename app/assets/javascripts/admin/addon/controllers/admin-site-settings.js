@@ -6,9 +6,12 @@ import { isEmpty } from "@ember/utils";
 import { debounce } from "discourse-common/utils/decorators";
 import { observes } from "@ember-decorators/object";
 import { action } from "@ember/object";
+import { inject as service } from "@ember/service";
 
 export default class AdminSiteSettingsController extends Controller {
-  filter = null;
+  @service router;
+
+  filter = "";
 
   @alias("model") allSiteSettings;
 
@@ -17,6 +20,16 @@ export default class AdminSiteSettingsController extends Controller {
 
   get maxResults() {
     return 100;
+  }
+
+  sortSettings(settings) {
+    // Sort the site settings so that fuzzy results are at the bottom
+    // and ordered by their gap count asc.
+    return settings.sort((a, b) => {
+      const aWeight = a.weight === undefined ? 0 : a.weight;
+      const bWeight = b.weight === undefined ? 0 : b.weight;
+      return aWeight - bWeight;
+    });
   }
 
   performSearch(filter, allSiteSettings, onlyOverridden) {
@@ -53,9 +66,11 @@ export default class AdminSiteSettingsController extends Controller {
 
     const strippedQuery = filter.replace(/[^a-z0-9]/gi, "");
     let fuzzyRegex;
+    let fuzzyRegexGaps;
 
     if (strippedQuery.length > 2) {
       fuzzyRegex = new RegExp(strippedQuery.split("").join(".*"), "i");
+      fuzzyRegexGaps = new RegExp(strippedQuery.split("").join("(.*)"), "i");
     }
 
     allSiteSettings.forEach((settingsCategory) => {
@@ -76,7 +91,19 @@ export default class AdminSiteSettingsController extends Controller {
             item.get("description").toLowerCase().includes(filter) ||
             (item.get("value") || "").toString().toLowerCase().includes(filter);
           if (!filterResult && fuzzyRegex && fuzzyRegex.test(setting)) {
-            fuzzyMatches.push(item);
+            // Tightens up fuzzy search results a bit.
+            const fuzzySearchLimiter = 15;
+            const strippedSetting = setting.replace(/[^a-z0-9]/gi, "");
+            if (
+              strippedSetting.length <=
+              strippedQuery.length + fuzzySearchLimiter
+            ) {
+              const gapResult = strippedSetting.match(fuzzyRegexGaps);
+              if (gapResult) {
+                item.weight = gapResult.filter((gap) => gap !== "").length;
+              }
+              fuzzyMatches.push(item);
+            }
           }
           return filterResult;
         } else {
@@ -95,13 +122,15 @@ export default class AdminSiteSettingsController extends Controller {
           name: I18n.t(
             "admin.site_settings.categories." + settingsCategory.nameKey
           ),
-          siteSettings,
+          siteSettings: this.sortSettings(siteSettings),
           count: siteSettings.length,
         });
       }
     });
 
     all.siteSettings.pushObjects(matches.slice(0, this.maxResults));
+    all.siteSettings = this.sortSettings(all.siteSettings);
+
     all.hasMore = matches.length > this.maxResults;
     all.count = all.hasMore ? `${this.maxResults}+` : matches.length;
     all.maxResults = this.maxResults;
@@ -117,7 +146,7 @@ export default class AdminSiteSettingsController extends Controller {
     if (isEmpty(this.filter) && !this.onlyOverridden) {
       this.set("visibleSiteSettings", this.allSiteSettings);
       if (this.categoryNameKey === "all_results") {
-        this.transitionToRoute("adminSiteSettings");
+        this.router.transitionTo("adminSiteSettings");
       }
       return;
     }
@@ -138,7 +167,7 @@ export default class AdminSiteSettingsController extends Controller {
     }
 
     this.set("visibleSiteSettings", matchesGroupedByCategory);
-    this.transitionToRoute(
+    this.router.transitionTo(
       "adminSiteSettingsCategory",
       category || "all_results"
     );

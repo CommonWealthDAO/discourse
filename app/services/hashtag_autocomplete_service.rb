@@ -15,6 +15,8 @@ class HashtagAutocompleteService
 
   attr_reader :guardian
 
+  # NOTE: This is not meant to be called directly; use `enabled_data_sources`
+  # or the individual data_source_X methods instead.
   def self.data_sources
     # Category and Tag data sources are in core and always should be
     # included for searches and lookups.
@@ -30,16 +32,20 @@ class HashtagAutocompleteService
     )
   end
 
+  def self.enabled_data_sources
+    self.data_sources.filter(&:enabled?)
+  end
+
   def self.data_source_types
-    data_sources.map(&:type)
+    self.enabled_data_sources.map(&:type)
   end
 
   def self.data_source_icon_map
-    data_sources.map { |ds| [ds.type, ds.icon] }.to_h
+    self.enabled_data_sources.map { |ds| [ds.type, ds.icon] }.to_h
   end
 
   def self.data_source_from_type(type)
-    data_sources.find { |ds| ds.type == type }
+    self.enabled_data_sources.find { |ds| ds.type == type }
   end
 
   def self.find_priorities_for_context(context)
@@ -51,7 +57,10 @@ class HashtagAutocompleteService
   end
 
   def self.ordered_types_for_context(context)
-    find_priorities_for_context(context).sort_by { |ctp| -ctp[:priority] }.map { |ctp| ctp[:type] }
+    find_priorities_for_context(context)
+      .sort_by { |ctp| -ctp[:priority] }
+      .map { |ctp| ctp[:type] }
+      .reject { |type| data_source_types.exclude?(type) }
   end
 
   def self.contexts_with_ordered_types
@@ -224,16 +233,16 @@ class HashtagAutocompleteService
   )
     raise Discourse::InvalidParameters.new(:order) if !types_in_priority_order.is_a?(Array)
     limit = [limit, SEARCH_MAX_LIMIT].min
+    types_in_priority_order =
+      types_in_priority_order.select do |type|
+        HashtagAutocompleteService.data_source_types.include?(type)
+      end
 
     return search_without_term(types_in_priority_order, limit) if term.blank?
 
     limited_results = []
     top_ranked_type = nil
     term = term.downcase
-    types_in_priority_order =
-      types_in_priority_order.select do |type|
-        HashtagAutocompleteService.data_source_types.include?(type)
-      end
 
     # Float exact matches by slug to the top of the list, any of these will be excluded
     # from further results.
@@ -288,51 +297,6 @@ class HashtagAutocompleteService
     # For example, if there is a category with the slug #general and a tag
     # with the slug #general, then the tag will have its ref changed to #general::tag
     append_types_to_conflicts(limited_results, top_ranked_type, types_in_priority_order, limit)
-  end
-
-  # TODO (martin) Remove this once plugins are not relying on the old lookup
-  # behavior via HashtagsController when enable_experimental_hashtag_autocomplete is removed
-  def lookup_old(slugs)
-    raise Discourse::InvalidParameters.new(:slugs) if !slugs.is_a?(Array)
-
-    all_slugs = []
-    tag_slugs = []
-
-    slugs[0..HashtagAutocompleteService::HASHTAGS_PER_REQUEST].each do |slug|
-      if slug.end_with?(PrettyText::Helpers::TAG_HASHTAG_POSTFIX)
-        tag_slugs << slug.chomp(PrettyText::Helpers::TAG_HASHTAG_POSTFIX)
-      else
-        all_slugs << slug
-      end
-    end
-
-    # Try to resolve hashtags as categories first
-    category_slugs_and_ids =
-      all_slugs.map { |slug| [slug, Category.query_from_hashtag_slug(slug)&.id] }.to_h
-    category_ids_and_urls =
-      Category
-        .secured(guardian)
-        .select(:id, :slug, :parent_category_id) # fields required for generating category URL
-        .where(id: category_slugs_and_ids.values)
-        .map { |c| [c.id, c.url] }
-        .to_h
-    categories_hashtags = {}
-    category_slugs_and_ids.each do |slug, id|
-      if category_url = category_ids_and_urls[id]
-        categories_hashtags[slug] = category_url
-      end
-    end
-
-    # Resolve remaining hashtags as tags
-    tag_hashtags = {}
-    if SiteSetting.tagging_enabled
-      tag_slugs += (all_slugs - categories_hashtags.keys)
-      DiscourseTagging
-        .filter_visible(Tag.where_name(tag_slugs), guardian)
-        .each { |tag| tag_hashtags[tag.name] = tag.full_url }
-    end
-
-    { categories: categories_hashtags, tags: tag_hashtags }
   end
 
   private

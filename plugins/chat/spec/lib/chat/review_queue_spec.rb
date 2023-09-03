@@ -3,16 +3,16 @@
 require "rails_helper"
 
 describe Chat::ReviewQueue do
+  subject(:queue) { described_class.new }
+
   fab!(:message_poster) { Fabricate(:user) }
   fab!(:flagger) { Fabricate(:user) }
   fab!(:chat_channel) { Fabricate(:category_channel) }
   fab!(:message) { Fabricate(:chat_message, user: message_poster, chat_channel: chat_channel) }
-
   fab!(:admin) { Fabricate(:admin) }
+
   let(:guardian) { Guardian.new(flagger) }
   let(:admin_guardian) { Guardian.new(admin) }
-
-  subject(:queue) { described_class.new }
 
   before do
     chat_channel.add(message_poster)
@@ -184,6 +184,13 @@ describe Chat::ReviewQueue do
         expect(pm_topic.title).to eq("Your chat message in \"#{chat_channel.title(message.user)}\"")
       end
 
+      it "doesn't create a reviewable" do
+        queue.flag_message(message, guardian, ReviewableScore.types[:notify_user])
+
+        reviewable = Chat::ReviewableMessage.find_by(target: message)
+        expect(reviewable).to be_nil
+      end
+
       it "doesn't create a PM if there is no message" do
         queue.flag_message(message, guardian, ReviewableScore.types[:notify_user])
 
@@ -237,6 +244,13 @@ describe Chat::ReviewQueue do
         expect(pm_topic.title).to eq(
           "A chat message in \"#{chat_channel.title(message.user)}\" requires staff attention",
         )
+      end
+
+      it "creates a reviewable" do
+        queue.flag_message(message, guardian, ReviewableScore.types[:notify_moderators])
+
+        reviewable = Chat::ReviewableMessage.find_by(target: message)
+        expect(reviewable).to be_present
       end
 
       it "ignores the is_warning flag when notifying moderators" do

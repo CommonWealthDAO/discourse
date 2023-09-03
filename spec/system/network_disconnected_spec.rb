@@ -1,49 +1,27 @@
 # frozen_string_literal: true
 
 RSpec.describe "Network Disconnected", type: :system do
-  fab!(:current_user) { Fabricate(:user) }
+  let(:cdp) { PageObjects::CDP.new }
 
-  before { skip(<<~TEXT) }
-    This group of tests is flaky and needs to be fixed. Example of error:
-
-    Failures:
-
-     1) Network Disconnected Doesn't show the offline indicator when the site setting isn't present
-     Failure/Error: expect(page).to have_css("html.message-bus-offline")
-       expected to find css "html.message-bus-offline" but there were no matches
+  it "NetworkConnectivity service adds class to DOM and displays offline indicator" do
+    skip(<<~TEXT) if ENV["CI"]
+      In CI this test will randomly flake - timing issue with the offline indicator
+      not being rendered soon enough after network conditions change
     TEXT
 
-  def with_network_disconnected
-    page.driver.browser.network_conditions = { offline: true }
-    yield
-    page.driver.browser.network_conditions = { offline: false }
-  end
-
-  it "Message bus connectivity service adds class to DOM and displays offline indicator" do
     SiteSetting.enable_offline_indicator = true
 
     visit("/c")
 
-    expect(page).to have_no_css("html.message-bus-offline")
+    expect(page).to have_no_css("html.network-disconnected")
     expect(page).to have_no_css(".offline-indicator")
 
-    with_network_disconnected do
+    cdp.with_network_disconnected do
       # Message bus connectivity services adds the disconnected class to the DOM
-      expect(page).to have_css("html.message-bus-offline")
+      expect(page).to have_css("html.network-disconnected")
 
       # Offline indicator is rendered
       expect(page).to have_css(".offline-indicator")
-    end
-  end
-
-  it "Doesn't show the offline indicator when the site setting isn't present" do
-    SiteSetting.enable_offline_indicator = false
-
-    visit("/c")
-
-    with_network_disconnected do
-      expect(page).to have_css("html.message-bus-offline")
-      expect(page).not_to have_css(".offline-indicator")
     end
   end
 end

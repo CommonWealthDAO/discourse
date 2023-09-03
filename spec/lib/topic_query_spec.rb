@@ -998,6 +998,13 @@ RSpec.describe TopicQuery do
         expect(topic_ids - [topic_category.id]).to eq([topic_in_cat1.id, topic_in_cat2.id])
       end
 
+      it "uses the category's default sort order when filter is passed as a string" do
+        category.update!(sort_order: "created", sort_ascending: true)
+        topic_ids =
+          TopicQuery.new(user, category: category.id, filter: "latest").list_latest.topics.map(&:id)
+        expect(topic_ids - [topic_category.id]).to eq([topic_in_cat1.id, topic_in_cat2.id])
+      end
+
       it "should apply default sort order to latest and unseen filters only" do
         category.update!(sort_order: "created", sort_ascending: true)
 
@@ -1366,11 +1373,11 @@ RSpec.describe TopicQuery do
   end
 
   describe "#list_suggested_for" do
+    use_redis_snapshotting
+
     def clear_cache!
       Discourse.redis.keys("random_topic_cache*").each { |k| Discourse.redis.del k }
     end
-
-    before { clear_cache! }
 
     context "when anonymous" do
       let(:topic) { Fabricate(:topic) }
@@ -2090,6 +2097,88 @@ RSpec.describe TopicQuery do
       DiscoursePluginRegistry.clear_modifiers!
 
       expect(original_topic_query.list_latest.topics.map(&:id)).to eq([topic2, topic1].map(&:id))
+    end
+  end
+
+  describe "precedence of categories and tag setting" do
+    fab!(:watched_category) do
+      Fabricate(:category).tap do |category|
+        CategoryUser.create!(
+          user: user,
+          category: category,
+          notification_level: CategoryUser.notification_levels[:watching],
+        )
+      end
+    end
+    fab!(:muted_category) do
+      Fabricate(:category).tap do |category|
+        CategoryUser.create!(
+          user: user,
+          category: category,
+          notification_level: CategoryUser.notification_levels[:muted],
+        )
+      end
+    end
+    fab!(:watched_tag) do
+      Fabricate(:tag).tap do |tag|
+        TagUser.create!(
+          user: user,
+          tag: tag,
+          notification_level: TagUser.notification_levels[:watching],
+        )
+      end
+    end
+    fab!(:muted_tag) do
+      Fabricate(:tag).tap do |tag|
+        TagUser.create!(
+          user: user,
+          tag: tag,
+          notification_level: TagUser.notification_levels[:muted],
+        )
+      end
+    end
+    fab!(:topic) { Fabricate(:topic) }
+    fab!(:topic_in_watched_category_and_muted_tag) do
+      Fabricate(:topic, category: watched_category, tags: [muted_tag])
+    end
+    fab!(:topic_in_muted_category_and_watched_tag) do
+      Fabricate(:topic, category: muted_category, tags: [watched_tag])
+    end
+    fab!(:topic_in_watched_and_muted_tag) { Fabricate(:topic, tags: [watched_tag, muted_tag]) }
+    fab!(:topic_in_muted_category) { Fabricate(:topic, category: muted_category) }
+    fab!(:topic_in_muted_tag) { Fabricate(:topic, tags: [muted_tag]) }
+
+    context "when enabled" do
+      it "returns topics even if category or tag is muted but another tag or category is watched" do
+        SiteSetting.watched_precedence_over_muted = true
+        query = TopicQuery.new(user).list_latest
+        expect(query.topics.map(&:id)).to contain_exactly(
+          topic.id,
+          topic_in_watched_category_and_muted_tag.id,
+          topic_in_muted_category_and_watched_tag.id,
+        )
+      end
+    end
+
+    context "when disabled" do
+      it "returns topics without muted category or tag" do
+        SiteSetting.watched_precedence_over_muted = false
+        query = TopicQuery.new(user).list_latest
+        expect(query.topics.map(&:id)).to contain_exactly(topic.id)
+      end
+    end
+
+    context "when disabled but overridden by user" do
+      it "returns topics even if category or tag is muted but another tag or category is watched" do
+        SiteSetting.watched_precedence_over_muted = false
+        user.user_option.update!(watched_precedence_over_muted: true)
+        query = TopicQuery.new(user).list_latest
+        expect(query.topics.map(&:id)).to contain_exactly(
+          topic.id,
+          topic_in_watched_category_and_muted_tag.id,
+          topic_in_muted_category_and_watched_tag.id,
+        )
+      end
     end
   end
 end

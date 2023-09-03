@@ -4,6 +4,10 @@
 # results when looking up a category slug via markdown or searching for
 # categories via the # autocomplete character.
 class CategoryHashtagDataSource
+  def self.enabled?
+    true
+  end
+
   def self.icon
     "folder"
   end
@@ -23,12 +27,7 @@ class CategoryHashtagDataSource
 
       # Single-level category heirarchy should be enough to distinguish between
       # categories here.
-      item.ref =
-        if category.parent_category_id
-          "#{category.parent_category.slug}:#{category.slug}"
-        else
-          category.slug
-        end
+      item.ref = category.slug_ref
     end
   end
 

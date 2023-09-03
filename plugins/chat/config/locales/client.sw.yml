@@ -6,6 +6,11 @@
 
 sw:
   js:
+    admin:
+      site_settings:
+        chat_separate_sidebar_mode:
+          always: "Mara kwa mara"
+          never: "Kamwe"
     chat:
       create: "Tengeneza"
       cancel: "Ghairi"
@@ -72,6 +77,8 @@ sw:
       settings:
         follow: "Jiunge"
         followed: "Alijiunga"
+        threading_enabled: "Imeruhusiwa"
+        threading_disabled: "Imezuiwa"
         notifications: "Taarifa"
         preview: "Kihakiki"
         save: "Hifadhi"
@@ -106,6 +113,11 @@ sw:
           other: "%{count} majibu"
         settings: "Mipangilio"
         last_reply: "jibu la mwisho"
+        notifications:
+          regular:
+            title: "Kawaida"
+          tracking:
+            title: "Fuatilia"
       draft_channel_screen:
         header: "Ujumbe Mpya"
         cancel: "Ghairi"

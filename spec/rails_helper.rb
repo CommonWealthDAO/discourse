@@ -23,6 +23,7 @@ require "fabrication"
 require "mocha/api"
 require "certified"
 require "webmock/rspec"
+require "minio_runner"
 
 class RspecErrorTracker
   def self.last_exception=(ex)
@@ -59,7 +60,6 @@ require "shoulda-matchers"
 require "sidekiq/testing"
 require "test_prof/recipes/rspec/let_it_be"
 require "test_prof/before_all/adapters/active_record"
-require "webdrivers"
 require "selenium-webdriver"
 require "capybara/rails"
 
@@ -76,7 +76,9 @@ end
 # Requires supporting ruby files with custom matchers and macros, etc,
 # in spec/support/ and its subdirectories.
 Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
+Dir[Rails.root.join("spec/requests/examples/*.rb")].each { |f| require f }
 
+Dir[Rails.root.join("spec/system/helpers/**/*.rb")].each { |f| require f }
 Dir[Rails.root.join("spec/system/page_objects/**/base.rb")].each { |f| require f }
 Dir[Rails.root.join("spec/system/page_objects/**/*.rb")].each { |f| require f }
 
@@ -146,10 +148,17 @@ module TestSetup
     BadgeGranter.disable_queue
 
     OmniAuth.config.test_mode = false
+
+    Middleware::AnonymousCache.disable_anon_cache
   end
 end
 
-TestProf::BeforeAll.configure { |config| config.before(:begin) { TestSetup.test_setup } }
+TestProf::BeforeAll.configure do |config|
+  config.after(:begin) do
+    DB.test_transaction = ActiveRecord::Base.connection.current_transaction
+    TestSetup.test_setup
+  end
+end
 
 if ENV["PREFABRICATION"] == "0"
   module Prefabrication
@@ -174,7 +183,7 @@ RSpec.configure do |config|
   config.include RSpecHtmlMatchers
   config.include IntegrationHelpers, type: :request
   config.include SystemHelpers, type: :system
-  config.include WebauthnIntegrationHelpers
+  config.include DiscourseWebauthnIntegrationHelpers
   config.include SiteSettingsHelpers
   config.include SidekiqHelpers
   config.include UploadsHelpers
@@ -222,6 +231,21 @@ RSpec.configure do |config|
       raise "There are pending migrations, run RAILS_ENV=test bin/rake db:migrate"
     end
 
+    # Use a file system lock to get `selenium-manager` to download the `chromedriver` binary that is requried for
+    # system tests to support running system tests in multiple processes. If we don't download the `chromedriver` binary
+    # before running system tests in multiple processes, each process will end up calling the `selenium-manager` binary
+    # to download the `chromedriver` binary at the same time but the problem is that the binary is being downloaded to
+    # the same location and this can interfere with the running tests in another process.
+    #
+    # The long term fix here is to get `selenium-manager` to download the `chromedriver` binary to a unique path for each
+    # process but the `--cache-path` option for `selenium-manager` is currently not supported in `selenium-webdriver`.
+    if !File.directory?("~/.cache/selenium")
+      File.open("#{Rails.root}/tmp/chrome_driver_flock", "w") do |file|
+        file.flock(File::LOCK_EX)
+        `#{Selenium::WebDriver::SeleniumManager.send(:binary)} --browser chrome`
+      end
+    end
+
     Sidekiq.error_handlers.clear
 
     # Ugly, but needed until we have a user creator
@@ -244,7 +268,34 @@ RSpec.configure do |config|
 
     SiteSetting.provider = TestLocalProcessProvider.new
 
-    WebMock.disable_net_connect!(allow_localhost: true, allow: [Webdrivers::Chromedriver.base_url])
+    # Used for S3 system specs, see also setup_s3_system_test.
+    MinioRunner.config do |minio_runner_config|
+      minio_runner_config.minio_domain = ENV["MINIO_RUNNER_MINIO_DOMAIN"] || "minio.local"
+      minio_runner_config.buckets =
+        (
+          if ENV["MINIO_RUNNER_BUCKETS"]
+            ENV["MINIO_RUNNER_BUCKETS"].split(",")
+          else
+            ["discoursetest"]
+          end
+        )
+      minio_runner_config.public_buckets =
+        (
+          if ENV["MINIO_RUNNER_PUBLIC_BUCKETS"]
+            ENV["MINIO_RUNNER_PUBLIC_BUCKETS"].split(",")
+          else
+            ["discoursetest"]
+          end
+        )
+    end
+
+    WebMock.disable_net_connect!(
+      allow_localhost: true,
+      allow: [
+        *MinioRunner.config.minio_urls,
+        URI(MinioRunner::MinioBinary.platform_binary_url).host,
+      ],
+    )
 
     if ENV["CAPYBARA_DEFAULT_MAX_WAIT_TIME"].present?
       Capybara.default_max_wait_time = ENV["CAPYBARA_DEFAULT_MAX_WAIT_TIME"].to_i
@@ -272,6 +323,52 @@ RSpec.configure do |config|
 
     Capybara::Session.class_eval { prepend IgnoreUnicornCapturedErrors }
 
+    module CapybaraTimeoutExtension
+      class CapybaraTimedOut < StandardError
+        attr_reader :cause
+
+        def initialize(wait_time, cause)
+          @cause = cause
+          super "This spec passed, but capybara waited for the full wait duration (#{wait_time}s) at least once. " +
+                  "This will slow down the test suite. " +
+                  "Beware of negating the result of selenium's RSpec matchers."
+        end
+      end
+
+      def synchronize(seconds = nil, errors: nil)
+        return super if session.synchronized # Nested synchronize. We only want our logic on the outermost call.
+        begin
+          super
+        rescue StandardError => e
+          seconds = session_options.default_max_wait_time if [nil, true].include? seconds
+          if catch_error?(e, errors) && seconds != 0
+            # This error will only have been raised if the timer expired
+            timeout_error = CapybaraTimedOut.new(seconds, e)
+            if RSpec.current_example
+              # Store timeout for later, we'll only raise it if the test otherwise passes
+              RSpec.current_example.metadata[:_capybara_timeout_exception] ||= timeout_error
+              raise # re-raise original error
+            else
+              # Outside an example... maybe a `before(:all)` hook?
+              raise timeout_error
+            end
+          else
+            raise
+          end
+        end
+      end
+    end
+
+    Capybara::Node::Base.prepend(CapybaraTimeoutExtension)
+
+    config.after(:each, type: :system) do |example|
+      # If test passed, but we had a capybara finder timeout, raise it now
+      if example.exception.nil? &&
+           (capybara_timout_error = example.metadata[:_capybara_timeout_exception])
+        raise capybara_timout_error
+      end
+    end
+
     # possible values: OFF, SEVERE, WARNING, INFO, DEBUG, ALL
     browser_log_level = ENV["SELENIUM_BROWSER_LOG_LEVEL"] || "SEVERE"
 
@@ -281,6 +378,7 @@ RSpec.configure do |config|
         .tap do |options|
           apply_base_chrome_options(options)
           options.add_argument("--window-size=1400,1400")
+          options.add_preference("download.default_directory", Downloads::FOLDER)
         end
 
     Capybara.register_driver :selenium_chrome do |app|
@@ -298,6 +396,9 @@ RSpec.configure do |config|
         .new(logging_prefs: { "browser" => browser_log_level, "driver" => "ALL" })
         .tap do |options|
           options.add_emulation(device_name: "iPhone 12 Pro")
+          options.add_argument(
+            '--user-agent="--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/36.0  Mobile/15E148 Safari/605.1.15"',
+          )
           apply_base_chrome_options(options)
         end
 
@@ -315,6 +416,9 @@ RSpec.configure do |config|
     else
       DB.exec "SELECT setval('uploads_id_seq', 1)"
     end
+
+    # Prevents 500 errors for site setting URLs pointing to test.localhost in system specs.
+    SiteIconManager.clear_cache!
   end
 
   class TestLocalProcessProvider < SiteSettings::LocalProcessProvider
@@ -339,17 +443,13 @@ RSpec.configure do |config|
 
     unfreeze_time
     ActionMailer::Base.deliveries.clear
-
-    if ActiveRecord::Base.connection_pool.stat[:busy] > 1
-      raise ActiveRecord::Base.connection_pool.stat.inspect
-    end
   end
 
   config.after(:suite) do
     FileUtils.remove_dir(concurrency_safe_tmp_dir, true) if SpecSecureRandom.value
+    Downloads.clear
+    MinioRunner.stop
   end
-
-  config.before :each, &TestSetup.method(:test_setup)
 
   config.around :each do |example|
     before_event_count = DiscourseEvent.events.values.sum(&:count)
@@ -385,10 +485,10 @@ RSpec.configure do |config|
   config.before :each do
     # This allows DB.transaction_open? to work in tests. See lib/mini_sql_multisite_connection.rb
     DB.test_transaction = ActiveRecord::Base.connection.current_transaction
+    TestSetup.test_setup
   end
 
   # Match the request hostname to the value in `database.yml`
-  config.before(:all, type: %i[request multisite system]) { host! "test.localhost" }
   config.before(:each, type: %i[request multisite system]) { host! "test.localhost" }
 
   last_driven_by = nil
@@ -434,7 +534,18 @@ RSpec.configure do |config|
           if logs.empty?
             lines << "(no logs)"
           else
-            logs.each { |log| lines << log.message }
+            logs.each do |log|
+              # System specs are full of image load errors that are just noise, no need
+              # to log this.
+              if (
+                   log.message.include?("Failed to load resource: net::ERR_CONNECTION_REFUSED") &&
+                     (log.message.include?("uploads") || log.message.include?("images"))
+                 ) || log.message.include?("favicon.ico")
+                next
+              end
+
+              lines << log.message
+            end
           end
           lines << "~~~~~ END JS LOGS ~~~~~"
         end
@@ -442,6 +553,8 @@ RSpec.configure do |config|
     end
 
     page.execute_script("if (typeof MessageBus !== 'undefined') { MessageBus.stop(); }")
+    MessageBus.backend_instance.reset! # Clears all existing backlog from memory backend
+    Scheduler::Defer.do_all_work # Process everything that was added to the defer queue when running the test
     Capybara.reset_sessions!
     Capybara.use_default_driver
     Discourse.redis.flushdb
@@ -660,7 +773,22 @@ def apply_base_chrome_options(options)
   options.add_argument("--no-sandbox")
   options.add_argument("--disable-dev-shm-usage")
   options.add_argument("--mute-audio")
-  options.add_argument("--force-device-scale-factor=1")
+
+  # A file that contains just a list of paths like so:
+  #
+  # /home/me/.config/google-chrome/Default/Extensions/bmdblncegkenkacieihfhpjfppoconhi/4.9.1_0
+  #
+  # These paths can be found for each individual extension via the
+  # chrome://extensions/ page.
+  if ENV["CHROME_LOAD_EXTENSIONS_MANIFEST"].present?
+    File
+      .readlines(ENV["CHROME_LOAD_EXTENSIONS_MANIFEST"])
+      .each { |path| options.add_argument("--load-extension=#{path}") }
+  end
+
+  if ENV["CHROME_DISABLE_FORCE_DEVICE_SCALE_FACTOR"].blank?
+    options.add_argument("--force-device-scale-factor=1")
+  end
 end
 
 class SpecSecureRandom

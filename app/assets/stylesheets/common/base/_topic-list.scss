@@ -263,17 +263,30 @@
     .discourse-tag.box {
       margin-right: 0.25em;
     }
-    .participant-groups {
-      margin-left: 0.5em;
-      font-weight: normal;
-      font-size: var(--font-down-1);
 
-      > a {
-        color: var(--primary-medium);
-        border: solid 1px var(--primary-low);
-        padding: 0 0.3em 0.07em;
-        border-radius: 0.6em;
-        margin-right: 0.25em;
+    .participant-group-wrapper {
+      display: flex;
+      margin-left: 0.5em;
+
+      .participant-group {
+        padding: 0 5px;
+        border: 1px solid var(--primary-low);
+        border-radius: 0.25em;
+        min-width: 3em;
+        @include ellipsis;
+
+        > a {
+          display: flex;
+          align-items: center;
+          height: 1.25em;
+          color: var(--primary-high);
+          .mobile-view & {
+            height: 1.1em;
+          }
+          .d-icon {
+            margin-right: 5px;
+          }
+        }
       }
     }
   }
@@ -315,6 +328,9 @@
   .num.activity {
     a {
       padding: 15px 5px;
+      span.relative-date {
+        pointer-events: none;
+      }
     }
   }
 }
@@ -366,18 +382,6 @@
     color: var(--danger-medium);
     font-size: var(--font-0);
     cursor: default;
-  }
-
-  .show-more {
-    width: 100%;
-    z-index: z("base");
-    position: absolute;
-    top: 0;
-
-    .alert {
-      margin: 0;
-      padding: 1.1em 2em 1.1em 0.65em;
-    }
   }
 }
 

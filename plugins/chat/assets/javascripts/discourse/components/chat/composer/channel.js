@@ -8,22 +8,35 @@ export default class ChatComposerChannel extends ChatComposer {
   @service("chat-channel-composer") composer;
   @service("chat-channel-pane") pane;
   @service chatDraftsManager;
+  @service currentUser;
 
   context = "channel";
 
   composerId = "channel-composer";
+
+  get shouldRenderReplyingIndicator() {
+    return this.args.channel;
+  }
 
   get presenceChannelName() {
     const channel = this.args.channel;
     return `/chat-reply/${channel.id}`;
   }
 
+  get disabled() {
+    return (
+      !this.chat.userCanInteractWithChat ||
+      !this.args.channel.canModifyMessages(this.currentUser)
+    );
+  }
+
+  @action
+  reset() {
+    this.composer.reset(this.args.channel);
+  }
+
   @action
   persistDraft() {
-    if (this.args.channel?.isDraft) {
-      return;
-    }
-
     this.chatDraftsManager.add(this.currentMessage);
 
     this._persistHandler = discourseDebounce(
@@ -49,7 +62,7 @@ export default class ChatComposerChannel extends ChatComposer {
   }
 
   lastUserMessage(user) {
-    return this.args.channel.lastUserMessage(user);
+    return this.args.channel.messagesManager.findLastUserMessage(user);
   }
 
   get placeholder() {
@@ -59,22 +72,22 @@ export default class ChatComposerChannel extends ChatComposer {
       );
     }
 
-    if (this.args.channel.isDraft) {
-      if (this.args.channel?.chatable?.users?.length) {
-        return I18n.t("chat.placeholder_start_conversation_users", {
-          commaSeparatedUsernames: this.args.channel.chatable.users
-            .mapBy("username")
-            .join(I18n.t("word_connector.comma")),
-        });
-      } else {
-        return I18n.t("chat.placeholder_start_conversation");
-      }
-    }
-
     if (!this.chat.userCanInteractWithChat) {
       return I18n.t("chat.placeholder_silenced");
     } else {
       return this.#messageRecipients(this.args.channel);
+    }
+  }
+
+  handleEscape(event) {
+    event.stopPropagation();
+
+    if (this.currentMessage?.inReplyTo) {
+      this.reset();
+    } else if (this.currentMessage?.editing) {
+      this.composer.cancel(this.args.channel);
+    } else {
+      event.target.blur();
     }
   }
 

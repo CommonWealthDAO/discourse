@@ -1,32 +1,41 @@
 import { inject as service } from "@ember/service";
+import { tracked } from "@glimmer/tracking";
+import { TrackedArray } from "@ember-compat/tracked-built-ins";
 import ChatPaneBaseSubscriptionsManager from "./chat-pane-base-subscriptions-manager";
+import ChatThreadPreview from "../models/chat-thread-preview";
+import ChatNotice from "../models/chat-notice";
 
 export default class ChatChannelPaneSubscriptionsManager extends ChatPaneBaseSubscriptionsManager {
   @service chat;
   @service currentUser;
 
-  get messageBusChannel() {
-    return `/chat/${this.model.id}`;
+  @tracked notices = new TrackedArray();
+
+  beforeSubscribe(model) {
+    this.messageBusChannel = `/chat/${model.id}`;
+    this.messageBusLastId = model.channelMessageBusLastId;
   }
 
-  get messageBusLastId() {
-    return this.model.channelMessageBusLastId;
+  afterMessage(model, _, __, lastMessageBusId) {
+    model.channelMessageBusLastId = lastMessageBusId;
   }
 
-  // TODO (martin) Implement this for the channel, since it involves a bunch
-  // of scrolling and pane-specific logic. Will leave the existing sub inside
-  // ChatLivePane for now.
   handleSentMessage() {
     return;
   }
 
+  handleNotice(data) {
+    this.notices.pushObject(ChatNotice.create(data));
+  }
+
+  clearNotice(notice) {
+    this.notices.removeObject(notice);
+  }
+
   handleThreadOriginalMessageUpdate(data) {
     const message = this.messagesManager.findMessage(data.original_message_id);
-    if (message) {
-      if (data.replies_count) {
-        message.threadReplyCount = data.replies_count;
-      }
-      message.threadTitle = data.title;
+    if (message?.thread) {
+      message.thread.preview = ChatThreadPreview.create(data.preview);
     }
   }
 

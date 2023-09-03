@@ -51,6 +51,7 @@ class ApplicationController < ActionController::Base
   after_action :add_noindex_header,
                if: -> { is_feed_request? || !SiteSetting.allow_index_in_robots_txt }
   after_action :add_noindex_header_to_non_canonical, if: :spa_boot_request?
+  after_action :set_cross_origin_opener_policy_header, if: :spa_boot_request?
   around_action :link_preload, if: -> { spa_boot_request? && GlobalSetting.preload_link_header }
 
   HONEYPOT_KEY ||= "HONEYPOT_KEY"
@@ -348,6 +349,8 @@ class ApplicationController < ActionController::Base
     before_action do
       if plugin = Discourse.plugins_by_name[plugin_name]
         raise PluginDisabled.new if !plugin.enabled?
+      elsif Rails.env.test?
+        raise "Required plugin '#{plugin_name}' not found. The string passed to requires_plugin should match the plugin's name at the top of plugin.rb"
       else
         Rails.logger.warn("Required plugin '#{plugin_name}' not found")
       end
@@ -661,6 +664,9 @@ class ApplicationController < ActionController::Base
 
     store_preloaded("topicTrackingStates", MultiJson.dump(hash[:data]))
     store_preloaded("topicTrackingStateMeta", MultiJson.dump(hash[:meta]))
+
+    # This is used in the wizard so we can preload fonts using the FontMap JS API.
+    store_preloaded("fontMap", MultiJson.dump(load_font_map)) if current_user.admin?
   end
 
   def custom_html_json
@@ -980,6 +986,12 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  def set_cross_origin_opener_policy_header
+    if SiteSetting.cross_origin_opener_policy_header != "unsafe-none"
+      response.headers["Cross-Origin-Opener-Policy"] = SiteSetting.cross_origin_opener_policy_header
+    end
+  end
+
   protected
 
   def honeypot_value
@@ -1064,5 +1076,48 @@ class ApplicationController < ActionController::Base
 
   def spa_boot_request?
     request.get? && !(request.format && request.format.json?) && !request.xhr?
+  end
+
+  def load_font_map
+    DiscourseFonts
+      .fonts
+      .each_with_object({}) do |font, font_map|
+        next if !font[:variants]
+        font_map[font[:key]] = font[:variants].map do |v|
+          {
+            url: "#{Discourse.base_url}/fonts/#{v[:filename]}?v=#{DiscourseFonts::VERSION}",
+            weight: v[:weight],
+          }
+        end
+      end
+  end
+
+  def fetch_limit_from_params(params: self.params, default:, max:)
+    fetch_int_from_params(:limit, params: params, default: default, max: max)
+  end
+
+  def fetch_int_from_params(key, params: self.params, default:, min: 0, max: nil)
+    key = key.to_sym
+
+    if default.present? && ((max.present? && default > max) || (min.present? && default < min))
+      raise "default #{key.inspect} is not between #{min.inspect} and #{max.inspect}"
+    end
+
+    if params.has_key?(key)
+      value =
+        begin
+          Integer(params[key])
+        rescue ArgumentError
+          raise Discourse::InvalidParameters.new(key)
+        end
+
+      if (min.present? && value < min) || (max.present? && value > max)
+        raise Discourse::InvalidParameters.new(key)
+      end
+
+      value
+    else
+      default
+    end
   end
 end

@@ -18,7 +18,7 @@ pt:
       no_day: "%B %Y"
   date:
     month_names:
-    - null
+    -
     - Janeiro
     - Fevereiro
     - Março
@@ -276,7 +276,6 @@ pt:
     more_replies:
       one: "mais %{count} resposta"
       other: "mais %{count} respostas"
-    loading: "A carregar Discussão..."
     permalink: "Hiperligação Permanente"
     imported_from: "Este é um tópico de discussão de acompanhamento para a entrada original em %{link}"
     in_reply_to: "▶ %{username}"
@@ -1052,7 +1051,6 @@ pt:
     top_topics_formula_least_likes_per_post_multiplier: "valor do multiplicador (n) de menos gostos por publicação na fórmula dos melhores tópicos: `log(views_count) * 2 + op_likes_count * 0.5 + LEAST(likes_count / posts_count, (n)) + 10 + log(posts_count)`"
     rate_limit_create_topic: "Após a criação de um tópico, os utilizadores devem esperar (n) segundos antes de criarem um novo tópico."
     rate_limit_create_post: "Após a publicação, os utilizadores devem esperar (n) segundos antes de criarem outra mensagem."
-    rate_limit_new_user_create_topic: "Após a criação de um tópico, os novos utilizadores devem esperar (n) segundos antes de criarem um novo tópico."
     rate_limit_new_user_create_post: "Após a publicação, os novos utilizadores devem esperar (n) segundos antes de criarem novas mensagens."
     max_likes_per_day: "Número máximo de gostos por utilizador por dia."
     max_flags_per_day: "Número máximo de sinalizações por utilizador por dia."
@@ -1224,7 +1222,6 @@ pt:
     automatically_unpin_topics: "Desafixar tópicos automaticamente quando um utilizador chega ao final."
     read_time_word_count: "Contagem de palavras por minuto para calcular tempo estimado de leitura."
     share_anonymized_statistics: "Partilhe estatísticas de utilização anonimizadas."
-    max_prints_per_hour_per_user: "Número máximo de impressões de páginas /print, por hora, por utlizador. (coloque 0 para desactivar)"
     full_name_required: "O nome completo é um campo obrigatório no perfil de utilizador."
     enable_names: "Mostrar o nome completo do utilizador no seu perfil, cartão de utilizador, e emails. Desativar para esconder o nome completo em todos os locais."
     display_name_on_posts: "Mostrar o nome completo de um utilizador nas suas mensagens em adição ao seu @nome-de-utilizador."
@@ -1236,7 +1233,6 @@ pt:
     allowed_href_schemes: "Esquemas permitidos nos links além de http e https."
     embed_post_limit: "Número máximo de mensagens a serem incorporadas."
     embed_username_required: "O nome de utilizador para a criação de tópico é necessário."
-    show_create_topics_notice: "Se o sítio tem menos de 5 tópicos públicos, mostrar um aviso pedindo aos administradores a criação de mais tópicos."
     delete_drafts_older_than_n_days: "Eliminar rascunhos mais antigos que (n) days."
     slug_generation_method: "Escolha um método de geração slug. 'encoded' irá gerar sequências de caracteres com código percentual. 'none' irá desativar slug por completo."
     enable_emoji: "Ativar emoji"
@@ -1269,7 +1265,6 @@ pt:
     default_categories_tracking: "Lista de categorias que por defeito são acompanhadas."
     default_categories_muted: "Lista de categorias que por defeito são mudas."
     default_categories_watching_first_post: "Lista de categorias em que a primeira publicação em cada novo tópico será vigiada por defeito."
-    allow_user_api_keys: "Permitir geração de chaves de API de utilizador"
     allow_user_api_key_scopes: "Lista de esferas permitidas para chaves da API de utlizador"
     allowed_user_api_push_urls: "URLs permitidos para o servidor fazer push para a API de utilizador"
     tagging_enabled: "Permitir etiquetas em tópicos?"
@@ -1303,7 +1298,6 @@ pt:
       pop3_polling_password_is_empty: "Deve configurar uma 'palavra-passe de polling pop3' antes de ativar o polling POP3."
       pop3_polling_authentication_failed: "Autenticação POP3 falhada. Por favor verifique as suas credenciais pop3."
       reply_by_email_address_is_empty: "É necessário definir um email para 'resposta por endereço de email' antes de ligar a resposta por email."
-      email_polling_disabled: "Tem de ligar a consulta manual ou automática de emails via POP3 antes de ligar a resposta por email."
       user_locale_not_enabled: "Tem de ligar 'permitir definições regionais do utilizador' antes de ligar esta configuração."
       invalid_regex: "A expressão regular não é válida ou permitida."
       min_username_length_range: "Não pode definir o mínimo acima do máximo."
@@ -2149,7 +2143,6 @@ pt:
       approve:
         title: "Aprovar"
       reject_user:
-        title: "Eliminar Utilizador..."
         delete:
           title: "Eliminar Utilizador"
       reject:

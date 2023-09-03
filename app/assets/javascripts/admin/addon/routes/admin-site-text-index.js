@@ -1,18 +1,22 @@
 import Route from "@ember/routing/route";
 import { action, getProperties } from "@ember/object";
-import showModal from "discourse/lib/show-modal";
+import { inject as service } from "@ember/service";
+import ReseedModal from "admin/components/modal/reseed";
 
 export default class AdminSiteTextIndexRoute extends Route {
+  @service modal;
+
   queryParams = {
     q: { replace: true },
     overridden: { replace: true },
+    outdated: { replace: true },
     locale: { replace: true },
   };
 
   model(params) {
     return this.store.find(
       "site-text",
-      getProperties(params, "q", "overridden", "locale")
+      getProperties(params, "q", "overridden", "outdated", "locale")
     );
   }
 
@@ -22,6 +26,6 @@ export default class AdminSiteTextIndexRoute extends Route {
 
   @action
   showReseedModal() {
-    showModal("admin-reseed", { admin: true });
+    this.modal.show(ReseedModal);
   }
 }

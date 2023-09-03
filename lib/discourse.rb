@@ -597,6 +597,46 @@ module Discourse
     alias_method :base_url_no_path, :base_url_no_prefix
   end
 
+  def self.urls_cache
+    @urls_cache ||= DistributedCache.new("urls_cache")
+  end
+
+  def self.tos_url
+    if SiteSetting.tos_url.present?
+      SiteSetting.tos_url
+    else
+      urls_cache["tos"] ||= (
+        if SiteSetting.tos_topic_id > 0 && Topic.exists?(id: SiteSetting.tos_topic_id)
+          "#{Discourse.base_path}/tos"
+        else
+          :nil
+        end
+      )
+
+      urls_cache["tos"] != :nil ? urls_cache["tos"] : nil
+    end
+  end
+
+  def self.privacy_policy_url
+    if SiteSetting.privacy_policy_url.present?
+      SiteSetting.privacy_policy_url
+    else
+      urls_cache["privacy_policy"] ||= (
+        if SiteSetting.privacy_topic_id > 0 && Topic.exists?(id: SiteSetting.privacy_topic_id)
+          "#{Discourse.base_path}/privacy"
+        else
+          :nil
+        end
+      )
+
+      urls_cache["privacy_policy"] != :nil ? urls_cache["privacy_policy"] : nil
+    end
+  end
+
+  def self.clear_urls!
+    urls_cache.clear
+  end
+
   LAST_POSTGRES_READONLY_KEY = "postgres:last_readonly"
 
   READONLY_MODE_KEY_TTL ||= 60
@@ -733,14 +773,14 @@ module Discourse
   def self.received_postgres_readonly!
     time = Time.zone.now
     redis.set(LAST_POSTGRES_READONLY_KEY, time.to_i.to_s)
-    postgres_last_read_only.clear
+    postgres_last_read_only.clear(after_commit: false)
 
     time
   end
 
   def self.clear_postgres_readonly!
     redis.del(LAST_POSTGRES_READONLY_KEY)
-    postgres_last_read_only.clear
+    postgres_last_read_only.clear(after_commit: false)
   end
 
   def self.received_redis_readonly!
@@ -1101,6 +1141,7 @@ module Discourse
         Discourse.git_version
         Discourse.git_branch
         Discourse.full_version
+        Discourse.plugins.each { |p| p.commit_url }
       end,
       Thread.new do
         require "actionview_precompiler"

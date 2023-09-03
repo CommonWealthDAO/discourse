@@ -7,7 +7,6 @@ RSpec.describe "Chat | composer | shortcuts | channel", type: :system do
   let(:chat) { PageObjects::Pages::Chat.new }
   let(:channel_page) { PageObjects::Pages::ChatChannel.new }
   let(:thread_page) { PageObjects::Pages::ChatThread.new }
-  let(:key_modifier) { RUBY_PLATFORM =~ /darwin/i ? :meta : :control }
 
   before do
     chat_system_bootstrap
@@ -55,10 +54,7 @@ RSpec.describe "Chat | composer | shortcuts | channel", type: :system do
       )
     end
 
-    before do
-      SiteSetting.enable_experimental_chat_threaded_discussions = true
-      channel_1.update!(threading_enabled: true)
-    end
+    before { channel_1.update!(threading_enabled: true) }
 
     it "directs the shortcut to the focused composer" do
       chat.visit_channel(channel_1)
@@ -79,8 +75,10 @@ RSpec.describe "Chat | composer | shortcuts | channel", type: :system do
   end
 
   context "when using ArrowUp" do
-    fab!(:message_1) { Fabricate(:chat_message, chat_channel: channel_1, user: current_user) }
-    fab!(:message_2) { Fabricate(:chat_message, chat_channel: channel_1) }
+    fab!(:message_1) do
+      Fabricate(:chat_message, chat_channel: channel_1, user: current_user, use_service: true)
+    end
+    fab!(:message_2) { Fabricate(:chat_message, chat_channel: channel_1, use_service: true) }
 
     it "edits last editable message" do
       chat.visit_channel(channel_1)

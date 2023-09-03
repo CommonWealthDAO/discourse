@@ -273,15 +273,17 @@
 
     button {
       white-space: nowrap;
+    }
 
-      &.approve-post {
-        background-color: var(--success);
-        color: var(--secondary);
-      }
-      &.reject-post {
-        background-color: var(--danger);
-        color: var(--secondary);
-      }
+    .approve-post,
+    .approve-post > summary {
+      background-color: var(--success);
+      color: var(--secondary);
+    }
+    .reject-post,
+    .reject-post > summary {
+      background-color: var(--danger);
+      color: var(--secondary);
     }
 
     .reviewable-action,
@@ -495,7 +497,7 @@
       background: var(--primary-very-low);
       color: var(--primary-high);
       font-size: var(--font-down-2);
-      box-shadow: shadow("dropdown-lite");
+      box-shadow: var(--shadow-dropdown);
       margin-left: 50%;
       transform: translateX(-50%);
       border-radius: 4px;

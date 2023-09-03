@@ -9,21 +9,6 @@ te:
     short_date_no_year: "D MMM"
     short_date: "D MMM, YYYY"
     long_date: "MMMM D, YYYY h:mma"
-  date:
-    month_names:
-    - null
-    - January
-    - February
-    - March
-    - April
-    - May
-    - June
-    - July
-    - August
-    - September
-    - October
-    - November
-    - December
   title: "డిస్కోర్స్"
   topics: "విషయాలు"
   posts: "టపాలు"
@@ -101,7 +86,6 @@ te:
     more_replies:
       one: "మరో జవాబు ఉంది"
       other: "ఇంకా %{count} జవాబులు ఉన్నాయి"
-    loading: "చర్చ లోడవుతోంది"
     permalink: "శాస్వత లంకె"
     imported_from: "%{link} వద్ద మూల పద్దుకు జోడు చర్చా విషయం ఉంది."
     in_reply_to: "▶ %{username}"

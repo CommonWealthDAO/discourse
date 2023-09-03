@@ -1,36 +1,22 @@
-import { escapeExpression } from "discourse/lib/utilities";
-import { emojiUnescape } from "discourse/lib/text";
-import { until } from "discourse/lib/formatter";
+import { UserStatusMessage } from "discourse/lib/user-status-message";
 
-export function updateUserStatusOnMention(mention, status, currentUser) {
+let userStatusMessages = [];
+
+export function updateUserStatusOnMention(mention, status) {
   removeStatus(mention);
   if (status) {
-    const html = statusHtml(status, currentUser);
-    mention.insertAdjacentHTML("beforeend", html);
+    const userStatusMessage = new UserStatusMessage(status);
+    userStatusMessages.push(userStatusMessage);
+    mention.appendChild(userStatusMessage.html);
   }
 }
 
-function removeStatus(mention) {
-  mention.querySelector("img.user-status")?.remove();
-}
-
-function statusHtml(status, currentUser) {
-  const emoji = escapeExpression(`:${status.emoji}:`);
-  return emojiUnescape(emoji, {
-    class: "user-status",
-    title: statusTitle(status, currentUser),
+export function destroyUserStatusOnMentions() {
+  userStatusMessages.forEach((instance) => {
+    instance.destroy();
   });
 }
 
-function statusTitle(status, currentUser) {
-  if (!status.ends_at) {
-    return status.description;
-  }
-
-  const timezone = currentUser
-    ? currentUser.user_option?.timezone
-    : moment.tz.guess();
-
-  const until_ = until(status.ends_at, timezone, currentUser?.locale);
-  return escapeExpression(`${status.description} ${until_}`);
+function removeStatus(mention) {
+  mention.querySelector("span.user-status-message")?.remove();
 }

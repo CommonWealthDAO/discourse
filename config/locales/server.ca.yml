@@ -18,7 +18,7 @@ ca:
       no_day: "%B %Y"
   date:
     month_names:
-    - null
+    -
     - gener
     - febrer
     - març
@@ -226,7 +226,6 @@ ca:
     more_replies:
       one: "%{count} resposta més"
       other: "%{count} respostes més "
-    loading: "Carregant la discussió..."
     permalink: "Enllaç permanent "
     imported_from: "Aquesta discussió és derivada de l'entrada original de %{link}"
     in_reply_to: "▶ %{username}"
@@ -442,7 +441,6 @@ ca:
   meta_category_description: "Discussió sobre aquest lloc web, la seva organització, com funciona i com podem millorar-lo."
   staff_category_name: "Equip responsable"
   staff_category_description: "Categoria privada per a converses de l'equip responsable. Els temes només seran visibles per a discussions entre moderadors i administradors."
-  admin_quick_start_title: "LLEGIU-ME PRIMER DE TOT: Guia ràpida d'inici per a administradors"
   category:
     topic_prefix: "Quant a la categoria %{category} "
     replace_paragraph: "(Substituïu aquest primer paràgraf per una descripció breu de la vostra nova categoria. Aquesta guia apareixerà en l'àrea de selecció de categories, de manera que intenteu mantenir-la per sota dels 200 caràcters.)"
@@ -1227,8 +1225,6 @@ ca:
     allowed_iframes: "Llista dels prefixos de domini en el codi d'iframe que Discourse pot permetre de manera segura en les publicacions"
     allowed_crawler_user_agents: "Agents d'usuari dels rastrejadors web als quals es permet accedir al lloc web. ATENCIÓ! ESTABLIR AIXÒ IMPEDIRÀ ACTUAR A TOTS ELS RASTREJADORS NO LLISTATS AQUÍ!"
     slow_down_crawler_rate: "Si s'especifica slow_down_crawler_user_agents, aquesta ràtio s'aplicarà a tots els rastrejadors (nombre de segons de retard entre les sol·licituds)."
-    content_security_policy: "Activa Content-Security-Policy (CSP)"
-    content_security_policy_report_only: "Activa Content-Security-Policy-Report-Only"
     content_security_policy_collect_reports: "Habilita la recol·lecció de reports de violació de CSP en /csp_reports"
     invalidate_inactive_admin_email_after_days: "Els comptes d'administrador que no hagin visitat el lloc web en aquest nombre de dies hauran de tornar a validar la seva adreça de correu abans d'iniciar la sessió. 0 per a desactivar-ho."
     top_menu: "Determineu quins elements apareixen en la navegació de la pàgina principal i en quin ordre. Per exemple, latest|new|unread|categories|top|read|posted|bookmarks"
@@ -1305,7 +1301,6 @@ ca:
     enable_safe_mode: "Permet als usuaris entrar en el mode segur per a depurar els connectors (plugins)."
     rate_limit_create_topic: "Després de crear un tema, els usuaris han d'esperar (n) segons abans de crear-ne un altre."
     rate_limit_create_post: "Després de fer una publicació, els usuaris han d'esperar (n) segons abans de fer-ne una altra."
-    rate_limit_new_user_create_topic: "Després de crear un tema, els usuaris nous han d'esperar (n) segons abans de crear-ne un altre"
     rate_limit_new_user_create_post: "Després de fer una publicació, els usuaris nous han d'esperar (n) segons abans de crear-ne una altra."
     max_likes_per_day: "Nombre màxim de 'M'agrada' per usuari i dia."
     max_flags_per_day: "Nombre màxim de banderes per usuari i dia."
@@ -1371,7 +1366,6 @@ ca:
     tl3_requires_likes_given: "Nombre mínim de 'M'agrada' que cal donar durant els darrers dies (període de temps nivell 3) per a optar al nivell de confiança 3."
     tl3_requires_likes_received: "Nombre mínim de 'M'agrada' que cal rebre durant els darrers dies (període de temps nivell 3) per a optar al nivell de confiança 3."
     tl3_links_no_follow: "No elimineu l'atribut rel=\"nofollow\" dels enllaços publicats per usuaris de nivell de confiança 3."
-    trusted_users_can_edit_others: "Permet als usuaris amb nivells de confiança elevats editar contingut d'altres usuaris"
     min_trust_to_create_topic: "Nivell mínim de confiança necessària per a crear un tema nou."
     allow_flagging_staff: "Si està activat, els usuaris poden marcar amb bandera publicacions de comptes de l'equip responsable. "
     min_trust_to_edit_wiki_post: "Nivell de confiança mínim necessari per a editar una publicació marcada com a wiki."
@@ -1396,7 +1390,6 @@ ca:
     title_min_entropy: "Entropia mínima (caràcters únics; els caràcters amb diacrítics compten més) necessària per al títol d'un tema."
     body_min_entropy: "Entropia mínima (caràcters únics; els caràcters amb diacrítics compten més) necessària per al cos d'una publicació."
     allow_uppercase_posts: "Permet tot majúscules en el títol o en el cos d'una publicació."
-    max_consecutive_replies: "Nombre de publicacions que un usuari ha de fer d'una tirada en un tema abans que se li impedeixi afegir una altra resposta."
     title_fancy_entities: "Converteix els caràcters comuns ASCII a entitats HTML en títols de temes, a l'estil SmartyPants <a href='https://daringfireball.net/projects/smartypants/' target='_blank'>https://daringfireball.net/projects/smartypants/</a>"
     min_title_similar_length: "Longitud mínima d'un títol abans que sigui consultat per a temes semblants."
     desktop_category_page_style: "Estil visual per a la pàgina /categories."
@@ -1551,7 +1544,6 @@ ca:
     share_anonymized_statistics: "Comparteix estadístiques d'ús anonimitzades."
     auto_handle_queued_age: "Tracta automàticament els registres que esperen ser revisats després d'aquest nombre de dies. Les banderes s'ignoraran. Les publicacions en cua i els usuaris seran rebutjats. Poseu-ho a 0 per a desactivar la funció."
     svg_icon_subset: "Afegiu 5 icones FontAwesome addicionals que voleu incloure en els vostres actius. Utilitzeu el prefix \"fa-\" per a icones sòlides, \"far-\" per a les icones habituals i \"fab-\" per a les icones de marca."
-    max_prints_per_hour_per_user: "Nombre màxim d'impressions de pàgina /print (deixeu-ho 0 per inhabilitar)"
     full_name_required: "El nom complet és un camp obligatori del perfil d'usuari."
     enable_names: "Mostra el nom complet de l'usuari en el seu perfil, la seva targeta d'usuari i els seus correus. Desactiveu-ho per a amagar el nom complet a tot arreu."
     display_name_on_posts: "Mostra el nom complet de l'usuari en les seves publicacions a més del seu @nomdusuari."
@@ -1568,7 +1560,6 @@ ca:
     allowed_href_schemes: "Esquemes permesos en enllaços a més de http i https."
     embed_post_limit: "Nombre màxim de publicacions que s'incrusten."
     embed_username_required: "Cal un nom d'usuari per a crear un tema."
-    show_create_topics_notice: "Si el lloc web té menys de 5 temes públics, mostra un avís demanant als administradors que en creï uns quants. "
     delete_drafts_older_than_n_days: "Suprimeix esborranys amb més de (n) dies."
     slug_generation_method: "Trieu un mètode de generació de slugs (adreces amigables). 'encoded' generarà una cadena amb codificacions %. 'none' anul·larà totalment l'adreça amigable."
     enable_emoji: "Activa emojis"
@@ -1619,7 +1610,6 @@ ca:
     retain_web_hook_events_period_days: "Nombre de dies per a conservar els registres d'esdeveniments webhook."
     retry_web_hook_events: "Reintenta automàticament quatre vegades els esdeveniments webhook fallits. Els intervals de temps entre els reintents són 1, 5, 25 i 125 minuts."
     revoke_api_keys_days: "Nombre de dies abans que una clau d’API no utilitzada sigui revocada  automàticament (0 per a mai)"
-    allow_user_api_keys: "Permet la generació de claus API d'usuari"
     allow_user_api_key_scopes: "Llista d'àmbits permesos per a les claus d'API d'usuari"
     allowed_user_api_auth_redirects: "URL permès per a la redirecció d'autenticació per a les claus de l'API d'usuari. El símbol de comodí * es pot utilitzar per a fer coincidir qualsevol part de l'URL (p. ex. www.example.com/*)."
     allowed_user_api_push_urls: "Adreces URL permeses per al 'server push' a l'API d'usuari"
@@ -1665,7 +1655,6 @@ ca:
       pop3_polling_password_is_empty: "Cal configurar 'pop3 polling password' abans d'activar la consulta POP3."
       pop3_polling_authentication_failed: "L'autenticació POP3 ha fallat. Verifiqueu les credencials POP3."
       reply_by_email_address_is_empty: "Cal definir 'reply by email address' abans de respondre per correu."
-      email_polling_disabled: "Cal activar la consulta manual o POP3 o manuals abans d'activar la resposta per correu."
       user_locale_not_enabled: "Cal configurar 'allow user locale' abans d'activar aquest paràmetre."
       invalid_regex: "L'expressió regular no és vàlida o no és permesa."
       email_editable_enabled: "Cal desactivar \"editable per correu\" abans d'activar aquest paràmetre."
@@ -2982,8 +2971,6 @@ ca:
         description: "Restaura la publicació de manera que tots els usuaris puguin veure-la."
       delete_single:
         title: "Suprimeix"
-      delete:
-        title: "Suprimeix ..."
       delete_and_ignore_replies:
         confirm: "Esteu segur que també voleu suprimir les respostes a la publicació?"
       delete_and_agree_replies:
@@ -3006,7 +2993,6 @@ ca:
       approve_user:
         title: "Aprova l'usuari"
       reject_user:
-        title: "Suprimeix l'usuari..."
         delete:
           title: "Suprimeix l'usuari"
           description: "L'usuari serà suprimit del fòrum."

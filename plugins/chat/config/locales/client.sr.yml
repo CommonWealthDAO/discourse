@@ -6,6 +6,11 @@
 
 sr:
   js:
+    admin:
+      site_settings:
+        chat_separate_sidebar_mode:
+          always: "Uvek"
+          never: "Nikad"
     chat:
       dates:
         time_tiny: "h:mm"
@@ -94,6 +99,11 @@ sr:
         title: "Naslov"
         settings: "Podešavanja"
         last_reply: "poslednji odgovor"
+        notifications:
+          regular:
+            title: "Normalno"
+          tracking:
+            title: "Praćeno"
       draft_channel_screen:
         header: "Nova privatna poruka"
         cancel: "Odustani"

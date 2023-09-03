@@ -34,7 +34,10 @@ describe Chat::MessageMover do
   fab!(:message4) { Fabricate(:chat_message, chat_channel: destination_channel) }
   fab!(:message5) { Fabricate(:chat_message, chat_channel: destination_channel) }
   fab!(:message6) { Fabricate(:chat_message, chat_channel: destination_channel) }
+
   let(:move_message_ids) { [message1.id, message2.id, message3.id] }
+
+  before { source_channel.update!(last_message: message3) }
 
   describe "#move_to_channel" do
     def move!(move_message_ids = [message1.id, message2.id, message3.id])
@@ -181,6 +184,31 @@ describe Chat::MessageMover do
         move!([message2.id])
         expect(message3.reload.in_reply_to_id).to eq(nil)
         expect(message3.reload.thread).to eq(thread)
+      end
+
+      it "updates the tracking to the last non-deleted channel message for users whose last_read_message_id was the moved message" do
+        membership_1 =
+          Fabricate(
+            :user_chat_channel_membership,
+            chat_channel: source_channel,
+            last_read_message: message1,
+          )
+        membership_2 =
+          Fabricate(
+            :user_chat_channel_membership,
+            chat_channel: source_channel,
+            last_read_message: message2,
+          )
+        membership_3 =
+          Fabricate(
+            :user_chat_channel_membership,
+            chat_channel: source_channel,
+            last_read_message: message3,
+          )
+        move!([message2.id])
+        expect(membership_1.reload.last_read_message_id).to eq(message1.id)
+        expect(membership_2.reload.last_read_message_id).to eq(message3.id)
+        expect(membership_3.reload.last_read_message_id).to eq(message3.id)
       end
 
       context "when a thread original message is moved" do

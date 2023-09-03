@@ -41,7 +41,7 @@ module PrettyText
     return erb_name if File.file?("#{root}#{erb_name}")
 
     erb_name = "#{filename}.js.erb"
-    return erb_name if File.file?("#{root}#{erb_name}")
+    erb_name if File.file?("#{root}#{erb_name}")
   end
 
   def self.apply_es6_file(ctx, root_path, part_name)
@@ -104,9 +104,9 @@ module PrettyText
     apply_es6_file(ctx, root_path, "discourse-common/addon/lib/object")
     apply_es6_file(ctx, root_path, "discourse-common/addon/lib/deprecated")
     apply_es6_file(ctx, root_path, "discourse-common/addon/lib/escape")
+    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/avatar-utils")
     apply_es6_file(ctx, root_path, "discourse-common/addon/utils/watched-words")
     apply_es6_file(ctx, root_path, "discourse/app/lib/to-markdown")
-    apply_es6_file(ctx, root_path, "discourse/app/lib/utilities")
 
     ctx.load("#{Rails.root}/lib/pretty_text/shims.js")
     ctx.eval("__setUnicode(#{Emoji.unicode_replacements_json})")
@@ -197,7 +197,6 @@ module PrettyText
         __optInput.lookupPrimaryUserGroup = __lookupPrimaryUserGroup;
         __optInput.formatUsername = __formatUsername;
         __optInput.getTopicInfo = __getTopicInfo;
-        __optInput.categoryHashtagLookup = __categoryLookup;
         __optInput.hashtagLookup = __hashtagLookup;
         __optInput.customEmoji = #{custom_emoji.to_json};
         __optInput.customEmojiTranslation = #{Plugin::CustomEmoji.translations.to_json};
@@ -260,7 +259,7 @@ module PrettyText
         __optInput = {};
         __optInput.avatar_sizes = #{SiteSetting.avatar_sizes.to_json};
         __paths = #{paths_json};
-        __utils.avatarImg({size: #{size.inspect}, avatarTemplate: #{avatar_template.inspect}}, __getURL);
+        require("discourse-common/lib/avatar-utils").avatarImg({size: #{size.inspect}, avatarTemplate: #{avatar_template.inspect}}, __getURL);
       JS
   end
 
@@ -312,7 +311,7 @@ module PrettyText
     add_mentions(doc, user_id: opts[:user_id]) if SiteSetting.enable_mentions
 
     scrubber = Loofah::Scrubber.new { |node| node.remove if node.name == "script" }
-    loofah_fragment = Loofah.fragment(doc.to_html)
+    loofah_fragment = Loofah.html5_fragment(doc.to_html)
     loofah_fragment.scrub!(scrubber).to_html
   end
 
@@ -457,6 +456,9 @@ module PrettyText
           end
         end
 
+    mentions =
+      DiscoursePluginRegistry.apply_modifier(:pretty_text_extract_mentions, mentions, cooked)
+
     mentions.compact!
     mentions.uniq!
     mentions
@@ -468,10 +470,7 @@ module PrettyText
     DiscourseEvent.trigger(:reduce_excerpt, doc, options)
     strip_image_wrapping(doc)
     strip_oneboxed_media(doc)
-
-    if SiteSetting.enable_experimental_hashtag_autocomplete && options[:plain_hashtags]
-      convert_hashtag_links_to_plaintext(doc)
-    end
+    convert_hashtag_links_to_plaintext(doc) if options[:plain_hashtags]
 
     html = doc.to_html
     ExcerptParser.get_excerpt(html, max_length, options)

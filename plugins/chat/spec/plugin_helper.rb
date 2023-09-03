@@ -24,17 +24,18 @@ module ChatSystemHelpers
     user.activate
     user.user_option.update!(chat_enabled: true)
     Group.refresh_automatic_group!("trust_level_#{user.trust_level}".to_sym)
-    Fabricate(:user_chat_channel_membership, chat_channel: channel, user: user)
+    channel.add(user)
   end
 
   def chat_thread_chain_bootstrap(channel:, users:, messages_count: 4, thread_attrs: {})
     last_user = nil
     last_message = nil
 
+    users.each { |user| chat_system_user_bootstrap(user: user, channel: channel) }
     messages_count.times do |i|
       in_reply_to = i.zero? ? nil : last_message.id
       thread_id = i.zero? ? nil : last_message.thread_id
-      last_user = last_user.present? ? (users - [last_user]).sample : users.sample
+      last_user = ((users - [last_user]).presence || users).sample
       creator =
         Chat::MessageCreator.new(
           chat_channel: channel,
@@ -53,10 +54,26 @@ module ChatSystemHelpers
     last_message.thread.update!(thread_attrs) if thread_attrs.any?
     last_message.thread
   end
+
+  def thread_excerpt(message)
+    CGI.escapeHTML(
+      message.censored_excerpt(max_length: ::Chat::Thread::EXCERPT_LENGTH).gsub("&hellip;", "…"),
+    )
+  end
+end
+
+module ChatSpecHelpers
+  def service_failed!(result)
+    raise RSpec::Expectations::ExpectationNotMetError.new(
+            "Service failed, see below for step details:\n\n" + result.inspect_steps.inspect,
+          )
+  end
 end
 
 RSpec.configure do |config|
   config.include ChatSystemHelpers, type: :system
+  config.include ChatSpecHelpers
+  config.include Chat::WithServiceHelper
   config.include Chat::ServiceMatchers
 
   config.expect_with :rspec do |c|

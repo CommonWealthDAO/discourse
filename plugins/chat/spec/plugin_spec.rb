@@ -17,12 +17,12 @@ describe Chat do
     fab!(:unused_upload) { Fabricate(:upload, user: user, created_at: 1.month.ago) }
 
     let!(:chat_message) do
-      Chat::MessageCreator.create(
+      Fabricate(
+        :chat_message,
         chat_channel: chat_channel,
         user: user,
-        in_reply_to_id: nil,
-        content: "Hello world!",
-        upload_ids: [upload.id],
+        message: "Hello world!",
+        uploads: [upload],
       )
     end
 
@@ -43,15 +43,13 @@ describe Chat do
     fab!(:unused_upload) { Fabricate(:upload, user: user, created_at: 1.month.ago) }
 
     let!(:chat_message) do
-      Chat::MessageCreator.create(
+      Fabricate(
+        :chat_message,
         chat_channel: chat_channel,
         user: user,
-        in_reply_to_id: nil,
-        content: "Hello world! #{message_upload.sha1}",
-        upload_ids: [],
+        message: "Hello world! #{message_upload.sha1}",
       )
     end
-
     let!(:draft_message) do
       Chat::Draft.create!(
         user: user,
@@ -135,16 +133,15 @@ describe Chat do
     fab!(:user_4) { Fabricate(:user, suspended_till: 3.weeks.from_now) }
 
     let!(:chat_message) do
-      Chat::MessageCreator.create(
-        chat_channel: chat_channel,
-        user: user,
-        in_reply_to_id: nil,
-        content: "Hello world!",
-        upload_ids: [],
-      ).chat_message
+      Fabricate(:chat_message, chat_channel: chat_channel, user: user, message: "Hello world!")
     end
 
     let(:chat_url) { "#{Discourse.base_url}/chat/c/-/#{chat_channel.id}" }
+
+    before do
+      chat_channel.update!(last_message: chat_message)
+      chat_channel.add(user)
+    end
 
     context "when inline" do
       it "renders channel" do
@@ -166,11 +163,10 @@ describe Chat do
 
     context "when regular" do
       it "renders channel, excluding inactive, staged, and suspended users" do
-        user.user_chat_channel_memberships.create!(chat_channel: chat_channel, following: true)
         user_2.user_chat_channel_memberships.create!(chat_channel: chat_channel, following: true)
         user_3.user_chat_channel_memberships.create!(chat_channel: chat_channel, following: true)
         user_4.user_chat_channel_memberships.create!(chat_channel: chat_channel, following: true)
-        Jobs::Chat::UpdateUserCountsForChannels.new.execute({})
+        Chat::Channel.ensure_consistency!
 
         expect(Oneboxer.preview(chat_url)).to match_html <<~HTML
           <aside class="onebox chat-onebox">
@@ -367,6 +363,27 @@ describe Chat do
         expect(serializer.chat_channels[:direct_message_channels]).to eq([])
         expect(serializer.chat_channels[:public_channels].count).to eq(1)
         expect(serializer.chat_channels[:public_channels][0].id).to eq(channel.id)
+      end
+    end
+
+    context "when the category is restricted and user has readonly persmissions" do
+      fab!(:channel_1) { Fabricate(:chat_channel) }
+      fab!(:group_1) { Fabricate(:group) }
+      fab!(:private_channel_1) { Fabricate(:private_category_channel, group: group_1) }
+
+      before do
+        private_channel_1.chatable.category_groups.first.update!(
+          permission_type: CategoryGroup.permission_types[:readonly],
+        )
+        group_1.add(user)
+        channel_1.add(user)
+        private_channel_1.add(user)
+      end
+
+      it "doesn’t list the associated channel" do
+        expect(serializer.chat_channels[:public_channels].map(&:id)).to contain_exactly(
+          channel_1.id,
+        )
       end
     end
   end

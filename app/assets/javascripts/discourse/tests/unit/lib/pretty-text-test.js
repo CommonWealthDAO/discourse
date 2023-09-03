@@ -643,73 +643,6 @@ eviltrout</p>
     );
   });
 
-  test("Category hashtags", function (assert) {
-    const alwaysTrue = {
-      categoryHashtagLookup: function () {
-        return [
-          "http://test.discourse.org/category-hashtag",
-          "category-hashtag",
-        ];
-      },
-    };
-
-    assert.cookedOptions(
-      "Check out #category-hashtag",
-      alwaysTrue,
-      '<p>Check out <a class="hashtag" href="http://test.discourse.org/category-hashtag">#<span>category-hashtag</span></a></p>',
-      "it translates category hashtag into links"
-    );
-
-    assert.cooked(
-      "Check out #category-hashtag",
-      '<p>Check out <span class="hashtag">#category-hashtag</span></p>',
-      "it does not translate category hashtag into links if it is not a valid category hashtag"
-    );
-
-    assert.cookedOptions(
-      "[#category-hashtag](http://www.test.com)",
-      alwaysTrue,
-      '<p><a href="http://www.test.com">#category-hashtag</a></p>',
-      "it does not translate category hashtag within links"
-    );
-
-    assert.cooked(
-      "```\n# #category-hashtag\n```",
-      '<pre><code class="lang-auto"># #category-hashtag\n</code></pre>',
-      "it does not translate category hashtags to links in code blocks"
-    );
-
-    assert.cooked(
-      "># #category-hashtag\n",
-      '<blockquote>\n<h1><span class="hashtag">#category-hashtag</span></h1>\n</blockquote>',
-      "it handles category hashtags in simple quotes"
-    );
-
-    assert.cooked(
-      "# #category-hashtag",
-      '<h1><a name="category-hashtag-1" class="anchor" href="#category-hashtag-1"></a><span class="hashtag">#category-hashtag</span></h1>',
-      "it works within ATX-style headers"
-    );
-
-    assert.cooked(
-      "don't `#category-hashtag`",
-      "<p>don't <code>#category-hashtag</code></p>",
-      "it does not mention in an inline code block"
-    );
-
-    assert.cooked(
-      "<small>#category-hashtag</small>",
-      '<p><small><span class="hashtag">#category-hashtag</span></small></p>',
-      "it works between HTML tags"
-    );
-
-    assert.cooked(
-      "Checkout #ụdị",
-      '<p>Checkout <span class="hashtag">#ụdị</span></p>',
-      "it works for non-english characters"
-    );
-  });
-
   test("Heading", function (assert) {
     assert.cooked(
       "**Bold**\n----------",
@@ -1683,6 +1616,7 @@ var bar = 'bar';
     const opts = {
       watchedWordsReplace: {
         "(?:\\W|^)(fun)(?=\\W|$)": {
+          word: "fun",
           replacement: "times",
           case_sensitive: false,
         },
@@ -1697,6 +1631,7 @@ var bar = 'bar';
     const opts = {
       watchedWordsLink: {
         "(?:\\W|^)(fun)(?=\\W|$)": {
+          word: "fun",
           replacement: "https://discourse.org",
           case_sensitive: false,
         },
@@ -1711,18 +1646,21 @@ var bar = 'bar';
   });
 
   test("watched words replace with bad regex", function (assert) {
-    const maxMatches = 100; // same limit as MD watched-words-replace plugin
     const opts = {
       siteSettings: { watched_words_regular_expressions: true },
       watchedWordsReplace: {
-        "(\\bu?\\b)": { replacement: "you", case_sensitive: false },
+        "(\\bu?\\b)": {
+          word: "(\\bu?\\b)",
+          replacement: "you",
+          case_sensitive: false,
+        },
       },
     };
 
     assert.cookedOptions(
       "one",
       opts,
-      `<p>${"you".repeat(maxMatches)}one</p>`,
+      `<p>youoneyou</p>`,
       "does not loop infinitely"
     );
   });
@@ -1743,6 +1681,50 @@ var bar = 'bar';
       `<pre><code class=\"lang-html\">&lt;strong&gt;fun&lt;/strong&gt; times
 </code></pre>`,
       "code block with html alias work"
+    );
+  });
+
+  test("image grid", function (assert) {
+    assert.cooked(
+      "[grid]\n![](http://folksy.com/images/folksy-colour.png)\n[/grid]",
+      `<div class="d-image-grid">
+<p><img src="http://folksy.com/images/folksy-colour.png" alt role="presentation"></p>
+</div>`,
+      "image grid works"
+    );
+
+    assert.cooked(
+      `[grid]
+![](http://folksy.com/images/folksy-colour.png)
+![](http://folksy.com/images/folksy-colour2.png)
+![](http://folksy.com/images/folksy-colour3.png)
+[/grid]`,
+      `<div class="d-image-grid">
+<p><img src="http://folksy.com/images/folksy-colour.png" alt role="presentation"><br>
+<img src="http://folksy.com/images/folksy-colour2.png" alt role="presentation"><br>
+<img src="http://folksy.com/images/folksy-colour3.png" alt role="presentation"></p>
+</div>`,
+      "image grid with 3 images works"
+    );
+
+    assert.cooked(
+      `[grid]
+![](http://folksy.com/images/folksy-colour.png) ![](http://folksy.com/images/folksy-colour2.png)
+![](http://folksy.com/images/folksy-colour3.png)
+[/grid]`,
+      `<div class="d-image-grid">
+<p><img src="http://folksy.com/images/folksy-colour.png" alt role="presentation"> <img src="http://folksy.com/images/folksy-colour2.png" alt role="presentation"><br>
+<img src="http://folksy.com/images/folksy-colour3.png" alt role="presentation"></p>
+</div>`,
+      "image grid with mixed block and inline images works"
+    );
+
+    assert.cooked(
+      "[grid]![](http://folksy.com/images/folksy-colour.png) ![](http://folksy.com/images/folksy-colour2.png)[/grid]",
+      `<div class="d-image-grid">
+<p><img src="http://folksy.com/images/folksy-colour.png" alt role="presentation"> <img src="http://folksy.com/images/folksy-colour2.png" alt role="presentation"></p>
+</div>`,
+      "image grid with inline images works"
     );
   });
 });

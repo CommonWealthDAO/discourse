@@ -1,30 +1,173 @@
 import Service, { inject as service } from "@ember/service";
+import { tracked } from "@glimmer/tracking";
 import { getOwner } from "@ember/application";
 import I18n from "I18n";
 import { dasherize } from "@ember/string";
+import { action } from "@ember/object";
 import { disableImplicitInjections } from "discourse/lib/implicit-injections";
+import { CLOSE_INITIATED_BY_MODAL_SHOW } from "discourse/components/d-modal";
+import deprecated from "discourse-common/lib/deprecated";
+
+// Known legacy modals in core. Silence deprecation warnings for these so the messages
+// don't cause unnecessary noise.
+const KNOWN_LEGACY_MODALS = [
+  "associate-account-confirm",
+  "avatar-selector",
+  "change-owner",
+  "change-post-notice",
+  "create-account",
+  "create-invite-bulk",
+  "create-invite",
+  "grant-badge",
+  "group-default-notifications",
+  "login",
+  "raw-email",
+  "reject-reason-reviewable",
+  "reorder-categories",
+  "request-group-membership-form",
+  "share-and-invite",
+  "tag-upload",
+];
+
+const LEGACY_OPTS = new Set([
+  "admin",
+  "templateName",
+  "title",
+  "titleTranslated",
+  "modalClass",
+  "titleAriaElementId",
+  "panels",
+]);
 
 @disableImplicitInjections
-export default class ModalService extends Service {
+class ModalService extends Service {
+  @tracked activeModal;
+  @tracked opts = {};
+
+  @tracked containerElement;
+
+  @action
+  setContainerElement(element) {
+    this.containerElement = element;
+  }
+
+  /**
+   * Render a modal
+   *
+   * @param {Component} modal - a reference to the component class for the modal
+   * @param {Object} [options] - options
+   * @param {string} [options.model] - An object which will be passed as the `@model` argument on the component
+   *
+   * @returns {Promise} A promise that resolves when the modal is closed, with any data passed to closeModal
+   */
+  show(modal, opts) {
+    this.close({ initiatedBy: CLOSE_INITIATED_BY_MODAL_SHOW });
+
+    let resolveShowPromise;
+    const promise = new Promise((resolve) => {
+      resolveShowPromise = resolve;
+    });
+
+    this.opts = opts || {};
+    this.activeModal = { component: modal, opts, resolveShowPromise };
+
+    const unsupportedOpts = Object.keys(opts).filter((key) =>
+      LEGACY_OPTS.has(key)
+    );
+    if (unsupportedOpts.length > 0) {
+      throw new Error(
+        `${unsupportedOpts.join(
+          ", "
+        )} are not supported in the component-based modal API. See https://meta.discourse.org/t/268057`
+      );
+    }
+
+    return promise;
+  }
+
+  close(data) {
+    this.activeModal?.resolveShowPromise?.(data);
+    this.activeModal = null;
+    this.opts = {};
+  }
+}
+
+// Remove all logic below when legacy modals are dropped (deprecation: discourse.modal-controllers)
+export default class ModalServiceWithLegacySupport extends ModalService {
   @service appEvents;
 
-  show(name, opts = {}) {
+  @tracked name;
+  @tracked selectedPanel;
+  @tracked hidden = true;
+
+  @tracked titleOverride;
+  @tracked modalClassOverride;
+  @tracked onSelectPanel;
+
+  get title() {
+    if (this.titleOverride) {
+      return this.titleOverride;
+    } else if (this.opts.titleTranslated) {
+      return this.opts.titleTranslated;
+    } else if (this.opts.title) {
+      return I18n.t(this.opts.title);
+    } else {
+      return null;
+    }
+  }
+
+  set title(value) {
+    this.titleOverride = value;
+  }
+
+  get modalClass() {
+    if (!this.isLegacy) {
+      return null;
+    }
+
+    return (
+      this.modalClassOverride ||
+      this.opts.modalClass ||
+      `${dasherize(this.name.replace(/^modals\//, "")).toLowerCase()}-modal`
+    );
+  }
+
+  set modalClass(value) {
+    this.modalClassOverride = value;
+  }
+
+  show(modal, opts = {}) {
+    if (typeof modal !== "string") {
+      return super.show(modal, opts);
+    }
+
+    this.close({ initiatedBy: CLOSE_INITIATED_BY_MODAL_SHOW });
+
+    if (!KNOWN_LEGACY_MODALS.includes(modal)) {
+      deprecated(
+        `Defining modals using a controller is deprecated. Use the component-based API instead. (modal: ${modal})`,
+        {
+          id: "discourse.modal-controllers",
+          since: "3.1",
+          dropFrom: "3.2",
+          url: "https://meta.discourse.org/t/268057",
+        }
+      );
+    }
+
+    const name = modal;
     const container = getOwner(this);
     const route = container.lookup("route:application");
-    const modalController = route.controllerFor("modal");
 
-    modalController.set(
-      "modalClass",
-      opts.modalClass || `${dasherize(name).toLowerCase()}-modal`
-    );
+    this.opts = opts;
 
     const controllerName = opts.admin ? `modals/${name}` : name;
-    modalController.set("name", controllerName);
+    this.name = controllerName;
 
     let controller = container.lookup("controller:" + controllerName);
     const templateName = opts.templateName || dasherize(name);
 
-    const renderArgs = { into: "modal", outlet: "modalBody" };
+    const renderArgs = { into: "application", outlet: "modalBody" };
     if (controller) {
       renderArgs.controller = controllerName;
     } else {
@@ -40,40 +183,15 @@ export default class ModalService extends Service {
     const modalName = `modal/${templateName}`;
     const fullName = opts.admin ? `admin/templates/${modalName}` : modalName;
     route.render(fullName, renderArgs);
-    if (opts.title) {
-      modalController.set("title", I18n.t(opts.title));
-    } else if (opts.titleTranslated) {
-      modalController.set("title", opts.titleTranslated);
-    } else {
-      modalController.set("title", null);
-    }
-
-    if (opts.titleAriaElementId) {
-      modalController.set("titleAriaElementId", opts.titleAriaElementId);
-    }
 
     if (opts.panels) {
-      modalController.setProperties({
-        panels: opts.panels,
-        selectedPanel: opts.panels[0],
-      });
-
       if (controller.actions.onSelectPanel) {
-        modalController.set(
-          "onSelectPanel",
-          controller.actions.onSelectPanel.bind(controller)
-        );
+        this.onSelectPanel = controller.actions.onSelectPanel.bind(controller);
       }
-
-      modalController.set(
-        "modalClass",
-        `${modalController.get("modalClass")} has-tabs`
-      );
-    } else {
-      modalController.setProperties({ panels: [], selectedPanel: null });
+      this.selectedPanel = opts.panels[0];
     }
 
-    controller.set("modal", modalController);
+    controller.set("modal", this);
     const model = opts.model;
     if (model) {
       controller.set("model", model);
@@ -83,55 +201,71 @@ export default class ModalService extends Service {
     }
     controller.set("flashMessage", null);
 
-    return controller;
+    return (this.activeController = controller);
   }
 
   close(initiatedBy) {
-    const route = getOwner(this).lookup("route:application");
-    let modalController = route.controllerFor("modal");
-    const controllerName = modalController.get("name");
+    if (!this.isLegacy) {
+      super.close(...arguments);
+    }
 
-    if (controllerName) {
-      const controller = getOwner(this).lookup(`controller:${controllerName}`);
-      if (controller && controller.beforeClose) {
-        if (false === controller.beforeClose()) {
-          return;
-        }
-      }
+    const controllerName = this.name;
+    const controller = controllerName
+      ? getOwner(this).lookup(`controller:${controllerName}`)
+      : null;
+
+    if (controller?.beforeClose?.() === false) {
+      return;
     }
 
     getOwner(this)
       .lookup("route:application")
-      .render("hide-modal", { into: "modal", outlet: "modalBody" });
+      .render("hide-modal", { into: "application", outlet: "modalBody" });
     $(".d-modal.fixed-modal").modal("hide");
 
-    if (controllerName) {
-      const controller = getOwner(this).lookup(`controller:${controllerName}`);
+    if (controller) {
+      this.appEvents.trigger("modal:closed", {
+        name: controllerName,
+        controller,
+      });
 
-      if (controller) {
-        this.appEvents.trigger("modal:closed", {
-          name: controllerName,
-          controller,
+      if (controller.onClose) {
+        controller.onClose({
+          initiatedByCloseButton: initiatedBy === "initiatedByCloseButton",
+          initiatedByClickOut: initiatedBy === "initiatedByClickOut",
+          initiatedByESC: initiatedBy === "initiatedByESC",
         });
-
-        if (controller.onClose) {
-          controller.onClose({
-            initiatedByCloseButton: initiatedBy === "initiatedByCloseButton",
-            initiatedByClickOut: initiatedBy === "initiatedByClickOut",
-            initiatedByESC: initiatedBy === "initiatedByESC",
-          });
-        }
       }
-      modalController.set("name", null);
     }
-    modalController.hidden = true;
+    this.hidden = true;
+
+    this.name =
+      this.selectedPanel =
+      this.modalClassOverride =
+      this.titleOverride =
+      this.onSelectPanel =
+        null;
+
+    super.close();
   }
 
   hide() {
-    $(".d-modal.fixed-modal").modal("hide");
+    if (this.isLegacy) {
+      $(".d-modal.fixed-modal").modal("hide");
+    } else {
+      throw "hide/reopen are not supported for component-based modals";
+    }
   }
 
   reopen() {
-    $(".d-modal.fixed-modal").modal("show");
+    if (this.isLegacy) {
+      $(".d-modal.fixed-modal").modal("show");
+    } else {
+      throw "hide/reopen are not supported for component-based modals";
+    }
+  }
+
+  get isLegacy() {
+    return this.name && !this.activeModal;
   }
 }

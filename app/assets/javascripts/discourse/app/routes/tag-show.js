@@ -9,7 +9,6 @@ import {
 import Category from "discourse/models/category";
 import Composer from "discourse/models/composer";
 import DiscourseRoute from "discourse/routes/discourse";
-import FilterModeMixin from "discourse/mixins/filter-mode";
 import I18n from "I18n";
 import PermissionType from "discourse/models/permission-type";
 import { escapeExpression } from "discourse/lib/utilities";
@@ -23,8 +22,10 @@ import { inject as service } from "@ember/service";
 const NONE = "none";
 const ALL = "all";
 
-export default DiscourseRoute.extend(FilterModeMixin, {
+export default DiscourseRoute.extend({
   composer: service(),
+  router: service(),
+  currentUser: service(),
   navMode: "latest",
 
   queryParams,
@@ -58,7 +59,7 @@ export default DiscourseRoute.extend(FilterModeMixin, {
     const filterType = this.navMode.split("/")[0];
 
     let tagNotification;
-    if (tag && tag.id !== NONE && this.currentUser) {
+    if (tag && tag.id !== NONE && this.currentUser && !additionalTags) {
       // If logged in, we should get the tag's user settings
       tagNotification = await this.store.find(
         "tagNotification",
@@ -99,7 +100,7 @@ export default DiscourseRoute.extend(FilterModeMixin, {
     ) {
       // TODO: avoid throwing away preload data by redirecting on the server
       PreloadStore.getAndRemove("topic_list");
-      return this.replaceWith(
+      return this.router.replaceWith(
         "tags.showCategoryNone",
         params.category_slug_path_with_id,
         tagId
@@ -161,9 +162,9 @@ export default DiscourseRoute.extend(FilterModeMixin, {
         category: model.category || null,
       };
 
-      this.searchService.set("searchContext", tagIntersectionSearchContext);
+      this.searchService.searchContext = tagIntersectionSearchContext;
     } else {
-      this.searchService.set("searchContext", model.tag.searchContext);
+      this.searchService.searchContext = model.tag.searchContext;
     }
   },
 
@@ -202,7 +203,7 @@ export default DiscourseRoute.extend(FilterModeMixin, {
 
   deactivate() {
     this._super(...arguments);
-    this.searchService.set("searchContext", null);
+    this.searchService.searchContext = null;
   },
 
   @action
@@ -247,10 +248,11 @@ export default DiscourseRoute.extend(FilterModeMixin, {
     const categoryId = controller.category?.id;
 
     if (categoryId) {
-      options = Object.assign({}, options, {
+      options = {
+        ...options,
         categoryId,
         includeSubcategories: !controller.noSubcategories,
-      });
+      };
     }
 
     controller.send("dismissRead", operationType, options);
@@ -259,12 +261,6 @@ export default DiscourseRoute.extend(FilterModeMixin, {
   @action
   resetParams(skipParams = []) {
     resetParams.call(this, skipParams);
-  },
-
-  @action
-  didTransition() {
-    this.controllerFor("tag.show")._showFooter();
-    return true;
   },
 
   _controllerTags(controller) {

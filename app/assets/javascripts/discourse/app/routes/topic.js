@@ -10,16 +10,31 @@ import { setTopicId } from "discourse/lib/topic-list-tracker";
 import showModal from "discourse/lib/show-modal";
 import TopicFlag from "discourse/lib/flag-targets/topic-flag";
 import PostFlag from "discourse/lib/flag-targets/post-flag";
+import HistoryModal from "discourse/components/modal/history";
+import PublishPageModal from "discourse/components/modal/publish-page";
+import EditSlowModeModal from "discourse/components/modal/edit-slow-mode";
+import ChangeTimestampModal from "discourse/components/modal/change-timestamp";
+import EditTopicTimerModal from "discourse/components/modal/edit-topic-timer";
+import FeatureTopicModal from "discourse/components/modal/feature-topic";
+import FlagModal from "discourse/components/modal/flag";
+import MoveToTopicModal from "discourse/components/modal/move-to-topic";
 
 const SCROLL_DELAY = 500;
 
 const TopicRoute = DiscourseRoute.extend({
   composer: service(),
   screenTrack: service(),
+  modal: service(),
 
   scheduledReplace: null,
   lastScrollPos: null,
   isTransitioning: false,
+
+  buildRouteInfoMetadata() {
+    return {
+      scrollOnTransition: false,
+    };
+  },
 
   redirect() {
     return this.redirectIfLoginRequired();
@@ -90,70 +105,96 @@ const TopicRoute = DiscourseRoute.extend({
 
   @action
   showFlags(model) {
-    let controller = showModal("flag", { model });
-    controller.setProperties({ flagTarget: new PostFlag() });
+    this.modal.show(FlagModal, {
+      model: {
+        flagTarget: new PostFlag(),
+        flagModel: model,
+        setHidden: () => model.set("hidden", true),
+      },
+    });
   },
 
   @action
   showFlagTopic() {
     const model = this.modelFor("topic");
-    let controller = showModal("flag", { model });
-    controller.setProperties({ flagTarget: new TopicFlag() });
+    this.modal.show(FlagModal, {
+      model: {
+        flagTarget: new TopicFlag(),
+        flagModel: model,
+        setHidden: () => model.set("hidden", true),
+      },
+    });
   },
 
   @action
   showPagePublish() {
     const model = this.modelFor("topic");
-    showModal("publish-page", {
+    this.modal.show(PublishPageModal, {
       model,
-      title: "topic.publish_page.title",
     });
   },
 
   @action
   showTopicTimerModal() {
     const model = this.modelFor("topic");
+    this.modal.show(EditTopicTimerModal, {
+      model: {
+        topic: model,
+        setTopicTimer: (v) => model.set("topic_timer", v),
+        updateTopicTimerProperty: this.updateTopicTimerProperty,
+      },
+    });
+  },
 
-    if (!model.get("topic_timer")) {
-      model.set("topic_timer", {});
-    }
-
-    showModal("edit-topic-timer", { model });
+  @action
+  updateTopicTimerProperty(property, value) {
+    this.modelFor("topic").set(`topic_timer.${property}`, value);
   },
 
   @action
   showTopicSlowModeUpdate() {
-    const model = this.modelFor("topic");
-
-    showModal("edit-slow-mode", { model });
+    this.modal.show(EditSlowModeModal, {
+      model: { topic: this.modelFor("topic") },
+    });
   },
 
   @action
   showChangeTimestamp() {
-    showModal("change-timestamp", {
-      model: this.modelFor("topic"),
-      title: "topic.change_timestamp.title",
+    this.modal.show(ChangeTimestampModal, {
+      model: { topic: this.modelFor("topic") },
     });
   },
 
   @action
   showFeatureTopic() {
-    showModal("feature-topic", {
-      model: this.modelFor("topic"),
-      title: "topic.feature_topic.title",
+    const topicController = this.controllerFor("topic");
+    const model = this.modelFor("topic");
+    model.setProperties({
+      pinnedInCategoryUntil: null,
+      pinnedGloballyUntil: null,
     });
-    this.controllerFor("feature_topic").reset();
+
+    this.modal.show(FeatureTopicModal, {
+      model: {
+        topic: model,
+        pinGlobally: () => topicController.send("pinGlobally"),
+        togglePinned: () => topicController.send("togglePinned"),
+        makeBanner: () => topicController.send("makeBanner"),
+        removeBanner: () => topicController.send("removeBanner"),
+      },
+    });
   },
 
   @action
   showHistory(model, revision) {
-    let historyController = showModal("history", {
-      model,
-      modalClass: "history-modal",
+    this.modal.show(HistoryModal, {
+      model: {
+        postId: model.id,
+        postVersion: revision || "latest",
+        post: model,
+        editPost: (post) => this.controllerFor("topic").send("editPost", post),
+      },
     });
-    historyController.refresh(model.get("id"), revision || "latest");
-    historyController.set("post", model);
-    historyController.set("topicController", this.controllerFor("topic"));
   },
 
   @action
@@ -172,9 +213,16 @@ const TopicRoute = DiscourseRoute.extend({
 
   @action
   moveToTopic() {
-    showModal("move-to-topic", {
-      model: this.modelFor("topic"),
-      title: "topic.move_to.title",
+    const topicController = this.controllerFor("topic");
+    this.modal.show(MoveToTopicModal, {
+      model: {
+        topic: this.modelFor("topic"),
+        selectedPostsCount: topicController.selectedPostsCount,
+        selectedAllPosts: topicController.selectedAllPosts,
+        selectedPosts: topicController.selectedPosts,
+        selectedPostIds: topicController.selectedPostIds,
+        toggleMultiSelect: topicController.toggleMultiSelect,
+      },
     });
   },
 
@@ -238,7 +286,6 @@ const TopicRoute = DiscourseRoute.extend({
   @action
   didTransition() {
     const controller = this.controllerFor("topic");
-    controller._showFooter();
     const topicId = controller.get("model.id");
     setTopicId(topicId);
     return true;
@@ -306,7 +353,7 @@ const TopicRoute = DiscourseRoute.extend({
       this.setupParams(topic, queryParams);
       return topic;
     } else {
-      let props = Object.assign({}, params);
+      let props = { ...params };
       delete props.username_filters;
       delete props.filter;
       topic = this.store.createRecord("topic", props);
@@ -317,15 +364,12 @@ const TopicRoute = DiscourseRoute.extend({
   activate() {
     this._super(...arguments);
     this.set("isTransitioning", false);
-
-    const topic = this.modelFor("topic");
-    this.session.set("lastTopicIdViewed", parseInt(topic.get("id"), 10));
   },
 
   deactivate() {
     this._super(...arguments);
 
-    this.searchService.set("searchContext", null);
+    this.searchService.searchContext = null;
 
     const topicController = this.controllerFor("topic");
     const postStream = topicController.get("model.postStream");
@@ -351,7 +395,7 @@ const TopicRoute = DiscourseRoute.extend({
       firstPostExpanded: false,
     });
 
-    this.searchService.set("searchContext", model.get("searchContext"));
+    this.searchService.searchContext = model.get("searchContext");
 
     // close the multi select when switching topics
     controller.set("multiSelect", false);

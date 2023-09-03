@@ -21,7 +21,7 @@ acceptance("Personal Message", function (needs) {
     await visit("/t/pm-for-testing/12");
 
     assert.strictEqual(
-      query("#suggested-topics .suggested-topics-title").innerText.trim(),
+      query("#suggested-topics-title").innerText.trim(),
       I18n.t("suggested_topics.pm_title")
     );
   });
@@ -70,5 +70,19 @@ acceptance("Personal Message (regular user)", function (needs) {
     });
 
     assert.true(DiscourseURL.redirectTo.calledWith("/"));
+  });
+});
+
+acceptance("Personal Message - invite", function (needs) {
+  needs.user();
+
+  test("suggested messages", async function (assert) {
+    await visit("/t/pm-for-testing/12");
+    await click(".add-remove-participant-btn");
+    await click(".private-message-map .controls .add-participant-btn");
+
+    assert
+      .dom(".d-modal.share-and-invite .invite-user-control")
+      .exists("invite modal is displayed");
   });
 });

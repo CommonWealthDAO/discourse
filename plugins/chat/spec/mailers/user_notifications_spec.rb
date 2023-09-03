@@ -22,7 +22,7 @@ describe UserNotifications do
     context "with private channel" do
       fab!(:channel) do
         refresh_auto_groups
-        Chat::DirectMessageChannelCreator.create!(acting_user: sender, target_users: [sender, user])
+        create_dm_channel(sender, [sender, user])
       end
 
       it "calls guardian can_join_chat_channel?" do
@@ -76,11 +76,7 @@ describe UserNotifications do
           another_dm_user = Fabricate(:user, group_ids: [chatters_group.id])
           refresh_auto_groups
           another_dm_user.reload
-          another_channel =
-            Chat::DirectMessageChannelCreator.create!(
-              acting_user: user,
-              target_users: [another_dm_user, user],
-            )
+          another_channel = create_dm_channel(user, [another_dm_user, user])
           Fabricate(:chat_message, user: another_dm_user, chat_channel: another_channel)
           Fabricate(:chat_message, user: sender, chat_channel: channel)
           email = described_class.chat_summary(user, {})
@@ -107,11 +103,8 @@ describe UserNotifications do
             refresh_auto_groups
             sender.reload
             senders << sender
-            channel =
-              Chat::DirectMessageChannelCreator.create!(
-                acting_user: sender,
-                target_users: [user, sender],
-              )
+            channel = create_dm_channel(sender, [sender, user])
+
             user
               .user_chat_channel_memberships
               .where(chat_channel_id: channel.id)
@@ -157,6 +150,11 @@ describe UserNotifications do
           user: user,
           last_read_message_id: chat_message.id - 2,
         )
+      end
+
+      before do
+        channel.add(sender)
+        channel.update!(last_message: chat_message)
       end
 
       it "doesn't return an email if there are no unread mentions" do
@@ -279,6 +277,7 @@ describe UserNotifications do
               chat_message: another_chat_message,
               notification: notification,
             )
+            another_chat_channel.update!(last_message: another_chat_message)
 
             email = described_class.chat_summary(user, {})
 
@@ -318,6 +317,7 @@ describe UserNotifications do
                 chat_message: another_chat_message,
                 notification: notification,
               )
+              another_chat_channel.update!(last_message: another_chat_message)
             end
 
             expected_subject =
@@ -337,11 +337,7 @@ describe UserNotifications do
         context "with both unread DM messages and mentions" do
           before do
             refresh_auto_groups
-            channel =
-              Chat::DirectMessageChannelCreator.create!(
-                acting_user: sender,
-                target_users: [sender, user],
-              )
+            channel = create_dm_channel(sender, [sender, user])
             Fabricate(:chat_message, user: sender, chat_channel: channel)
             notification = Fabricate(:notification)
             Fabricate(
@@ -462,11 +458,7 @@ describe UserNotifications do
           it "returns an email when the user has unread private messages" do
             user_membership.update!(last_read_message_id: chat_message.id)
             refresh_auto_groups
-            channel =
-              Chat::DirectMessageChannelCreator.create!(
-                acting_user: sender,
-                target_users: [sender, user],
-              )
+            channel = create_dm_channel(sender, [sender, user])
             Fabricate(:chat_message, user: sender, chat_channel: channel)
 
             email = described_class.chat_summary(user, {})
@@ -627,5 +619,15 @@ describe UserNotifications do
         end
       end
     end
+  end
+
+  def create_dm_channel(sender, target_users)
+    result =
+      Chat::CreateDirectMessageChannel.call(
+        guardian: sender.guardian,
+        target_usernames: target_users.map(&:username),
+      )
+    service_failed!(result) if result.failure?
+    result.channel
   end
 end

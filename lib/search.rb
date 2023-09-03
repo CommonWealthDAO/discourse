@@ -491,7 +491,7 @@ class Search
   end
 
   advanced_filter(/\Acreated:@(.*)\z/i) do |posts, match|
-    user_id = User.where(username: match.downcase).pick(:id)
+    user_id = User.where(username_lower: match.downcase).pick(:id)
     posts.where(user_id: user_id, post_number: 1)
   end
 
@@ -938,6 +938,8 @@ class Search
     if !SiteSetting.enable_listing_suspended_users_on_search && !@guardian.user&.admin
       users = users.where(suspended_at: nil)
     end
+
+    users = DiscoursePluginRegistry.apply_modifier(:search_user_search, users)
 
     users_custom_data_query =
       DB.query(<<~SQL, user_ids: users.pluck(:id), term: "%#{@original_term.downcase}%")

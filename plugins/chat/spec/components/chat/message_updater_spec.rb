@@ -33,15 +33,13 @@ describe Chat::MessageUpdater do
   end
 
   def create_chat_message(user, message, channel, upload_ids: nil)
-    creator =
-      Chat::MessageCreator.create(
-        chat_channel: channel,
-        user: user,
-        in_reply_to_id: nil,
-        content: message,
-        upload_ids: upload_ids,
-      )
-    creator.chat_message
+    Fabricate(
+      :chat_message,
+      chat_channel: channel,
+      user: user,
+      message: message,
+      upload_ids: upload_ids,
+    )
   end
 
   it "errors when length is less than `chat_minimum_message_length`" do
@@ -81,6 +79,27 @@ describe Chat::MessageUpdater do
     expect(updater.failed?).to eq(true)
     expect(updater.error.message).to match(
       I18n.t("chat.errors.message_too_long", { count: SiteSetting.chat_maximum_message_length }),
+    )
+    expect(chat_message.reload.message).to eq(og_message)
+  end
+
+  it "errors when a blank message is sent" do
+    og_message = "This won't be changed!"
+    chat_message = create_chat_message(user1, og_message, public_chat_channel)
+    new_message = "    "
+
+    updater =
+      Chat::MessageUpdater.update(
+        guardian: guardian,
+        chat_message: chat_message,
+        new_content: new_message,
+      )
+    expect(updater.failed?).to eq(true)
+    expect(updater.error.message).to match(
+      I18n.t(
+        "chat.errors.minimum_length_not_met",
+        { count: SiteSetting.chat_minimum_message_length },
+      ),
     )
     expect(chat_message.reload.message).to eq(og_message)
   end
@@ -216,8 +235,13 @@ describe Chat::MessageUpdater do
     end
 
     it "doesn't create mention notification in direct message for users without access" do
-      direct_message_channel =
-        Chat::DirectMessageChannelCreator.create!(acting_user: user1, target_users: [user1, user2])
+      result =
+        Chat::CreateDirectMessageChannel.call(
+          guardian: user1.guardian,
+          target_usernames: [user1.username, user2.username],
+        )
+      service_failed!(result) if result.failure?
+      direct_message_channel = result.channel
       message = create_chat_message(user1, "ping nobody", direct_message_channel)
 
       Chat::MessageUpdater.update(
@@ -326,46 +350,48 @@ describe Chat::MessageUpdater do
         expect(user2.chat_mentions.where(chat_message: chat_message).count).to eq(1)
       end
     end
-  end
 
-  describe "group mentions" do
-    it "creates group mentions on update" do
-      chat_message = create_chat_message(user1, "ping nobody", public_chat_channel)
-      expect {
-        Chat::MessageUpdater.update(
-          guardian: guardian,
-          chat_message: chat_message,
-          new_content: "ping @#{admin_group.name}",
-        )
-      }.to change { Chat::Mention.where(chat_message: chat_message).count }.by(2)
+    describe "with group mentions" do
+      it "creates group mentions on update" do
+        chat_message = create_chat_message(user1, "ping nobody", public_chat_channel)
+        expect {
+          Chat::MessageUpdater.update(
+            guardian: guardian,
+            chat_message: chat_message,
+            new_content: "ping @#{admin_group.name}",
+          )
+        }.to change { Chat::Mention.where(chat_message: chat_message).count }.by(2)
 
-      expect(admin1.chat_mentions.where(chat_message: chat_message)).to be_present
-      expect(admin2.chat_mentions.where(chat_message: chat_message)).to be_present
-    end
+        expect(admin1.chat_mentions.where(chat_message: chat_message)).to be_present
+        expect(admin2.chat_mentions.where(chat_message: chat_message)).to be_present
+      end
 
-    it "doesn't duplicate mentions when the user is already direct mentioned and then group mentioned" do
-      chat_message = create_chat_message(user1, "ping @#{admin2.username}", public_chat_channel)
-      expect {
-        Chat::MessageUpdater.update(
-          guardian: guardian,
-          chat_message: chat_message,
-          new_content: "ping @#{admin_group.name} @#{admin2.username}",
-        )
-      }.to change { admin1.chat_mentions.count }.by(1).and not_change { admin2.chat_mentions.count }
-    end
+      it "doesn't duplicate mentions when the user is already direct mentioned and then group mentioned" do
+        chat_message = create_chat_message(user1, "ping @#{admin2.username}", public_chat_channel)
+        expect {
+          Chat::MessageUpdater.update(
+            guardian: guardian,
+            chat_message: chat_message,
+            new_content: "ping @#{admin_group.name} @#{admin2.username}",
+          )
+        }.to change { admin1.chat_mentions.count }.by(1).and not_change {
+                admin2.chat_mentions.count
+              }
+      end
 
-    it "deletes old mentions when group mention is removed" do
-      chat_message = create_chat_message(user1, "ping @#{admin_group.name}", public_chat_channel)
-      expect {
-        Chat::MessageUpdater.update(
-          guardian: guardian,
-          chat_message: chat_message,
-          new_content: "ping nobody anymore!",
-        )
-      }.to change { Chat::Mention.where(chat_message: chat_message).count }.by(-2)
+      it "deletes old mentions when group mention is removed" do
+        chat_message = create_chat_message(user1, "ping @#{admin_group.name}", public_chat_channel)
+        expect {
+          Chat::MessageUpdater.update(
+            guardian: guardian,
+            chat_message: chat_message,
+            new_content: "ping nobody anymore!",
+          )
+        }.to change { Chat::Mention.where(chat_message: chat_message).count }.by(-2)
 
-      expect(admin1.chat_mentions.where(chat_message: chat_message)).not_to be_present
-      expect(admin2.chat_mentions.where(chat_message: chat_message)).not_to be_present
+        expect(admin1.chat_mentions.where(chat_message: chat_message)).not_to be_present
+        expect(admin2.chat_mentions.where(chat_message: chat_message)).not_to be_present
+      end
     end
   end
 
@@ -587,19 +613,42 @@ describe Chat::MessageUpdater do
     end
   end
 
+  context "when the message is in a thread" do
+    fab!(:message) do
+      Fabricate(
+        :chat_message,
+        user: user1,
+        chat_channel: public_chat_channel,
+        thread: Fabricate(:chat_thread, channel: public_chat_channel),
+      )
+    end
+
+    it "publishes a MessageBus event to update the original message metadata" do
+      messages =
+        MessageBus.track_publish("/chat/#{public_chat_channel.id}") do
+          Chat::MessageUpdater.update(
+            guardian: guardian,
+            chat_message: message,
+            new_content: "some new updated content",
+          )
+        end
+      expect(messages.find { |m| m.data["type"] == "update_thread_original_message" }).to be_present
+    end
+  end
+
   describe "watched words" do
     fab!(:watched_word) { Fabricate(:watched_word) }
 
     it "errors when a blocked word is present" do
       chat_message = create_chat_message(user1, "something", public_chat_channel)
-      creator =
-        Chat::MessageCreator.create(
-          chat_channel: public_chat_channel,
-          user: user1,
-          content: "bad word - #{watched_word.word}",
+      updater =
+        Chat::MessageUpdater.update(
+          guardian: guardian,
+          chat_message: chat_message,
+          new_content: "bad word - #{watched_word.word}",
         )
-      expect(creator.failed?).to eq(true)
-      expect(creator.error.message).to match(
+      expect(updater.failed?).to eq(true)
+      expect(updater.error.message).to match(
         I18n.t("contains_blocked_word", { word: watched_word.word }),
       )
     end

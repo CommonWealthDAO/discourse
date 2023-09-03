@@ -70,7 +70,11 @@ const Category = RestModel.extend({
 
   @discourseComputed("parentCategory.level")
   level(parentLevel) {
-    return (parentLevel || -1) + 1;
+    if (!parentLevel) {
+      return parentLevel === 0 ? 1 : 0;
+    } else {
+      return parentLevel + 1;
+    }
   },
 
   @discourseComputed("subcategories")
@@ -194,6 +198,14 @@ const Category = RestModel.extend({
     return notificationLevel >= NotificationLevels.TRACKING;
   },
 
+  get unreadTopicsCount() {
+    return this.topicTrackingState.countUnread({ categoryId: this.id });
+  },
+
+  get newTopicsCount() {
+    return this.topicTrackingState.countNew({ categoryId: this.id });
+  },
+
   save() {
     const id = this.id;
     const url = id ? `/categories/${id}` : "/categories";
@@ -306,16 +318,6 @@ const Category = RestModel.extend({
     }
   },
 
-  @discourseComputed("id", "topicTrackingState.messageCount")
-  unreadTopics(id) {
-    return this.topicTrackingState.countUnread({ categoryId: id });
-  },
-
-  @discourseComputed("id", "topicTrackingState.messageCount")
-  newTopics(id) {
-    return this.topicTrackingState.countNew({ categoryId: id });
-  },
-
   setNotification(notification_level) {
     User.currentProp(
       "muted_category_ids",
@@ -342,6 +344,16 @@ const Category = RestModel.extend({
   @discourseComputed("id")
   isUncategorizedCategory(id) {
     return Category.isUncategorized(id);
+  },
+
+  get canCreateTopic() {
+    return this.permission === PermissionType.FULL;
+  },
+
+  get subcategoryWithCreateTopicPermission() {
+    return this.subcategories?.find(
+      (subcategory) => subcategory.canCreateTopic
+    );
   },
 });
 
