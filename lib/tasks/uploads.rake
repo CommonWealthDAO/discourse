@@ -353,7 +353,16 @@ def regenerate_missing_optimized
 
         if File.exist?(original) && File.size(original) > 0
           FileUtils.mkdir_p(File.dirname(thumbnail))
-          OptimizedImage.resize(original, thumbnail, optimized_image.width, optimized_image.height)
+          if upload.extension == "svg"
+            FileUtils.cp(original, thumbnail)
+          else
+            OptimizedImage.resize(
+              original,
+              thumbnail,
+              optimized_image.width,
+              optimized_image.height,
+            )
+          end
           putc "#"
         else
           missing_uploads << original
@@ -604,16 +613,20 @@ task "uploads:secure_upload_analyse_and_update" => :environment do
       # If secure upload is enabled we need to first set the access control post of
       # all post uploads (even uploads that are linked to multiple posts). If the
       # upload is not set to secure upload then this has no other effect on the upload,
-      # but we _must_ know what the access control post is because the with_secure_uploads?
+      # but we _must_ know what the access control post is because the should_secure_uploads?
       # method is on the post, and this knows about the category security & PM status
       update_uploads_access_control_post if SiteSetting.secure_uploads?
 
       puts "", "Analysing which uploads need to be marked secure and be rebaked.", ""
-      if SiteSetting.login_required?
-        # Simply mark all uploads linked to posts secure if login_required because no anons will be able to access them.
+      if SiteSetting.login_required? && !SiteSetting.secure_uploads_pm_only?
+        # Simply mark all uploads linked to posts secure if login_required because
+        # no anons will be able to access them; however if secure_uploads_pm_only is
+        # true then login_required will not mark other uploads secure.
         post_ids_to_rebake, all_upload_ids_changed = mark_all_as_secure_login_required
       else
-        # Otherwise only mark uploads linked to posts in secure categories or PMs as secure.
+        # Otherwise only mark uploads linked to posts either:
+        #   * In secure categories or PMs if !SiteSetting.secure_uploads_pm_only
+        #   * In PMs if SiteSetting.secure_uploads_pm_only
         post_ids_to_rebake, all_upload_ids_changed =
           update_specific_upload_security_no_login_required
       end
@@ -693,15 +706,24 @@ end
 def update_specific_upload_security_no_login_required
   # A simplification of the rules found in UploadSecurity which is a lot faster than
   # having to loop through records and use that class to check security.
+  filter_clause =
+    if SiteSetting.secure_uploads_pm_only?
+      "WHERE topics.archetype = 'private_message'"
+    else
+      <<~SQL
+        LEFT JOIN categories ON categories.id = topics.category_id
+        WHERE (topics.category_id IS NOT NULL AND categories.read_restricted) OR
+          (topics.archetype = 'private_message')
+      SQL
+    end
+
   post_upload_ids_marked_secure = DB.query_single(<<~SQL)
     WITH upl AS (
       SELECT DISTINCT ON (upload_id) upload_id
       FROM upload_references
       INNER JOIN posts ON posts.id = upload_references.target_id AND upload_references.target_type = 'Post'
       INNER JOIN topics ON topics.id = posts.topic_id
-      LEFT JOIN categories ON categories.id = topics.category_id
-      WHERE (topics.category_id IS NOT NULL AND categories.read_restricted) OR
-        (topics.archetype = 'private_message')
+      #{filter_clause}
     )
     UPDATE uploads
     SET secure = true,
@@ -927,7 +949,7 @@ def analyze_missing_s3
       puts
     end
 
-  missing_uploads = Upload.where(verification_status: Upload.verification_statuses[:invalid_etag])
+  missing_uploads = Upload.with_invalid_etag_verification_status
   puts "Total missing uploads: #{missing_uploads.count}, newest is #{missing_uploads.maximum(:created_at)}"
   puts "Total problem posts: #{lookup.keys.count} with #{lookup.values.sum { |a| a.length }} missing uploads"
   puts "Other missing uploads count: #{other.count}"
@@ -952,6 +974,7 @@ def analyze_missing_s3
       %i[categories uploaded_logo_id],
       %i[categories uploaded_logo_dark_id],
       %i[categories uploaded_background_id],
+      %i[categories uploaded_background_dark_id],
       %i[custom_emojis upload_id],
       %i[theme_fields upload_id],
       %i[user_exports upload_id],
@@ -968,16 +991,15 @@ def analyze_missing_s3
 end
 
 def delete_missing_s3
-  missing =
-    Upload.where(verification_status: Upload.verification_statuses[:invalid_etag]).order(
-      :created_at,
-    )
+  missing = Upload.with_invalid_etag_verification_status.order(:created_at)
   count = missing.count
+
   if count > 0
     puts "The following uploads will be deleted from the database"
     missing.each { |upload| puts "#{upload.id} - #{upload.url} - #{upload.created_at}" }
     puts "Please confirm you wish to delete #{count} upload records by typing YES"
     confirm = STDIN.gets.strip
+
     if confirm == "YES"
       missing.destroy_all
       puts "#{count} records were deleted"
@@ -985,6 +1007,29 @@ def delete_missing_s3
       STDERR.puts "Aborting"
       exit 1
     end
+  end
+end
+
+task "uploads:mark_invalid_s3_uploads_as_missing" => :environment do
+  puts "Marking invalid S3 uploads as missing for '#{RailsMultisite::ConnectionManagement.current_db}'..."
+  invalid_s3_uploads = Upload.with_invalid_etag_verification_status.order(:created_at)
+  count = invalid_s3_uploads.count
+
+  if count > 0
+    puts "The following uploads will be marked as missing on S3"
+    invalid_s3_uploads.each { |upload| puts "#{upload.id} - #{upload.url} - #{upload.created_at}" }
+    puts "Please confirm you wish to mark #{count} upload records as missing by typing YES"
+    confirm = STDIN.gets.strip
+
+    if confirm == "YES"
+      changed_count = Upload.mark_invalid_s3_uploads_as_missing
+      puts "#{changed_count} records were marked as missing"
+    else
+      STDERR.puts "Aborting"
+      exit 1
+    end
+  else
+    puts "No uploads found with invalid S3 etag verification status"
   end
 end
 
@@ -1008,7 +1053,7 @@ def fix_missing_s3
   Jobs.run_immediately!
 
   puts "Attempting to download missing uploads and recreate"
-  ids = Upload.where(verification_status: Upload.verification_statuses[:invalid_etag]).pluck(:id)
+  ids = Upload.with_invalid_etag_verification_status.pluck(:id)
   ids.each do |id|
     upload = Upload.find_by(id: id)
     next if !upload

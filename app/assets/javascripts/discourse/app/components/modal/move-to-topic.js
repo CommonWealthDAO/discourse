@@ -1,11 +1,11 @@
 import Component from "@glimmer/component";
-import { action } from "@ember/object";
 import { tracked } from "@glimmer/tracking";
-import { mergeTopic, movePosts } from "discourse/models/topic";
-import DiscourseURL from "discourse/lib/url";
-import I18n from "I18n";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
 import { isEmpty } from "@ember/utils";
-import { inject as service } from "@ember/service";
+import DiscourseURL from "discourse/lib/url";
+import { mergeTopic, movePosts } from "discourse/models/topic";
+import I18n from "discourse-i18n";
 
 export default class MoveToTopic extends Component {
   @service currentUser;
@@ -19,6 +19,7 @@ export default class MoveToTopic extends Component {
   @tracked chronologicalOrder = false;
   @tracked selection = "new_topic";
   @tracked selectedTopicId;
+  @tracked flash;
 
   constructor() {
     super(...arguments);
@@ -160,5 +161,25 @@ export default class MoveToTopic extends Component {
     } finally {
       this.saving = false;
     }
+  }
+
+  @action
+  updateTopicName(newName) {
+    this.topicName = newName;
+  }
+
+  @action
+  updateCategoryId(newId) {
+    this.categoryId = newId;
+  }
+
+  @action
+  updateTags(newTags) {
+    this.tags = newTags;
+  }
+
+  @action
+  newTopicSelected(topic) {
+    this.selectedTopicId = topic.id;
   }
 }

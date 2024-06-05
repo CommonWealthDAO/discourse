@@ -1,10 +1,11 @@
-import CleansUp from "discourse/mixins/cleans-up";
 import Component from "@ember/component";
-import DiscourseURL from "discourse/lib/url";
-import I18n from "I18n";
-import discourseComputed, { bind } from "discourse-common/utils/decorators";
 import { scheduleOnce } from "@ember/runloop";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
+import $ from "jquery";
+import DiscourseURL from "discourse/lib/url";
+import CleansUp from "discourse/mixins/cleans-up";
+import discourseComputed, { bind } from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 function entranceDate(dt, showTime) {
   const today = new Date();
@@ -32,6 +33,7 @@ function entranceDate(dt, showTime) {
 export default Component.extend(CleansUp, {
   router: service(),
   session: service(),
+  historyStore: service(),
   elementId: "topic-entrance",
   classNameBindings: ["visible::hidden"],
   topic: null,
@@ -160,14 +162,12 @@ export default Component.extend(CleansUp, {
   },
 
   willDestroyElement() {
+    this._super(...arguments);
     this.appEvents.off("topic-entrance:show", this, "_show");
   },
 
   _jumpTo(destination) {
-    this.session.set("lastTopicIdViewed", {
-      topicId: this.topic.id,
-      historyUuid: this.router.location.getState?.().uuid,
-    });
+    this.historyStore.set("lastTopicIdViewed", this.topic.id);
 
     this.cleanUp();
     DiscourseURL.routeTo(destination);

@@ -1,8 +1,8 @@
 import EmberObject from "@ember/object";
-import I18n from "I18n";
 import Mixin from "@ember/object/mixin";
-import discourseComputed from "discourse-common/utils/decorators";
 import { isEmpty } from "@ember/utils";
+import discourseComputed from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 export default Mixin.create({
   rejectedPasswords: null,
@@ -81,7 +81,9 @@ export default Mixin.create({
     if (password.length < passwordMinLength) {
       return EmberObject.create(
         Object.assign(failedAttrs, {
-          reason: I18n.t("user.password.too_short"),
+          reason: I18n.t("user.password.too_short", {
+            count: passwordMinLength,
+          }),
         })
       );
     }

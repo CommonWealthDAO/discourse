@@ -17,10 +17,6 @@ class DiscourseJsProcessor
     "proposal-export-namespace-from",
   ]
 
-  def self.plugin_transpile_paths
-    @@plugin_transpile_paths ||= Set.new
-  end
-
   def self.ember_cli?(filename)
     filename.include?("/app/assets/javascripts/discourse/dist/")
   end
@@ -33,25 +29,12 @@ class DiscourseJsProcessor
 
     data = transpile(data, root_path, logical_path) if should_transpile?(input[:filename])
 
-    # add sourceURL until we can do proper source maps
-    if !Rails.env.production? && !ember_cli?(input[:filename])
-      plugin_name = root_path[%r{/plugins/([\w-]+)/assets}, 1]
-      source_url =
-        if plugin_name
-          "plugins/#{plugin_name}/assets/javascripts/#{logical_path}"
-        else
-          logical_path
-        end
-
-      data = "eval(#{data.inspect} + \"\\n//# sourceURL=#{source_url}\");\n"
-    end
-
     { data: data }
   end
 
-  def self.transpile(data, root_path, logical_path, theme_id: nil)
+  def self.transpile(data, root_path, logical_path, theme_id: nil, extension: nil)
     transpiler = Transpiler.new(skip_module: skip_module?(data))
-    transpiler.perform(data, root_path, logical_path, theme_id: theme_id)
+    transpiler.perform(data, root_path, logical_path, theme_id: theme_id, extension: extension)
   end
 
   def self.should_transpile?(filename)
@@ -74,22 +57,6 @@ class DiscourseJsProcessor
     return false if relative_path.start_with?("#{js_root}/locales/")
     return false if relative_path.start_with?("#{js_root}/plugins/")
 
-    if %w[
-         start-discourse
-         onpopstate-handler
-         google-tag-manager
-         google-universal-analytics-v3
-         google-universal-analytics-v4
-         activate-account
-         auto-redirect
-         embed-application
-         app-boot
-       ].any? { |f| relative_path == "#{js_root}/#{f}.js" }
-      return true
-    end
-
-    return true if plugin_transpile_paths.any? { |prefix| relative_path.start_with?(prefix) }
-
     !!(relative_path =~ %r{^#{js_root}/[^/]+/} || relative_path =~ %r{^#{test_root}/[^/]+/})
   end
 
@@ -98,8 +65,14 @@ class DiscourseJsProcessor
   end
 
   class Transpiler
-    JS_PROCESSOR_PATH =
-      Rails.env.production? ? "tmp/js-processor.js" : "tmp/js-processor/#{Process.pid}.js"
+    TRANSPILER_PATH =
+      (
+        if Rails.env.production?
+          "tmp/theme-transpiler.js"
+        else
+          "tmp/theme-transpiler/#{Process.pid}.js"
+        end
+      )
 
     @mutex = Mutex.new
     @ctx_init = Mutex.new
@@ -109,19 +82,13 @@ class DiscourseJsProcessor
       @mutex
     end
 
-    def self.generate_js_processor
+    def self.build_theme_transpiler
       Discourse::Utils.execute_command(
-        "yarn",
-        "--silent",
-        "esbuild",
-        "--log-level=warning",
-        "--bundle",
-        "--external:fs",
-        "--define:process='{\"env\":{}}'",
-        "app/assets/javascripts/js-processor.js",
-        "--outfile=#{JS_PROCESSOR_PATH}",
+        "node",
+        "app/assets/javascripts/theme-transpiler/build.js",
+        TRANSPILER_PATH,
       )
-      JS_PROCESSOR_PATH
+      TRANSPILER_PATH
     end
 
     def self.create_new_context
@@ -134,11 +101,9 @@ class DiscourseJsProcessor
       ctx.attach("rails.logger.error", proc { |err| Rails.logger.error(err.to_s) })
 
       # Theme template AST transformation plugins
-      if Rails.env.development? || Rails.env.test?
-        @processor_mutex.synchronize { generate_js_processor }
-      end
+      @processor_mutex.synchronize { build_theme_transpiler } if !Rails.env.production?
 
-      ctx.eval(File.read(JS_PROCESSOR_PATH), filename: "js-processor.js")
+      ctx.eval(File.read(TRANSPILER_PATH), filename: "theme-transpiler.js")
 
       ctx
     end
@@ -190,7 +155,7 @@ class DiscourseJsProcessor
       @skip_module = skip_module
     end
 
-    def perform(source, root_path = nil, logical_path = nil, theme_id: nil)
+    def perform(source, root_path = nil, logical_path = nil, theme_id: nil, extension: nil)
       self.class.v8_call(
         "transpile",
         source,
@@ -198,6 +163,7 @@ class DiscourseJsProcessor
           skipModule: @skip_module,
           moduleId: module_name(root_path, logical_path),
           filename: logical_path || "unknown",
+          extension: extension,
           themeId: theme_id,
           commonPlugins: DISCOURSE_COMMON_BABEL_PLUGINS,
         },

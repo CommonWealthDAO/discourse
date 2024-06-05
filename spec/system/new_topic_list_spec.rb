@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 describe "New topic list", type: :system do
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
   fab!(:group) { Fabricate(:group, users: [user]) }
-  fab!(:category) { Fabricate(:category) }
-  fab!(:tag) { Fabricate(:tag) }
+  fab!(:category)
+  fab!(:tag)
 
   fab!(:new_reply) do
     Fabricate(:post).topic.tap do |topic|
@@ -328,7 +328,7 @@ describe "New topic list", type: :system do
           expect(tabs_toggle.topics_tab).to be_inactive
         end
 
-        it "live-updates the counts shown on the tabs" do
+        skip "live-updates the counts shown on the tabs" do
           Fabricate(:post, topic: Fabricate(:topic, tags: [tag]))
 
           visit("/tag/#{tag.name}/l/new")

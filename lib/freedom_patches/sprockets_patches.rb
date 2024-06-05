@@ -50,11 +50,12 @@ Sprockets::DirectiveProcessor.prepend(
   end,
 )
 
-# Skip digest path for workbox assets. They are already in a folder with a digest in the name.
+# Skip sprockets fingerprinting for some assets
 Sprockets::Asset.prepend(
   Module.new do
     def digest_path
-      return logical_path if logical_path.match?(%r{^workbox-.*/})
+      # Webpack chunks are already named based on their contents
+      return logical_path if logical_path.start_with?("chunk.")
       super
     end
   end,

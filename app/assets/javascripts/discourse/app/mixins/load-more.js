@@ -1,5 +1,5 @@
-import Eyeline from "discourse/lib/eyeline";
 import Mixin from "@ember/object/mixin";
+import Eyeline from "discourse/lib/eyeline";
 import Scrolling from "discourse/mixins/scrolling";
 import { on } from "discourse-common/utils/decorators";
 
@@ -7,12 +7,6 @@ import { on } from "discourse-common/utils/decorators";
 export default Mixin.create(Scrolling, {
   scrolled() {
     return this.eyeline?.update();
-  },
-
-  loadMoreUnlessFull() {
-    if (this.screenNotFull()) {
-      this.send("loadMore");
-    }
   },
 
   @on("didInsertElement")

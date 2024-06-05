@@ -20,13 +20,17 @@ module MultisiteTestHelpers
   end
 
   def self.create_multisite?
-    (ENV["RAILS_ENV"] == "test" || !ENV["RAILS_ENV"]) && !ENV["RAILS_DB"] && !ENV["SKIP_MULTISITE"]
+    (ENV["RAILS_ENV"] == "test" || !ENV["RAILS_ENV"]) && !ENV["RAILS_DB"] &&
+      !ENV["SKIP_MULTISITE"] && !ENV["SKIP_TEST_DATABASE"]
   end
 end
 
 task "db:environment:set" => [:load_config] do |_, args|
   if MultisiteTestHelpers.load_multisite?
-    system("RAILS_ENV=test RAILS_DB=discourse_test_multisite rake db:environment:set")
+    system(
+      "RAILS_ENV=test RAILS_DB=discourse_test_multisite rake db:environment:set",
+      exception: true,
+    )
   end
 end
 
@@ -55,7 +59,7 @@ end
 
 task "db:drop" => [:load_config] do |_, args|
   if MultisiteTestHelpers.create_multisite?
-    system("RAILS_DB=discourse_test_multisite RAILS_ENV=test rake db:drop")
+    system("RAILS_DB=discourse_test_multisite RAILS_ENV=test rake db:drop", exception: true)
   end
 end
 
@@ -116,7 +120,12 @@ class SeedHelper
   end
 end
 
-task "multisite:migrate" => %w[db:load_config environment set_locale] do |_, args|
+task "multisite:migrate" => %w[
+       db:load_config
+       environment
+       set_locale
+       assets:precompile:theme_transpiler
+     ] do |_, args|
   raise "Multisite migrate is only supported in production" if ENV["RAILS_ENV"] != "production"
 
   DistributedMutex.synchronize(
@@ -220,7 +229,7 @@ task "db:migrate" => %w[
        load_config
        environment
        set_locale
-       assets:precompile:js_processor
+       assets:precompile:theme_transpiler
      ] do |_, args|
   DistributedMutex.synchronize(
     "db_migration",
@@ -260,7 +269,7 @@ task "db:migrate" => %w[
   end
 
   if !Discourse.is_parallel_test? && MultisiteTestHelpers.load_multisite?
-    system("RAILS_DB=discourse_test_multisite rake db:migrate")
+    system("RAILS_DB=discourse_test_multisite rake db:migrate", exception: true)
   end
 end
 

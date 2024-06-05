@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 RSpec.describe PostBookmarkable do
   subject(:registered_bookmarkable) { RegisteredBookmarkable.new(PostBookmarkable) }
 
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
   fab!(:private_category) { Fabricate(:private_category, group: Fabricate(:group)) }
 
   let(:guardian) { Guardian.new(user) }
@@ -101,6 +99,13 @@ RSpec.describe PostBookmarkable do
       bookmark1.reload
       expect(registered_bookmarkable.can_send_reminder?(bookmark1)).to eq(false)
     end
+
+    it "cannot send reminder if the user cannot access the topic" do
+      expect(registered_bookmarkable.can_send_reminder?(bookmark1)).to eq(true)
+      bookmark1.bookmarkable.topic.update!(category: private_category)
+      bookmark1.reload
+      expect(registered_bookmarkable.can_send_reminder?(bookmark1)).to eq(false)
+    end
   end
 
   describe "#reminder_handler" do
@@ -119,6 +124,8 @@ RSpec.describe PostBookmarkable do
           display_username: bookmark1.user.username,
           bookmark_name: bookmark1.name,
           bookmark_id: bookmark1.id,
+          bookmarkable_type: bookmark1.bookmarkable_type,
+          bookmarkable_id: bookmark1.bookmarkable_id,
         }.to_json,
       )
     end

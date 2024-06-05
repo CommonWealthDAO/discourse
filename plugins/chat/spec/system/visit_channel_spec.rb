@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe "Visit channel", type: :system do
-  fab!(:category) { Fabricate(:category) }
-  fab!(:topic) { Fabricate(:topic) }
+  fab!(:category)
+  fab!(:topic)
   fab!(:post) { Fabricate(:post, topic: topic) }
   fab!(:current_user) { Fabricate(:user) }
   fab!(:category_channel_1) { Fabricate(:category_channel) }
@@ -24,7 +24,7 @@ RSpec.describe "Visit channel", type: :system do
     end
 
     it "shows a not found page" do
-      chat.visit_channel(category_channel_1)
+      chat.visit_channel(category_channel_1, with_preloaded_channels: false)
 
       expect(page).to have_content(I18n.t("page_not_found.title"))
     end
@@ -33,7 +33,7 @@ RSpec.describe "Visit channel", type: :system do
   context "when chat enabled" do
     context "when anonymous" do
       it "redirects to homepage" do
-        chat.visit_channel(category_channel_1)
+        chat.visit_channel(category_channel_1, with_preloaded_channels: false)
 
         expect(page).to have_current_path("/latest")
       end
@@ -46,7 +46,7 @@ RSpec.describe "Visit channel", type: :system do
         before { current_user.user_option.update!(chat_enabled: false) }
 
         it "redirects to homepage" do
-          chat.visit_channel(category_channel_1)
+          chat.visit_channel(category_channel_1, with_preloaded_channels: false)
 
           expect(page).to have_current_path("/latest")
         end
@@ -56,7 +56,7 @@ RSpec.describe "Visit channel", type: :system do
         before { SiteSetting.chat_allowed_groups = Group::AUTO_GROUPS[:staff] }
 
         it "redirects homepage" do
-          chat.visit_channel(category_channel_1)
+          chat.visit_channel(category_channel_1, with_preloaded_channels: false)
 
           expect(page).to have_current_path("/latest")
         end

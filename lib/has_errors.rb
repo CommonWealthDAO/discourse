@@ -3,7 +3,6 @@
 # Helper functions for dealing with errors and objects that have
 # child objects with errors
 module HasErrors
-  attr_reader :errors
   attr_accessor :forbidden, :not_found, :conflict
 
   def errors
@@ -27,7 +26,7 @@ module HasErrors
   end
 
   def add_error(msg)
-    errors.add(:base, msg) unless errors[:base].include?(msg)
+    errors.add(:base, msg) if errors[:base].exclude?(msg)
   end
 
   def add_errors_from(obj)

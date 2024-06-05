@@ -1,15 +1,13 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe Chat::ReviewQueue do
   subject(:queue) { described_class.new }
 
   fab!(:message_poster) { Fabricate(:user) }
-  fab!(:flagger) { Fabricate(:user) }
+  fab!(:flagger) { Fabricate(:user, refresh_auto_groups: true) }
   fab!(:chat_channel) { Fabricate(:category_channel) }
   fab!(:message) { Fabricate(:chat_message, user: message_poster, chat_channel: chat_channel) }
-  fab!(:admin) { Fabricate(:admin) }
+  fab!(:admin)
 
   let(:guardian) { Guardian.new(flagger) }
   let(:admin_guardian) { Guardian.new(admin) }
@@ -17,7 +15,6 @@ describe Chat::ReviewQueue do
   before do
     chat_channel.add(message_poster)
     chat_channel.add(flagger)
-    Group.refresh_automatic_groups!
   end
 
   describe "#flag_message" do
@@ -116,10 +113,10 @@ describe Chat::ReviewQueue do
       end
 
       it "ignores the cooldown window when the message is edited" do
-        Chat::MessageUpdater.update(
+        Chat::UpdateMessage.call(
           guardian: Guardian.new(message.user),
-          chat_message: message,
-          new_content: "I'm editing this message. Please flag it.",
+          message_id: message.id,
+          message: "I'm editing this message. Please flag it.",
         )
 
         expect(second_flag_result).to include success: true

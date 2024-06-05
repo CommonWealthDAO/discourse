@@ -1,12 +1,13 @@
-import Service from "@ember/service";
+import { warn } from "@ember/debug";
 import { set } from "@ember/object";
+import Service from "@ember/service";
+import { underscore } from "@ember/string";
 import { Promise } from "rsvp";
+import { ajax } from "discourse/lib/ajax";
+import { cleanNullQueryParams } from "discourse/lib/utilities";
 import RestModel from "discourse/models/rest";
 import ResultSet from "discourse/models/result-set";
-import { ajax } from "discourse/lib/ajax";
 import { getRegister } from "discourse-common/lib/get-owner";
-import { underscore } from "@ember/string";
-import { warn } from "@ember/debug";
 
 let _identityMap;
 
@@ -49,32 +50,32 @@ function findAndRemoveMap(type, id) {
 
 flushMap();
 
-export default Service.extend({
-  _plurals: {
+export default class StoreService extends Service {
+  _plurals = {
     category: "categories",
     "post-reply": "post-replies",
     "post-reply-history": "post_reply_histories",
     reviewable_history: "reviewable_histories",
-  },
+  };
 
   init() {
-    this._super(...arguments);
+    super.init(...arguments);
     this.register = this.register || getRegister(this);
-  },
+  }
 
   pluralize(thing) {
     return this._plurals[thing] || thing + "s";
-  },
+  }
 
   addPluralization(thing, plural) {
     this._plurals[thing] = plural;
-  },
+  }
 
   findAll(type, findArgs) {
     const adapter = this.adapterFor(type);
 
     let store = this;
-    return adapter.findAll(this, type, findArgs).then((result) => {
+    return adapter.findAll(this, type, findArgs).then(async (result) => {
       let results = this._resultSet(type, result);
       if (adapter.afterFindAll) {
         results = adapter.afterFindAll(results, {
@@ -83,16 +84,23 @@ export default Service.extend({
           },
         });
       }
+      await adapter.applyTransformations?.([result]);
       return results;
     });
-  },
+  }
 
   // Mostly for legacy, things like TopicList without ResultSets
   findFiltered(type, findArgs) {
-    return this.adapterFor(type)
+    const adapter = this.adapterFor(type);
+    findArgs = cleanNullQueryParams(findArgs);
+    return adapter
       .find(this, type, findArgs)
-      .then((result) => this._build(type, result));
-  },
+      .then((result) => this._build(type, result))
+      .then(async (result) => {
+        await adapter.applyTransformations?.([result]);
+        return result;
+      });
+  }
 
   _hydrateFindResults(result, type, findArgs) {
     if (typeof findArgs === "object") {
@@ -101,7 +109,7 @@ export default Service.extend({
       const apiName = this.adapterFor(type).apiNameFor(type);
       return this._hydrate(type, result[underscore(apiName)], result);
     }
-  },
+  }
 
   // See if the store can find stale data. We sometimes prefer to show stale data and
   // refresh it in the background.
@@ -112,7 +120,7 @@ export default Service.extend({
       results: stale,
       refresh: () => this.find(type, findArgs, opts),
     };
-  },
+  }
 
   find(type, findArgs, opts) {
     let adapter = this.adapterFor(type);
@@ -120,7 +128,14 @@ export default Service.extend({
       let hydrated = this._hydrateFindResults(result, type, findArgs, opts);
 
       if (result.extras) {
-        hydrated.set("extras", result.extras);
+        let extras = result.extras;
+
+        const extrasClass = this._extrasClass(type);
+        if (extrasClass) {
+          extras = new extrasClass(extras);
+        }
+
+        hydrated.set("extras", extras);
       }
 
       if (adapter.cache) {
@@ -130,7 +145,7 @@ export default Service.extend({
       }
       return hydrated;
     });
-  },
+  }
 
   _updateStale(stale, hydrated, primaryKey) {
     if (!stale) {
@@ -156,7 +171,7 @@ export default Service.extend({
       })
     );
     return hydrated;
-  },
+  }
 
   refreshResults(resultSet, type, url) {
     const adapter = this.adapterFor(type);
@@ -167,7 +182,7 @@ export default Service.extend({
       );
       resultSet.set("content", content);
     });
-  },
+  }
 
   appendResults(resultSet, type, url) {
     const adapter = this.adapterFor(type);
@@ -190,7 +205,7 @@ export default Service.extend({
         resultSet.set("loadMoreUrl", null);
       }
     });
-  },
+  }
 
   update(type, id, attrs) {
     const adapter = this.adapterFor(type);
@@ -201,15 +216,15 @@ export default Service.extend({
       }
       return result;
     });
-  },
+  }
 
   createRecord(type, attrs) {
     attrs = attrs || {};
     const adapter = this.adapterFor(type);
-    return !!attrs[adapter.primaryKey]
+    return attrs[adapter.primaryKey]
       ? this._hydrate(type, attrs)
       : this._build(type, attrs);
-  },
+  }
 
   destroyRecord(type, record) {
     const adapter = this.adapterFor(type);
@@ -224,7 +239,7 @@ export default Service.extend({
       removeMap(type, record.get(adapter.primaryKey));
       return result;
     });
-  },
+  }
 
   _resultSet(type, result, findArgs) {
     const adapter = this.adapterFor(type);
@@ -254,11 +269,27 @@ export default Service.extend({
     };
 
     if (result.extras) {
-      createArgs.extras = result.extras;
+      let extras = result.extras;
+
+      const extrasClass = this._extrasClass(type);
+      if (extrasClass) {
+        extras = new extrasClass(extras);
+      }
+
+      createArgs.extras = extras;
+
+      for (const obj of content) {
+        obj.extras = extras;
+      }
     }
 
     return ResultSet.create(createArgs);
-  },
+  }
+
+  _extrasClass(type) {
+    const klass = this.register.lookupFactory("model:" + type) || RestModel;
+    return klass.class?.ExtrasClass;
+  }
 
   _build(type, obj) {
     const adapter = this.adapterFor(type);
@@ -266,25 +297,19 @@ export default Service.extend({
     obj.__type = type;
     obj.__state = obj[adapter.primaryKey] ? "created" : "new";
 
-    // TODO: Have injections be automatic
-    obj.topicTrackingState = this.register.lookup(
-      "service:topic-tracking-state"
-    );
-    obj.keyValueStore = this.register.lookup("service:key-value-store");
-
     const klass = this.register.lookupFactory("model:" + type) || RestModel;
     const model = klass.create(obj);
 
     storeMap(type, obj[adapter.primaryKey], model);
     return model;
-  },
+  }
 
   adapterFor(type) {
     return (
       this.register.lookup("adapter:" + type) ||
       this.register.lookup("adapter:rest")
     );
-  },
+  }
 
   _lookupSubType(subType, type, id, root) {
     if (root.meta && root.meta.types) {
@@ -312,7 +337,7 @@ export default Service.extend({
         return hydrated;
       }
     }
-  },
+  }
 
   _hydrateEmbedded(type, obj, root) {
     const adapter = this.adapterFor(type);
@@ -351,7 +376,7 @@ export default Service.extend({
         }
       }
     });
-  },
+  }
 
   _hydrate(type, obj, root) {
     if (!obj) {
@@ -396,7 +421,7 @@ export default Service.extend({
     }
 
     return this._build(type, obj);
-  },
-});
+  }
+}
 
 export { flushMap };

@@ -11,10 +11,6 @@ class ImportScripts::Sfn < ImportScripts::Base
   BATCH_SIZE = 100_000
   MIN_CREATED_AT = "2003-11-01"
 
-  def initialize
-    super
-  end
-
   def execute
     load_external_users
     import_users
@@ -42,7 +38,7 @@ class ImportScripts::Sfn < ImportScripts::Base
     @external_users = {}
 
     CSV.foreach("/Users/zogstrip/Desktop/sfn.csv", col_sep: ";") do |row|
-      next unless @personify_id_to_contact_key.include?(row[0])
+      next if @personify_id_to_contact_key.exclude?(row[0])
 
       id = @personify_id_to_contact_key[row[0]]
       full_name = [row[1].strip, row[2].strip, row[3].strip].join(" ").strip

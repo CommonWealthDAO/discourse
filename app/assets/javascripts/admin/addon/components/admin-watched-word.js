@@ -1,22 +1,20 @@
-import { classNames } from "@ember-decorators/component";
-import { inject as service } from "@ember/service";
-import { alias, equal } from "@ember/object/computed";
 import Component from "@ember/component";
-import discourseComputed from "discourse-common/utils/decorators";
 import { action } from "@ember/object";
-import I18n from "I18n";
+import { alias, equal } from "@ember/object/computed";
+import { service } from "@ember/service";
+import { classNames } from "@ember-decorators/component";
+import discourseComputed from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 @classNames("watched-word")
 export default class AdminWatchedWord extends Component {
   @service dialog;
 
   @equal("actionKey", "replace") isReplace;
-
   @equal("actionKey", "tag") isTag;
-
   @equal("actionKey", "link") isLink;
-
   @alias("word.case_sensitive") isCaseSensitive;
+  @alias("word.html") isHtml;
 
   @discourseComputed("word.replacement")
   tags(replacement) {

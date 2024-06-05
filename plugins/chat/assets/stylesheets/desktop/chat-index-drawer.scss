@@ -1,4 +1,4 @@
-.chat-drawer-container .channels-list {
+.chat-drawer-container .channels-list-container {
   .chat-channel-divider {
     padding: 1.5rem 0.5rem 0.5rem 1rem;
     font-size: var(--font-0);
@@ -24,9 +24,25 @@
         margin-top: 0.25rem;
       }
     }
+
+    &.--threads {
+      margin-top: 0.25rem;
+      .c-unread-indicator {
+        width: 8px;
+        height: 8px;
+      }
+      .chat-channel-title {
+        gap: 0.5rem;
+        color: var(--primary);
+      }
+    }
   }
 
   .toggle-channel-membership-button.-leave {
     margin-left: 0.5em;
   }
+}
+
+.chat-drawer-container .c-footer .chat-channel-unread-indicator.-urgent {
+  width: min-content;
 }

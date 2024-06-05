@@ -1,7 +1,7 @@
-import I18n from "I18n";
 import { isEmpty } from "@ember/utils";
 import { userPath } from "discourse/lib/url";
 import getURL from "discourse-common/lib/get-url";
+import I18n from "discourse-i18n";
 
 const _additionalAttributes = [];
 
@@ -117,6 +117,7 @@ export default function transformPost(
 
   const createdBy = details.created_by || {};
 
+  postAtts.topic = topic;
   postAtts.topicId = topic.id;
   postAtts.topicOwner = createdBy.id === post.user_id;
   postAtts.topicCreatedById = createdBy.id;
@@ -129,7 +130,7 @@ export default function transformPost(
     postType === postTypes.small_action || post.action_code === "split_topic";
   postAtts.canBookmark = !!currentUser;
   postAtts.canManage = currentUser && currentUser.get("canManageTopic");
-  postAtts.canViewRawEmail = currentUser && currentUser.staff;
+  postAtts.canViewRawEmail = currentUser && currentUser.can_view_raw_email;
   postAtts.canArchiveTopic = !!details.can_archive_topic;
   postAtts.canCloseTopic = !!details.can_close_topic;
   postAtts.canSplitMergeTopic = !!details.can_split_merge_topic;
@@ -220,6 +221,10 @@ export default function transformPost(
     postAtts.topicWordCount = topic.word_count;
     postAtts.hasTopRepliesSummary = topic.has_summary;
     postAtts.summarizable = topic.summarizable;
+
+    if (post.post_number === 1) {
+      postAtts.summary = postStream.topicSummary;
+    }
   }
 
   if (postAtts.isDeleted) {
@@ -249,7 +254,11 @@ export default function transformPost(
           postId: post.id,
           action,
           canUndo: a.can_undo,
-          description: I18n.t(`post.actions.by_you.${action}`),
+          description: I18n.t(`post.actions.by_you.${action}`, {
+            defaultValue: I18n.t(`post.actions.by_you.custom`, {
+              custom: a.actionType.name,
+            }),
+          }),
         };
       });
   }

@@ -1,30 +1,52 @@
 # frozen_string_literal: true
 
-task "assets:precompile:before": "environment" do
-  require "uglifier"
-  require "open3"
-
-  unless %w[profile production].include? Rails.env
+task "assets:precompile:prereqs" do
+  if %w[profile production].exclude? Rails.env
     raise "rake assets:precompile should only be run in RAILS_ENV=production, you are risking unminified assets"
   end
+end
 
-  if ENV["EMBER_CLI_COMPILE_DONE"] != "1"
-    compile_command = "yarn --cwd app/assets/javascripts/discourse run ember build -prod"
+task "assets:precompile:build" do
+  if ENV["SKIP_EMBER_CLI_COMPILE"] != "1"
+    ember_version = ENV["EMBER_VERSION"] || "5"
 
-    if check_node_heap_size_limit < 1024
-      STDERR.puts "Detected low Node.js heap_size_limit. Using --max-old-space-size=1024."
-      compile_command = "NODE_OPTIONS='--max-old-space-size=1024' #{compile_command}"
+    raise "Unknown ember version '#{ember_version}'" if !%w[5].include?(ember_version)
+
+    compile_command = "CI=1 yarn --cwd app/assets/javascripts/discourse run ember build"
+
+    heap_size_limit = check_node_heap_size_limit
+
+    if heap_size_limit < 2048
+      STDERR.puts "Node.js heap_size_limit (#{heap_size_limit}) is less than 2048MB. Setting --max-old-space-size=2048 and CHEAP_SOURCE_MAPS=1"
+      compile_command =
+        "JOBS=0 CI=1 NODE_OPTIONS='--max-old-space-size=2048' CHEAP_SOURCE_MAPS=1 #{compile_command}"
     end
 
+    ember_env = ENV["EMBER_ENV"] || "production"
+    compile_command = "#{compile_command} -prod" if ember_env == "production"
+
+    only_ember_precompile_build_remaining = (ARGV.last == "assets:precompile:build")
     only_assets_precompile_remaining = (ARGV.last == "assets:precompile")
 
-    if only_assets_precompile_remaining
-      # Using exec to free up Rails app memory during ember build
-      exec "#{compile_command} && EMBER_CLI_COMPILE_DONE=1 bin/rake assets:precompile"
+    # Using exec to free up Rails app memory during ember build
+    if only_ember_precompile_build_remaining
+      exec "#{compile_command}"
+    elsif only_assets_precompile_remaining
+      exec "#{compile_command} && SKIP_EMBER_CLI_COMPILE=1 bin/rake assets:precompile"
     else
       system compile_command, exception: true
+      EmberCli.clear_cache!
     end
   end
+end
+
+task "assets:precompile:before": %w[
+       environment
+       assets:precompile:prereqs
+       assets:precompile:build
+     ] do
+  require "uglifier"
+  require "open3"
 
   # Ensure we ALWAYS do a clean build
   # We use many .erbs that get out of date quickly, especially with plugins
@@ -51,11 +73,6 @@ task "assets:precompile:before": "environment" do
 
   require "sprockets"
   require "digest/sha1"
-
-  # Add ember cli chunks
-  Rails.configuration.assets.precompile.push(
-    *EmberCli.script_chunks.values.flatten.flat_map { |name| ["#{name}.js", "#{name}.map"] },
-  )
 end
 
 task "assets:precompile:css" => "environment" do
@@ -181,7 +198,8 @@ end
 
 # different brotli versions use different parameters
 def brotli_command(path, max_compress)
-  compression_quality = max_compress ? "11" : "6"
+  compression_quality =
+    max_compress ? "11" : (ENV["DISCOURSE_ASSETS_PRECOMPILE_DEFAULT_BROTLI_QUALITY"] || "6")
   "brotli -f --quality=#{compression_quality} #{path} --output=#{path}.br"
 end
 
@@ -196,7 +214,7 @@ end
 def max_compress?(path, locales)
   return false if Rails.configuration.assets.skip_minification.include? path
   return false if EmberCli.is_ember_cli_asset?(path)
-  return true unless path.include? "locales/"
+  return true if path.exclude? "locales/"
 
   path_locale = path.delete_prefix("locales/").delete_suffix(".js")
   return true if locales.include? path_locale
@@ -205,11 +223,7 @@ def max_compress?(path, locales)
 end
 
 def compress(from, to)
-  if $node_compress
-    compress_node(from, to)
-  else
-    compress_ruby(from, to)
-  end
+  $node_compress ? compress_node(from, to) : compress_ruby(from, to)
 end
 
 def concurrent?
@@ -254,10 +268,16 @@ task "assets:precompile:compress_js": "environment" do
         manifest
           .files
           .select { |k, v| k =~ /\.js\z/ }
-          .reject { |k, v| k =~ %r{/workbox-.*'/} }
           .each do |file, info|
             path = "#{assets_path}/#{file}"
-            _file = (d = File.dirname(file)) == "." ? "_#{file}" : "#{d}/_#{File.basename(file)}"
+            _file =
+              (
+                if (d = File.dirname(file)) == "."
+                  "_#{file}"
+                else
+                  "#{d}/_#{File.basename(file)}"
+                end
+              )
             _path = "#{assets_path}/#{_file}"
             max_compress = max_compress?(info["logical_path"], locales)
             if File.exist?(_path)
@@ -300,16 +320,15 @@ task "assets:precompile:compress_js": "environment" do
   end
 end
 
-task "assets:precompile:js_processor": "environment" do
-  path = DiscourseJsProcessor::Transpiler.generate_js_processor
-  puts "Compiled js-processor: #{path}"
+task "assets:precompile:theme_transpiler": "environment" do
+  DiscourseJsProcessor::Transpiler.build_theme_transpiler
 end
 
 # Run these tasks **before** Rails' "assets:precompile" task
 task "assets:precompile": %w[
        assets:precompile:before
        maxminddb:refresh
-       assets:precompile:js_processor
+       assets:precompile:theme_transpiler
      ]
 
 # Run these tasks **after** Rails' "assets:precompile" task

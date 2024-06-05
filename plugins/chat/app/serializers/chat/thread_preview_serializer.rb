@@ -7,8 +7,8 @@ module Chat
                :last_reply_id,
                :participant_count,
                :reply_count
-    has_many :participant_users, serializer: BasicUserSerializer, embed: :objects
-    has_one :last_reply_user, serializer: BasicUserSerializer, embed: :objects
+    has_many :participant_users, serializer: ::BasicUserSerializer, embed: :objects
+    has_one :last_reply_user, serializer: ::BasicUserSerializer, embed: :objects
 
     def initialize(object, opts)
       super(object, opts)
@@ -28,11 +28,11 @@ module Chat
     end
 
     def last_reply_excerpt
-      object.last_message.excerpt(max_length: Chat::Thread::EXCERPT_LENGTH)
+      object.last_message.excerpt || object.last_message.build_excerpt
     end
 
     def last_reply_user
-      object.last_message.user
+      object.last_message.user || Chat::NullUser.new
     end
 
     def include_participant_data?

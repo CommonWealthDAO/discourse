@@ -1,33 +1,11 @@
-import Service, { inject as service } from "@ember/service";
 import { tracked } from "@glimmer/tracking";
-import { getOwner } from "@ember/application";
-import I18n from "I18n";
-import { dasherize } from "@ember/string";
 import { action } from "@ember/object";
-import { disableImplicitInjections } from "discourse/lib/implicit-injections";
+import Service, { service } from "@ember/service";
 import { CLOSE_INITIATED_BY_MODAL_SHOW } from "discourse/components/d-modal";
+import { clearAllBodyScrollLocks } from "discourse/lib/body-scroll-lock";
+import { disableImplicitInjections } from "discourse/lib/implicit-injections";
+import { waitForClosedKeyboard } from "discourse/lib/wait-for-keyboard";
 import deprecated from "discourse-common/lib/deprecated";
-
-// Known legacy modals in core. Silence deprecation warnings for these so the messages
-// don't cause unnecessary noise.
-const KNOWN_LEGACY_MODALS = [
-  "associate-account-confirm",
-  "avatar-selector",
-  "change-owner",
-  "change-post-notice",
-  "create-account",
-  "create-invite-bulk",
-  "create-invite",
-  "grant-badge",
-  "group-default-notifications",
-  "login",
-  "raw-email",
-  "reject-reason-reviewable",
-  "reorder-categories",
-  "request-group-membership-form",
-  "share-and-invite",
-  "tag-upload",
-];
 
 const LEGACY_OPTS = new Set([
   "admin",
@@ -40,7 +18,9 @@ const LEGACY_OPTS = new Set([
 ]);
 
 @disableImplicitInjections
-class ModalService extends Service {
+export default class ModalService extends Service {
+  @service dialog;
+
   @tracked activeModal;
   @tracked opts = {};
 
@@ -60,15 +40,34 @@ class ModalService extends Service {
    *
    * @returns {Promise} A promise that resolves when the modal is closed, with any data passed to closeModal
    */
-  show(modal, opts) {
+  async show(modal, opts) {
+    if (typeof modal === "string") {
+      this.dialog.alert(
+        `Error: the '${modal}' modal needs updating to work with the latest version of Discourse. See https://meta.discourse.org/t/268057.`
+      );
+      deprecated(
+        `Defining modals using a controller is no longer supported. Use the component-based API instead. (modal: ${modal})`,
+        {
+          id: "discourse.modal-controllers",
+          since: "3.1",
+          dropFrom: "3.2",
+          url: "https://meta.discourse.org/t/268057",
+          raiseError: true,
+        }
+      );
+      return;
+    }
+
     this.close({ initiatedBy: CLOSE_INITIATED_BY_MODAL_SHOW });
+
+    await waitForClosedKeyboard(this);
 
     let resolveShowPromise;
     const promise = new Promise((resolve) => {
       resolveShowPromise = resolve;
     });
 
-    this.opts = opts || {};
+    this.opts = opts ??= {};
     this.activeModal = { component: modal, opts, resolveShowPromise };
 
     const unsupportedOpts = Object.keys(opts).filter((key) =>
@@ -86,186 +85,9 @@ class ModalService extends Service {
   }
 
   close(data) {
+    clearAllBodyScrollLocks();
     this.activeModal?.resolveShowPromise?.(data);
     this.activeModal = null;
     this.opts = {};
-  }
-}
-
-// Remove all logic below when legacy modals are dropped (deprecation: discourse.modal-controllers)
-export default class ModalServiceWithLegacySupport extends ModalService {
-  @service appEvents;
-
-  @tracked name;
-  @tracked selectedPanel;
-  @tracked hidden = true;
-
-  @tracked titleOverride;
-  @tracked modalClassOverride;
-  @tracked onSelectPanel;
-
-  get title() {
-    if (this.titleOverride) {
-      return this.titleOverride;
-    } else if (this.opts.titleTranslated) {
-      return this.opts.titleTranslated;
-    } else if (this.opts.title) {
-      return I18n.t(this.opts.title);
-    } else {
-      return null;
-    }
-  }
-
-  set title(value) {
-    this.titleOverride = value;
-  }
-
-  get modalClass() {
-    if (!this.isLegacy) {
-      return null;
-    }
-
-    return (
-      this.modalClassOverride ||
-      this.opts.modalClass ||
-      `${dasherize(this.name.replace(/^modals\//, "")).toLowerCase()}-modal`
-    );
-  }
-
-  set modalClass(value) {
-    this.modalClassOverride = value;
-  }
-
-  show(modal, opts = {}) {
-    if (typeof modal !== "string") {
-      return super.show(modal, opts);
-    }
-
-    this.close({ initiatedBy: CLOSE_INITIATED_BY_MODAL_SHOW });
-
-    if (!KNOWN_LEGACY_MODALS.includes(modal)) {
-      deprecated(
-        `Defining modals using a controller is deprecated. Use the component-based API instead. (modal: ${modal})`,
-        {
-          id: "discourse.modal-controllers",
-          since: "3.1",
-          dropFrom: "3.2",
-          url: "https://meta.discourse.org/t/268057",
-        }
-      );
-    }
-
-    const name = modal;
-    const container = getOwner(this);
-    const route = container.lookup("route:application");
-
-    this.opts = opts;
-
-    const controllerName = opts.admin ? `modals/${name}` : name;
-    this.name = controllerName;
-
-    let controller = container.lookup("controller:" + controllerName);
-    const templateName = opts.templateName || dasherize(name);
-
-    const renderArgs = { into: "application", outlet: "modalBody" };
-    if (controller) {
-      renderArgs.controller = controllerName;
-    } else {
-      // use a basic controller
-      renderArgs.controller = "basic-modal-body";
-      controller = container.lookup(`controller:${renderArgs.controller}`);
-    }
-
-    if (opts.addModalBodyView) {
-      renderArgs.view = "modal-body";
-    }
-
-    const modalName = `modal/${templateName}`;
-    const fullName = opts.admin ? `admin/templates/${modalName}` : modalName;
-    route.render(fullName, renderArgs);
-
-    if (opts.panels) {
-      if (controller.actions.onSelectPanel) {
-        this.onSelectPanel = controller.actions.onSelectPanel.bind(controller);
-      }
-      this.selectedPanel = opts.panels[0];
-    }
-
-    controller.set("modal", this);
-    const model = opts.model;
-    if (model) {
-      controller.set("model", model);
-    }
-    if (controller.onShow) {
-      controller.onShow();
-    }
-    controller.set("flashMessage", null);
-
-    return (this.activeController = controller);
-  }
-
-  close(initiatedBy) {
-    if (!this.isLegacy) {
-      super.close(...arguments);
-    }
-
-    const controllerName = this.name;
-    const controller = controllerName
-      ? getOwner(this).lookup(`controller:${controllerName}`)
-      : null;
-
-    if (controller?.beforeClose?.() === false) {
-      return;
-    }
-
-    getOwner(this)
-      .lookup("route:application")
-      .render("hide-modal", { into: "application", outlet: "modalBody" });
-    $(".d-modal.fixed-modal").modal("hide");
-
-    if (controller) {
-      this.appEvents.trigger("modal:closed", {
-        name: controllerName,
-        controller,
-      });
-
-      if (controller.onClose) {
-        controller.onClose({
-          initiatedByCloseButton: initiatedBy === "initiatedByCloseButton",
-          initiatedByClickOut: initiatedBy === "initiatedByClickOut",
-          initiatedByESC: initiatedBy === "initiatedByESC",
-        });
-      }
-    }
-    this.hidden = true;
-
-    this.name =
-      this.selectedPanel =
-      this.modalClassOverride =
-      this.titleOverride =
-      this.onSelectPanel =
-        null;
-
-    super.close();
-  }
-
-  hide() {
-    if (this.isLegacy) {
-      $(".d-modal.fixed-modal").modal("hide");
-    } else {
-      throw "hide/reopen are not supported for component-based modals";
-    }
-  }
-
-  reopen() {
-    if (this.isLegacy) {
-      $(".d-modal.fixed-modal").modal("show");
-    } else {
-      throw "hide/reopen are not supported for component-based modals";
-    }
-  }
-
-  get isLegacy() {
-    return this.name && !this.activeModal;
   }
 }

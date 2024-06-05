@@ -1,6 +1,6 @@
-import Service, { inject as service } from "@ember/service";
-import I18n from "I18n";
+import Service, { service } from "@ember/service";
 import { bind } from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 import { CHANNEL_STATUSES } from "discourse/plugins/chat/discourse/models/chat-channel";
 import ChatChannelArchive from "../models/chat-channel-archive";
 
@@ -25,9 +25,9 @@ export default class ChatSubscriptionsManager extends Service {
     }
 
     this._channelSubscriptions.add(channel.id);
+    this._startChannelMentionsSubscription(channel);
 
     if (!channel.isDirectMessageChannel) {
-      this._startChannelMentionsSubscription(channel);
       this._startKickFromChannelSubscription(channel);
     }
 
@@ -226,13 +226,15 @@ export default class ChatSubscriptionsManager extends Service {
 
   _onNewThreadMessage(busData) {
     this.chatChannelsManager.find(busData.channel_id).then((channel) => {
-      if (!channel.threadingEnabled) {
+      if (!channel.threadingEnabled && !busData.force_thread) {
         return;
       }
 
       channel.threadsManager
         .find(busData.channel_id, busData.thread_id)
         .then((thread) => {
+          thread.lastMessageId = busData.message.id;
+
           if (busData.message.user.id === this.currentUser.id) {
             // Thread should no longer be considered unread.
             if (thread.currentUserMembership) {

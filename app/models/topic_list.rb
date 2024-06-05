@@ -40,7 +40,6 @@ class TopicList
     :filter,
     :for_period,
     :per_page,
-    :top_tags,
     :current_user,
     :tags,
     :shared_drafts,
@@ -56,7 +55,7 @@ class TopicList
 
     @category = Category.find_by(id: @opts[:category_id]) if @opts[:category]
 
-    @tags = Tag.where(id: @opts[:tags]).all if @opts[:tags]
+    @tags = Tag.where(id: @opts[:tag_ids]).all if @opts[:tag_ids].present?
 
     @publish_read_state = !!@opts[:publish_read_state]
   end
@@ -74,6 +73,11 @@ class TopicList
   # Lazy initialization
   def topics
     @topics ||= load_topics
+  end
+
+  def categories
+    @categories ||=
+      topics.map { |t| [t.category&.parent_category, t.category] }.flatten.uniq.compact
   end
 
   def load_topics
@@ -128,7 +132,12 @@ class TopicList
       ft.topic_list = self
     end
 
-    topic_preloader_associations = [:image_upload, { topic_thumbnails: :optimized_image }]
+    topic_preloader_associations = [
+      :image_upload,
+      { topic_thumbnails: :optimized_image },
+      { category: :parent_category },
+    ]
+
     topic_preloader_associations.concat(DiscoursePluginRegistry.topic_preloader_associations.to_a)
 
     ActiveRecord::Associations::Preloader.new(

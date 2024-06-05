@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 describe "Local dates", type: :system do
-  fab!(:topic) { Fabricate(:topic) }
-  fab!(:current_user) { Fabricate(:user) }
+  fab!(:topic)
+  fab!(:current_user) { Fabricate(:user, refresh_auto_groups: true) }
   let(:year) { Time.zone.now.year + 1 }
   let(:month) { Time.zone.now.month }
   let(:bookmark_modal) { PageObjects::Modals::Bookmark.new }
+  let(:bookmark_menu) { PageObjects::Components::BookmarkMenu.new }
   let(:composer) { PageObjects::Components::Composer.new }
   let(:insert_datetime_modal) { PageObjects::Modals::InsertDateTime.new }
 
@@ -31,44 +32,46 @@ describe "Local dates", type: :system do
 
       expect(topic_page).to have_content(topic.title)
 
-      post_dates = topic_page.find_all("span[data-date]")
-
       # Single date in a paragraph.
       #
-      post_dates[0].click
-      tippy_date = topic_page.find(".tippy-content .current .date-time")
-
-      expect(tippy_date).to have_text("#{formatted_date_for_year(12, 15)}\n2:19 PM", exact: true)
+      find("span[data-date]:nth-of-type(1)").click
+      expect(page.find("[data-content] .current .date-time")).to have_text(
+        "#{formatted_date_for_year(12, 15)}\n2:19 PM",
+        exact: true,
+      )
+      page.send_keys(:escape)
 
       # Two single dates in the same paragraph.
       #
-      post_dates[1].click
-      tippy_date = topic_page.find(".tippy-content .current .date-time")
+      find("span[data-date]:nth-of-type(2)").click
+      expect(page.find("[data-content] .current .date-time")).to have_text(
+        "#{formatted_date_for_year(12, 15)}\n1:20 AM",
+        exact: true,
+      )
+      page.send_keys(:escape)
 
-      expect(tippy_date).to have_text("#{formatted_date_for_year(12, 15)}\n1:20 AM", exact: true)
-
-      post_dates[2].click
-      tippy_date = topic_page.find(".tippy-content .current .date-time")
-
-      expect(tippy_date).to have_text("#{formatted_date_for_year(12, 15)}\n2:40 AM", exact: true)
+      find("span[data-date]:nth-of-type(3)").click
+      expect(page.find("[data-content] .current .date-time")).to have_text(
+        "#{formatted_date_for_year(12, 15)}\n2:40 AM",
+        exact: true,
+      )
+      page.send_keys(:escape)
 
       # Two date ranges in the same paragraph.
       #
-      post_dates[3].click
-      tippy_date = topic_page.find(".tippy-content .current .date-time")
-
-      expect(tippy_date).to have_text(
+      find("span[data-date]:nth-of-type(4)").click
+      expect(page.find("[data-content] .current .date-time")).to have_text(
         "#{formatted_date_for_year(12, 15)}\n11:25 AM → 12:26 AM",
         exact: true,
       )
+      page.send_keys(:escape)
 
-      post_dates[5].click
-      tippy_date = topic_page.find(".tippy-content .current .date-time")
-
-      expect(tippy_date).to have_text(
+      find("span[data-date]:nth-of-type(6)").click
+      expect(page.find("[data-content] .current .date-time")).to have_text(
         "#{formatted_date_for_year(12, 22)} 11:57 AM → #{formatted_date_for_year(12, 23)} 11:58 AM",
         exact: true,
       )
+      page.send_keys(:escape)
     end
   end
 
@@ -161,6 +164,7 @@ describe "Local dates", type: :system do
       topic_page.visit_topic(topic)
       topic_page.expand_post_actions(topic.first_post)
       topic_page.click_post_action_button(topic.first_post, :bookmark)
+      bookmark_menu.click_menu_option("custom")
       bookmark_modal.select_preset_reminder(:post_local_date)
       expect(topic_page).to have_post_bookmarked(topic.first_post)
       bookmark = Bookmark.find_by(bookmarkable: topic.first_post, user: current_user)
@@ -175,6 +179,7 @@ describe "Local dates", type: :system do
       topic_page.visit_topic(topic)
       topic_page.expand_post_actions(topic.first_post)
       topic_page.click_post_action_button(topic.first_post, :bookmark)
+      bookmark_menu.click_menu_option("custom")
       expect(bookmark_modal).to be_open
       expect(bookmark_modal).to have_no_preset(:post_local_date)
     end

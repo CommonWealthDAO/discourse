@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe "Editing Sidebar Community Section", type: :system do
-  fab!(:admin) { Fabricate(:admin) }
-  fab!(:user) { Fabricate(:user) }
+  fab!(:admin)
+  fab!(:user)
 
   let(:sidebar) { PageObjects::Components::NavigationMenu::Sidebar.new }
   let(:sidebar_header_dropdown) { PageObjects::Components::NavigationMenu::HeaderDropdown.new }
@@ -30,6 +30,7 @@ RSpec.describe "Editing Sidebar Community Section", type: :system do
     modal.fill_link("Topics", "/latest", "paper-plane")
     modal.topics_link.drag_to(modal.review_link, delay: 0.4)
     modal.save
+    modal.confirm_update
 
     expect(sidebar.primary_section_links("community")).to eq(
       ["My Posts", "Topics", "Review", "Admin", "More"],
@@ -77,7 +78,9 @@ RSpec.describe "Editing Sidebar Community Section", type: :system do
 
     visit("/latest")
 
-    modal = sidebar_header_dropdown.open.click_customize_community_section_button
+    sidebar_header_dropdown.open
+    expect(sidebar_header_dropdown).to have_dropdown_visible
+    modal = sidebar_header_dropdown.click_customize_community_section_button
 
     expect(modal).to be_visible
   end

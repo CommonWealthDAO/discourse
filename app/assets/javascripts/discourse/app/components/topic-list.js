@@ -1,20 +1,29 @@
-import { alias, and } from "@ember/object/computed";
-import discourseComputed, { observes } from "discourse-common/utils/decorators";
 import Component from "@ember/component";
-import LoadMore from "discourse/mixins/load-more";
+import { dependentKeyCompat } from "@ember/object/compat";
+import { alias } from "@ember/object/computed";
 import { on } from "@ember/object/evented";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
+import LoadMore from "discourse/mixins/load-more";
+import discourseComputed, { observes } from "discourse-common/utils/decorators";
 import TopicBulkActions from "./modal/topic-bulk-actions";
 
 export default Component.extend(LoadMore, {
   modal: service(),
+  router: service(),
+  siteSettings: service(),
 
   tagName: "table",
   classNames: ["topic-list"],
   classNameBindings: ["bulkSelectEnabled:sticky-header"],
   showTopicPostBadges: true,
   listTitle: "topic.title",
-  canDoBulkActions: and("currentUser.canManageTopic", "selected.length"),
+  lastCheckedElementId: null,
+
+  get canDoBulkActions() {
+    return (
+      this.currentUser?.canManageTopic && this.bulkSelectHelper?.selected.length
+    );
+  },
 
   // Overwrite this to perform client side filtering of topics, if desired
   filteredTopics: alias("topics"),
@@ -26,9 +35,24 @@ export default Component.extend(LoadMore, {
     this.refreshLastVisited();
   }),
 
-  @discourseComputed("bulkSelectEnabled")
-  toggleInTitle(bulkSelectEnabled) {
-    return !bulkSelectEnabled && this.canBulkSelect;
+  get selected() {
+    return this.bulkSelectHelper?.selected;
+  },
+
+  @dependentKeyCompat // for the classNameBindings
+  get bulkSelectEnabled() {
+    return this.bulkSelectHelper?.bulkSelectEnabled;
+  },
+
+  get toggleInTitle() {
+    return (
+      !this.bulkSelectHelper?.bulkSelectEnabled && this.get("canBulkSelect")
+    );
+  },
+
+  @discourseComputed
+  experimentalTopicBulkActionsEnabled() {
+    return this.currentUser?.use_experimental_topic_bulk_actions;
   },
 
   @discourseComputed
@@ -54,7 +78,7 @@ export default Component.extend(LoadMore, {
     }
   },
 
-  @observes("topics", "order", "ascending", "category", "top")
+  @observes("topics", "order", "ascending", "category", "top", "hot")
   lastVisitedTopicChanged() {
     this.refreshLastVisited();
   },
@@ -69,7 +93,7 @@ export default Component.extend(LoadMore, {
     onScroll.call(this);
   },
 
-  _updateLastVisitedTopic(topics, order, ascending, top) {
+  _updateLastVisitedTopic(topics, order, ascending, top, hot) {
     this.set("lastVisitedTopic", null);
 
     if (!this.highlightLastVisited) {
@@ -80,7 +104,7 @@ export default Component.extend(LoadMore, {
       return;
     }
 
-    if (top) {
+    if (top || hot) {
       return;
     }
 
@@ -134,12 +158,9 @@ export default Component.extend(LoadMore, {
       this.topics,
       this.order,
       this.ascending,
-      this.top
+      this.top,
+      this.hot
     );
-  },
-
-  updateAutoAddTopicsToBulkSelect(newVal) {
-    this.set("autoAddTopicsToBulkSelect", newVal);
   },
 
   click(e) {
@@ -152,19 +173,19 @@ export default Component.extend(LoadMore, {
     };
 
     onClick("button.bulk-select", () => {
-      this.toggleBulkSelect();
+      this.bulkSelectHelper.toggleBulkSelect();
       this.rerender();
     });
 
     onClick("button.bulk-select-all", () => {
-      this.updateAutoAddTopicsToBulkSelect(true);
+      this.bulkSelectHelper.autoAddTopicsToBulkSelect = true;
       document
         .querySelectorAll("input.bulk-select:not(:checked)")
         .forEach((el) => el.click());
     });
 
     onClick("button.bulk-clear-all", () => {
-      this.updateAutoAddTopicsToBulkSelect(false);
+      this.bulkSelectHelper.autoAddTopicsToBulkSelect = false;
       document
         .querySelectorAll("input.bulk-select:checked")
         .forEach((el) => el.click());
@@ -178,9 +199,9 @@ export default Component.extend(LoadMore, {
     onClick("button.bulk-select-actions", () => {
       this.modal.show(TopicBulkActions, {
         model: {
-          topics: this.selected,
+          topics: this.bulkSelectHelper.selected,
           category: this.category,
-          refreshClosure: this.bulkSelectAction,
+          refreshClosure: () => this.router.refresh(),
         },
       });
     });

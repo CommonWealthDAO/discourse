@@ -1,7 +1,9 @@
 import Component from "@glimmer/component";
-import { inject as service } from "@ember/service";
 import { action } from "@ember/object";
-import { focusSearchButton } from "discourse/components/search-menu";
+import { service } from "@ember/service";
+import { wantsNewWindow } from "discourse/lib/intercept-click";
+import { logSearchLinkClick } from "discourse/lib/search";
+import DiscourseURL from "discourse/lib/url";
 
 export default class Types extends Component {
   @service search;
@@ -21,15 +23,46 @@ export default class Types extends Component {
   }
 
   @action
-  onKeydown(e) {
-    if (e.key === "Escape") {
-      focusSearchButton();
+  onClick({ resultType, result }, event) {
+    logSearchLinkClick({
+      searchLogId: this.args.searchLogId,
+      searchResultId: result.id,
+      searchResultType: resultType.type,
+    });
+
+    if (wantsNewWindow(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    this.routeToSearchResult(event.currentTarget.href);
+  }
+
+  @action
+  onKeydown({ resultType, result }, event) {
+    if (event.key === "Escape") {
       this.args.closeSearchMenu();
-      e.preventDefault();
+      event.preventDefault();
+      return false;
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      logSearchLinkClick({
+        searchLogId: this.args.searchLogId,
+        searchResultId: result.id,
+        searchResultType: resultType.type,
+      });
+      this.routeToSearchResult(event.target.href);
       return false;
     }
 
-    this.search.handleResultInsertion(e);
-    this.search.handleArrowUpOrDown(e);
+    this.search.handleResultInsertion(event);
+    this.search.handleArrowUpOrDown(event);
+  }
+
+  @action
+  routeToSearchResult(href) {
+    DiscourseURL.routeTo(href);
+    this.args.closeSearchMenu();
   }
 }

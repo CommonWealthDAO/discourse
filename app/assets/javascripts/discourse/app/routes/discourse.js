@@ -1,9 +1,10 @@
+import { action } from "@ember/object";
 import Route from "@ember/routing/route";
 import { once } from "@ember/runloop";
+import { service } from "@ember/service";
 import { seenUser } from "discourse/lib/user-presence";
-import { getOwner } from "discourse-common/lib/get-owner";
 import deprecated from "discourse-common/lib/deprecated";
-import { inject as service } from "@ember/service";
+import { getOwnerWithFallback } from "discourse-common/lib/get-owner";
 
 const DiscourseRoute = Route.extend({
   router: service(),
@@ -16,27 +17,25 @@ const DiscourseRoute = Route.extend({
     this.send("_collectTitleTokens", []);
   },
 
-  actions: {
-    _collectTitleTokens(tokens) {
-      // If there's a title token method, call it and get the token
-      if (this.titleToken) {
-        const t = this.titleToken();
-        if (t && t.length) {
-          if (t instanceof Array) {
-            t.forEach(function (ti) {
-              tokens.push(ti);
-            });
-          } else {
-            tokens.push(t);
-          }
+  @action
+  _collectTitleTokens(tokens) {
+    // If there's a title token method, call it and get the token
+    if (this.titleToken) {
+      const t = this.titleToken();
+      if (t?.length) {
+        if (t instanceof Array) {
+          t.forEach((ti) => tokens.push(ti));
+        } else {
+          tokens.push(t);
         }
       }
-      return true;
-    },
+    }
+    return true;
+  },
 
-    refreshTitle() {
-      once(this, this._refreshTitleOnce);
-    },
+  @action
+  refreshTitle() {
+    once(this, this._refreshTitleOnce);
   },
 
   redirectIfLoginRequired() {
@@ -52,7 +51,7 @@ const DiscourseRoute = Route.extend({
       { id: "discourse.open-topic-draft" }
     );
     if (this.currentUser?.has_topic_draft) {
-      return getOwner(this)
+      return getOwnerWithFallback(this)
         .lookup("service:composer")
         .openNewTopic({ preferDraft: true });
     }
@@ -64,13 +63,6 @@ const DiscourseRoute = Route.extend({
     }
 
     return user.id === this.currentUser.id;
-  },
-
-  isPoppedState(transition) {
-    return (
-      !transition._discourse_intercepted &&
-      (!!transition.intent.url || !!transition.queryParamsOnly)
-    );
   },
 });
 

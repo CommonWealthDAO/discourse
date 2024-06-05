@@ -1,28 +1,17 @@
 import EmberObject from "@ember/object";
 import { Promise } from "rsvp";
-import UserAction from "discourse/models/user-action";
 import { ajax } from "discourse/lib/ajax";
-import { on } from "discourse-common/utils/decorators";
 import { url } from "discourse/lib/computed";
+import UserAction from "discourse/models/user-action";
 
-export default EmberObject.extend({
-  loaded: false,
+export default class UserPostsStream extends EmberObject {
+  loaded = false;
+  itemsLoaded = 0;
+  canLoadMore = true;
+  content = [];
 
-  @on("init")
-  _initialize() {
-    this.setProperties({
-      itemsLoaded: 0,
-      canLoadMore: true,
-      content: [],
-    });
-  },
-
-  url: url(
-    "user.username_lower",
-    "filter",
-    "itemsLoaded",
-    "/posts/%@/%@?offset=%@"
-  ),
+  @url("user.username_lower", "filter", "itemsLoaded", "/posts/%@/%@?offset=%@")
+  url;
 
   filterBy(opts) {
     if (this.loaded && this.filter === opts.filter) {
@@ -41,7 +30,7 @@ export default EmberObject.extend({
     );
 
     return this.findItems();
-  },
+  }
 
   findItems() {
     if (this.loading || !this.canLoadMore) {
@@ -63,5 +52,5 @@ export default EmberObject.extend({
         }
       })
       .finally(() => this.set("loading", false));
-  },
-});
+  }
+}

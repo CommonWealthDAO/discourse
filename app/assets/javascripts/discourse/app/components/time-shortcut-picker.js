@@ -1,20 +1,19 @@
-import { laterToday, now, parseCustomDatetime } from "discourse/lib/time-utils";
+import Component from "@ember/component";
+import { action } from "@ember/object";
+import { and, equal } from "@ember/object/computed";
 import {
-  TIME_SHORTCUT_TYPES,
   defaultTimeShortcuts,
   formatTime,
   hideDynamicTimeShortcuts,
   specialShortcutOptions,
+  TIME_SHORTCUT_TYPES,
 } from "discourse/lib/time-shortcut";
+import { laterToday, now, parseCustomDatetime } from "discourse/lib/time-utils";
 import discourseComputed, {
   observes,
   on,
 } from "discourse-common/utils/decorators";
-
-import Component from "@ember/component";
-import I18n from "I18n";
-import { action } from "@ember/object";
-import { and, equal } from "@ember/object/computed";
+import I18n from "discourse-i18n";
 
 const BINDINGS = {
   "l t": {
@@ -53,6 +52,7 @@ export default Component.extend({
   selectedDate: null,
   selectedDatetime: null,
   prefilledDatetime: null,
+  selectedDurationMins: null,
 
   hiddenOptions: null,
   customOptions: null,
@@ -209,7 +209,10 @@ export default Component.extend({
   relativeTimeChanged(relativeTimeMins) {
     let dateTime = now(this.userTimezone).add(relativeTimeMins, "minutes");
 
-    this.set("selectedDatetime", dateTime);
+    this.setProperties({
+      selectedDurationMins: relativeTimeMins,
+      selectedDatetime: dateTime,
+    });
 
     if (this.onTimeSelected) {
       this.onTimeSelected(TIME_SHORTCUT_TYPES.RELATIVE, dateTime);

@@ -11,7 +11,14 @@ class SidebarSectionsController < ApplicationController
         .includes(:sidebar_urls)
         .where("public OR user_id = ?", current_user.id)
         .order("(public IS TRUE) DESC, title ASC")
-        .map { |section| SidebarSectionSerializer.new(section, root: false) }
+
+    sections =
+      ActiveModel::ArraySerializer.new(
+        sections,
+        each_serializer: SidebarSectionSerializer,
+        scope: guardian,
+        root: "sidebar_sections",
+      )
 
     render json: sections
   end
@@ -81,17 +88,6 @@ class SidebarSectionsController < ApplicationController
     end
 
     render_serialized(sidebar_section, SidebarSectionSerializer)
-  end
-
-  def reorder
-    sidebar_section = SidebarSection.find_by(id: reorder_params["sidebar_section_id"])
-    @guardian.ensure_can_edit!(sidebar_section)
-    order = reorder_params["links_order"].map(&:to_i).each_with_index.to_h
-    set_order(sidebar_section, order)
-
-    render_serialized(sidebar_section, SidebarSectionSerializer)
-  rescue Discourse::InvalidAccess
-    render json: failed_json, status: 403
   end
 
   def destroy

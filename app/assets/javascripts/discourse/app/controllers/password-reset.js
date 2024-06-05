@@ -1,15 +1,15 @@
-import DiscourseURL, { userPath } from "discourse/lib/url";
+import Controller from "@ember/controller";
 import { action } from "@ember/object";
 import { alias, or, readOnly } from "@ember/object/computed";
-import Controller from "@ember/controller";
-import I18n from "I18n";
+import { ajax } from "discourse/lib/ajax";
+import DiscourseURL, { userPath } from "discourse/lib/url";
+import { modKeysPressed } from "discourse/lib/utilities";
+import { getWebauthnCredential } from "discourse/lib/webauthn";
 import PasswordValidation from "discourse/mixins/password-validation";
 import { SECOND_FACTOR_METHODS } from "discourse/models/user";
-import { ajax } from "discourse/lib/ajax";
-import discourseComputed from "discourse-common/utils/decorators";
 import getURL from "discourse-common/lib/get-url";
-import { getWebauthnCredential } from "discourse/lib/webauthn";
-import { modKeysPressed } from "discourse/lib/utilities";
+import discourseComputed from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 export default Controller.extend(PasswordValidation, {
   isDeveloper: alias("model.is_developer"),
@@ -34,6 +34,11 @@ export default Controller.extend(PasswordValidation, {
   requiresApproval: false,
   redirected: false,
   maskPassword: true,
+
+  init() {
+    this._super(...arguments);
+    this.set("selectedSecondFactorMethod", this.secondFactorMethod);
+  },
 
   @discourseComputed()
   continueButtonText() {
@@ -73,7 +78,7 @@ export default Controller.extend(PasswordValidation, {
           password: this.accountPassword,
           second_factor_token:
             this.securityKeyCredential || this.secondFactorToken,
-          second_factor_method: this.secondFactorMethod,
+          second_factor_method: this.selectedSecondFactorMethod,
           timezone: moment.tz.guess(),
         },
       })
@@ -109,7 +114,7 @@ export default Controller.extend(PasswordValidation, {
               this.rejectedPasswords.pushObject(this.accountPassword);
               this.rejectedPasswordsMessages.set(
                 this.accountPassword,
-                result.errors.password[0]
+                (result.friendly_messages || []).join("\n")
               );
             }
 

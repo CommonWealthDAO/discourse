@@ -28,50 +28,24 @@ module PrettyText
     Rails.root
   end
 
-  def self.find_file(root, filename)
-    return filename if File.file?("#{root}#{filename}")
-
-    es6_name = "#{filename}.js.es6"
-    return es6_name if File.file?("#{root}#{es6_name}")
-
-    js_name = "#{filename}.js"
-    return js_name if File.file?("#{root}#{js_name}")
-
-    erb_name = "#{filename}.js.es6.erb"
-    return erb_name if File.file?("#{root}#{erb_name}")
-
-    erb_name = "#{filename}.js.erb"
-    erb_name if File.file?("#{root}#{erb_name}")
+  def self.apply_es6_file(ctx:, path:, module_name:)
+    source = File.read(path)
+    transpiler = DiscourseJsProcessor::Transpiler.new
+    transpiled = transpiler.perform(source, nil, module_name)
+    ctx.eval(transpiled, filename: module_name)
   end
 
-  def self.apply_es6_file(ctx, root_path, part_name)
-    filename = find_file(root_path, part_name)
-    if filename
-      source = File.read("#{root_path}#{filename}")
-      source = ERB.new(source).result(binding) if filename =~ /\.erb\z/
-
-      transpiler = DiscourseJsProcessor::Transpiler.new
-      transpiled = transpiler.perform(source, "#{Rails.root}/app/assets/javascripts/", part_name)
-      ctx.eval(transpiled)
-    else
-      # Look for vendored stuff
-      vendor_root = "#{Rails.root}/vendor/assets/javascripts/"
-      filename = find_file(vendor_root, part_name)
-      ctx.eval(File.read("#{vendor_root}#{filename}")) if filename
-    end
-  end
-
-  def self.ctx_load_directory(ctx, path)
-    root_path = "#{Rails.root}/app/assets/javascripts/"
-    Dir["#{root_path}#{path}/**/*"].sort.each do |f|
-      apply_es6_file(ctx, root_path, f.sub(root_path, "").sub(/\.js(.es6)?\z/, ""))
+  def self.ctx_load_directory(ctx:, base_path:, module_prefix:)
+    Dir["**/*.js", base: base_path].sort.each do |f|
+      module_name = "#{module_prefix}#{f.delete_suffix(".js")}"
+      apply_es6_file(ctx: ctx, path: File.join(base_path, f), module_name: module_name)
     end
   end
 
   def self.create_es6_context
     ctx = MiniRacer::Context.new(timeout: 25_000, ensure_gc_after_idle: 2000)
 
-    ctx.eval("window = {}; window.devicePixelRatio = 2;") # hack to make code think stuff is retina
+    ctx.eval("window = globalThis; window.devicePixelRatio = 2;") # hack to make code think stuff is retina
 
     ctx.attach("rails.logger.info", proc { |err| Rails.logger.info(err.to_s) })
     ctx.attach("rails.logger.warn", proc { |err| Rails.logger.warn(err.to_s) })
@@ -91,35 +65,58 @@ module PrettyText
       ctx.attach("__helpers.#{method}", PrettyText::Helpers.method(method))
     end
 
-    root_path = "#{Rails.root}/app/assets/javascripts/"
-    ctx_load(ctx, "#{root_path}/node_modules/loader.js/dist/loader/loader.js")
-    ctx_load(ctx, "#{root_path}/handlebars-shim.js")
-    ctx_load(ctx, "#{root_path}/node_modules/xss/dist/xss.js")
+    root_path = "#{Rails.root}/app/assets/javascripts"
+    node_modules = "#{Rails.root}/node_modules"
+    md_node_modules = "#{Rails.root}/app/assets/javascripts/discourse-markdown-it/node_modules"
+    ctx.load("#{node_modules}/loader.js/dist/loader/loader.js")
+    ctx.load("#{md_node_modules}/markdown-it/dist/markdown-it.js")
+    ctx.load("#{root_path}/handlebars-shim.js")
+    ctx.load("#{node_modules}/xss/dist/xss.js")
     ctx.load("#{Rails.root}/lib/pretty_text/vendor-shims.js")
-    ctx_load_directory(ctx, "pretty-text/addon")
-    ctx_load_directory(ctx, "pretty-text/engines/discourse-markdown")
-    ctx_load(ctx, "#{root_path}/node_modules/markdown-it/dist/markdown-it.js")
 
-    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/get-url")
-    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/object")
-    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/deprecated")
-    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/escape")
-    apply_es6_file(ctx, root_path, "discourse-common/addon/lib/avatar-utils")
-    apply_es6_file(ctx, root_path, "discourse-common/addon/utils/watched-words")
-    apply_es6_file(ctx, root_path, "discourse/app/lib/to-markdown")
+    ctx_load_directory(
+      ctx: ctx,
+      base_path: "#{root_path}/pretty-text/addon",
+      module_prefix: "pretty-text/",
+    )
+    ctx_load_directory(
+      ctx: ctx,
+      base_path: "#{root_path}/discourse-markdown-it/src",
+      module_prefix: "discourse-markdown-it/",
+    )
+
+    %w[
+      discourse-common/addon/lib/get-url
+      discourse-common/addon/lib/object
+      discourse-common/addon/lib/deprecated
+      discourse-common/addon/lib/escape
+      discourse-common/addon/lib/avatar-utils
+      discourse-common/addon/utils/watched-words
+      discourse/app/lib/to-markdown
+      discourse/app/static/markdown-it/features
+    ].each do |f|
+      apply_es6_file(
+        ctx: ctx,
+        path: "#{root_path}/#{f}.js",
+        module_name: f.sub("/addon/", "/").sub("/app/", "/"),
+      )
+    end
 
     ctx.load("#{Rails.root}/lib/pretty_text/shims.js")
     ctx.eval("__setUnicode(#{Emoji.unicode_replacements_json})")
 
-    to_load = []
-    DiscoursePluginRegistry.each_globbed_asset do |a|
-      to_load << a if File.file?(a) && a =~ /discourse-markdown/
-    end
-    to_load.uniq.each do |f|
-      if f =~ %r{\A.+assets/javascripts/}
-        root = Regexp.last_match[0]
-        apply_es6_file(ctx, root, f.sub(root, "").sub(/\.js(\.es6)?\z/, ""))
-      end
+    Discourse.plugins.each do |plugin|
+      Dir
+        .glob("#{plugin.directory}/assets/javascripts/**/discourse-markdown/**/*.{js,js.es6}")
+        .filter { |a| File.file?(a) }
+        .each do |f|
+          module_name =
+            f.sub(%r{\A.+assets/javascripts/}, "discourse/plugins/#{plugin.name}/").sub(
+              /\.js(\.es6)?\z/,
+              "",
+            )
+          apply_es6_file(ctx: ctx, path: f, module_name: module_name)
+        end
     end
 
     DiscoursePluginRegistry.vendored_core_pretty_text.each { |vpt| ctx.eval(File.read(vpt)) }
@@ -203,9 +200,9 @@ module PrettyText
         __optInput.emojiUnicodeReplacer = __emojiUnicodeReplacer;
         __optInput.emojiDenyList = #{Emoji.denied.to_json};
         __optInput.lookupUploadUrls = __lookupUploadUrls;
-        __optInput.censoredRegexp = #{WordWatcher.serializable_word_matcher_regexp(:censor, engine: :js).to_json};
-        __optInput.watchedWordsReplace = #{WordWatcher.word_matcher_regexps(:replace, engine: :js).to_json};
-        __optInput.watchedWordsLink = #{WordWatcher.word_matcher_regexps(:link, engine: :js).to_json};
+        __optInput.censoredRegexp = #{WordWatcher.serialized_regexps_for_action(:censor, engine: :js).to_json};
+        __optInput.watchedWordsReplace = #{WordWatcher.regexps_for_action(:replace, engine: :js).to_json};
+        __optInput.watchedWordsLink = #{WordWatcher.regexps_for_action(:link, engine: :js).to_json};
         __optInput.additionalOptions = #{Site.markdown_additional_options.to_json};
         __optInput.avatar_sizes = #{SiteSetting.avatar_sizes.to_json};
       JS
@@ -227,8 +224,8 @@ module PrettyText
       buffer << "__optInput.hashtagTypesInPriorityOrder = [#{hashtag_types_as_js}];\n"
       buffer << "__optInput.hashtagIcons = #{HashtagAutocompleteService.data_source_icon_map.to_json};\n"
 
-      buffer << "__textOptions = __buildOptions(__optInput);\n"
-      buffer << ("__pt = new __PrettyText(__textOptions);")
+      buffer << "__pluginFeatures = __loadPluginFeatures();"
+      buffer << "__pt = __DiscourseMarkdownIt.withCustomFeatures(__pluginFeatures).withOptions(__optInput);"
 
       # Be careful disabling sanitization. We allow for custom emails
       buffer << ("__pt.disableSanitizer();") if opts[:sanitize] == false
@@ -307,6 +304,7 @@ module PrettyText
     add_rel_attributes_to_user_content(doc, add_nofollow)
     strip_hidden_unicode_bidirectional_characters(doc)
     sanitize_hotlinked_media(doc)
+    add_video_placeholder_image(doc)
 
     add_mentions(doc, user_id: opts[:user_id]) if SiteSetting.enable_mentions
 
@@ -342,10 +340,13 @@ module PrettyText
     allowed_pattern = allowed_src_pattern
 
     doc
-      .css("img[src], source[src], source[srcset], track[src]")
+      .css("img[src], source[src], source[srcset], track[src], div[data-video-src]")
       .each do |el|
         if el["src"] && !el["src"].match?(allowed_pattern)
           el[PrettyText::BLOCKED_HOTLINKED_SRC_ATTR] = el.delete("src")
+        end
+        if el["data-video-src"] && !el["data-video-src"].match?(allowed_pattern)
+          el[PrettyText::BLOCKED_HOTLINKED_SRC_ATTR] = el["data-video-src"]
         end
 
         if el["srcset"]
@@ -444,15 +445,28 @@ module PrettyText
     links
   end
 
+  def self.add_video_placeholder_image(doc)
+    doc
+      .css(".video-placeholder-container")
+      .each do |video|
+        video_src = video["data-video-src"]
+        video_sha1 = File.basename(video_src, File.extname(video_src))
+        thumbnail = Upload.where("original_filename LIKE ?", "#{video_sha1}.%").last
+        if thumbnail
+          video["data-thumbnail-src"] = UrlHelper.absolute(
+            GlobalPath.upload_cdn_path(thumbnail.url),
+          )
+        end
+      end
+  end
+
   def self.extract_mentions(cooked)
     mentions =
       cooked
         .css(".mention, .mention-group")
-        .map do |e|
+        .filter_map do |e|
           if (name = e.inner_text)
-            name = name[1..-1]
-            name = User.normalize_username(name)
-            name
+            User.normalize_username(name[1..-1]) if name[0] == "@"
           end
         end
 
@@ -492,17 +506,23 @@ module PrettyText
   end
 
   def self.make_all_links_absolute(doc)
-    site_uri = nil
     doc
-      .css("a")
-      .each do |link|
-        href = link["href"].to_s
+      .css("a[href]")
+      .each do |a|
         begin
-          uri = URI(href)
-          site_uri ||= URI(Discourse.base_url)
-          unless uri.host.present? || href.start_with?("mailto")
-            link["href"] = "#{site_uri}#{link["href"]}"
-          end
+          href = a["href"].to_s
+          next if href.blank?
+          next if href.start_with?("mailto:")
+          next if href.start_with?(Discourse.base_url)
+          next if URI(href).host.present?
+
+          a["href"] = (
+            if href.start_with?(Discourse.base_path)
+              "#{Discourse.base_url_no_prefix}#{href}"
+            else
+              "#{Discourse.base_url}#{href}"
+            end
+          )
         rescue URI::Error
           # leave it
         end
@@ -550,7 +570,7 @@ module PrettyText
 
         if a.classes.include?("lightbox")
           img = a.css("img[src]").first
-          srcset = img&.attributes["srcset"]&.value
+          srcset = img&.attributes&.[]("srcset")&.value
           if srcset
             # if available, use the first image from the srcset here
             # so we get the optimized image instead of the possibly huge original
@@ -639,7 +659,7 @@ module PrettyText
   def self.format_for_email(html, post = nil)
     doc = Nokogiri::HTML5.fragment(html)
     DiscourseEvent.trigger(:reduce_cooked, doc, post)
-    strip_secure_uploads(doc) if post&.with_secure_uploads?
+    strip_secure_uploads(doc) if post&.should_secure_uploads?
     strip_image_wrapping(doc)
     convert_vimeo_iframes(doc)
     make_all_links_absolute(doc)
@@ -661,10 +681,6 @@ module PrettyText
     rval = nil
     @mutex.synchronize { rval = yield }
     rval
-  end
-
-  def self.ctx_load(ctx, *files)
-    files.each { |file| ctx.load(app_root + file) }
   end
 
   private

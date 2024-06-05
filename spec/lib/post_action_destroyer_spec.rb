@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe PostActionDestroyer do
-  fab!(:admin) { Fabricate(:admin) }
-  fab!(:user) { Fabricate(:user) }
-  fab!(:post) { Fabricate(:post) }
+  fab!(:admin)
+  fab!(:user) { Fabricate(:user, refresh_auto_groups: true) }
+  fab!(:post)
 
   describe "#perform" do
     context "with like" do

@@ -3,6 +3,7 @@
 class Topic < ActiveRecord::Base
   class UserExists < StandardError
   end
+
   class NotAllowed < StandardError
   end
   include RateLimiter::OnCreateRecord
@@ -15,8 +16,8 @@ class Topic < ActiveRecord::Base
   EXTERNAL_ID_MAX_LENGTH = 50
 
   self.ignored_columns = [
-    "avg_time", # TODO(2021-01-04): remove
-    "image_url", # TODO(2021-06-01): remove
+    "avg_time", # TODO: Remove when 20240212034010_drop_deprecated_columns has been promoted to pre-deploy
+    "image_url", # TODO: Remove when 20240212034010_drop_deprecated_columns has been promoted to pre-deploy
   ]
 
   def_delegator :featured_users, :user_ids, :featured_user_ids
@@ -42,6 +43,19 @@ class Topic < ActiveRecord::Base
     [self.share_thumbnail_size] + DiscoursePluginRegistry.topic_thumbnail_sizes
   end
 
+  def self.visibility_reasons
+    @visible_reasons ||=
+      Enum.new(
+        op_flag_threshold_reached: 0,
+        op_unhidden: 1,
+        embedded_topic: 2,
+        manually_unlisted: 3,
+        manually_relisted: 4,
+        bulk_action: 5,
+        unknown: 99,
+      )
+  end
+
   def thumbnail_job_redis_key(sizes)
     "generate_topic_thumbnail_enqueue_#{id}_#{sizes.inspect}"
   end
@@ -58,7 +72,7 @@ class Topic < ActiveRecord::Base
 
   def thumbnail_info(enqueue_if_missing: false, extra_sizes: [])
     return nil unless original = image_upload
-    return nil if original.filesize >= SiteSetting.max_image_size_kb.kilobytes
+    return nil if original.filesize >= SiteSetting.max_image_size_kb.to_i.kilobytes
     return nil unless original.read_attribute(:width) && original.read_attribute(:height)
 
     infos = []
@@ -171,7 +185,7 @@ class Topic < ActiveRecord::Base
   rate_limit :limit_private_messages_per_day
 
   validates :title,
-            if: Proc.new { |t| t.new_record? || t.title_changed? },
+            if: Proc.new { |t| t.new_record? || t.title_changed? || t.category_id_changed? },
             presence: true,
             topic_title_length: true,
             censored_words: true,
@@ -248,6 +262,7 @@ class Topic < ActiveRecord::Base
 
   has_many :group_archived_messages, dependent: :destroy
   has_many :user_archived_messages, dependent: :destroy
+  has_many :topic_view_stats, dependent: :destroy
 
   has_many :allowed_groups, through: :topic_allowed_groups, source: :group
   has_many :allowed_group_users, through: :allowed_groups, source: :users
@@ -295,7 +310,6 @@ class Topic < ActiveRecord::Base
   attr_accessor :participants
   attr_accessor :participant_groups
   attr_accessor :topic_list
-  attr_accessor :meta_data
   attr_accessor :include_last_poster
   attr_accessor :import_mode # set to true to optimize creation and save for imports
 
@@ -318,13 +332,13 @@ class Topic < ActiveRecord::Base
   SQL
 
   scope :private_messages_for_user,
-        ->(user) {
+        ->(user) do
           private_messages.where(
             "topics.id IN (#{PRIVATE_MESSAGES_SQL_USER})
       OR topics.id IN (#{PRIVATE_MESSAGES_SQL_GROUP})",
             user_id: user.id,
           )
-        }
+        end
 
   scope :listable_topics, -> { where("topics.archetype <> ?", Archetype.private_message) }
 
@@ -569,8 +583,7 @@ class Topic < ActiveRecord::Base
     topics = topics.limit(opts[:limit]) if opts[:limit]
 
     # Remove category topics
-    category_topic_ids = Category.pluck(:topic_id).compact!
-    topics = topics.where("topics.id NOT IN (?)", category_topic_ids) if category_topic_ids.present?
+    topics = topics.where.not(id: Category.select(:topic_id).where.not(topic_id: nil))
 
     # Remove muted and shared draft categories
     remove_category_ids =
@@ -586,11 +599,14 @@ class Topic < ActiveRecord::Base
         )
     end
     if SiteSetting.digest_suppress_tags.present?
-      topics =
-        topics.joins("LEFT JOIN topic_tags tg ON topics.id = tg.topic_id").where(
-          "tg.tag_id NOT IN (?) OR tg.tag_id IS NULL",
-          SiteSetting.digest_suppress_tags.split("|").map(&:to_i),
-        )
+      tag_ids = Tag.where_name(SiteSetting.digest_suppress_tags.split("|")).pluck(:id)
+      if tag_ids.present?
+        topics =
+          topics.joins("LEFT JOIN topic_tags tg ON topics.id = tg.topic_id").where(
+            "tg.tag_id NOT IN (?) OR tg.tag_id IS NULL",
+            tag_ids,
+          )
+      end
     end
     remove_category_ids << SiteSetting.shared_drafts_category if SiteSetting.shared_drafts_enabled?
     if remove_category_ids.present?
@@ -619,19 +635,6 @@ class Topic < ActiveRecord::Base
     topics
   end
 
-  def meta_data=(data)
-    custom_fields.replace(data)
-  end
-
-  def meta_data
-    custom_fields
-  end
-
-  def update_meta_data(data)
-    custom_fields.update(data)
-    save
-  end
-
   def reload(options = nil)
     @post_numbers = nil
     @public_topic_timer = nil
@@ -652,7 +655,8 @@ class Topic < ActiveRecord::Base
     start_date,
     end_date,
     category_id = nil,
-    include_subcategories = false
+    include_subcategories = false,
+    group_ids = nil
   )
     result =
       listable_topics.where(
@@ -665,6 +669,15 @@ class Topic < ActiveRecord::Base
       result.where(
         category_id: include_subcategories ? Category.subcategory_ids(category_id) : category_id,
       ) if category_id
+
+    if group_ids
+      result =
+        result
+          .joins("INNER JOIN users ON users.id = topics.user_id")
+          .joins("INNER JOIN group_users ON group_users.user_id = users.id")
+          .where("group_users.group_id IN (?)", group_ids)
+    end
+
     result.count
   end
 
@@ -843,14 +856,22 @@ class Topic < ActiveRecord::Base
         FROM posts
         WHERE deleted_at IS NULL AND post_type <> 4
         GROUP BY topic_id
+      ),
+      Z as (
+        SELECT topic_id,
+               SUM(COALESCE(posts.word_count, 0)) word_count
+        FROM posts
+        WHERE deleted_at IS NULL AND post_type <> 4
+        GROUP BY topic_id
       )
       UPDATE topics
       SET
         highest_staff_post_number = X.highest_post_number,
         highest_post_number = Y.highest_post_number,
         last_posted_at = Y.last_posted_at,
-        posts_count = Y.posts_count
-      FROM X, Y
+        posts_count = Y.posts_count,
+        word_count = Z.word_count
+      FROM X, Y, Z
       WHERE
         topics.archetype <> 'private_message' AND
         X.topic_id = topics.id AND
@@ -858,7 +879,8 @@ class Topic < ActiveRecord::Base
           topics.highest_staff_post_number <> X.highest_post_number OR
           topics.highest_post_number <> Y.highest_post_number OR
           topics.last_posted_at <> Y.last_posted_at OR
-          topics.posts_count <> Y.posts_count
+          topics.posts_count <> Y.posts_count OR
+          topics.word_count <> Z.word_count
         )
     SQL
 
@@ -879,14 +901,22 @@ class Topic < ActiveRecord::Base
         FROM posts
         WHERE deleted_at IS NULL AND post_type <> 3 AND post_type <> 4
         GROUP BY topic_id
+      ),
+      Z as (
+        SELECT topic_id,
+                SUM(COALESCE(posts.word_count, 0)) word_count
+        FROM posts
+        WHERE deleted_at IS NULL AND post_type <> 3 AND post_type <> 4
+        GROUP BY topic_id
       )
       UPDATE topics
       SET
         highest_staff_post_number = X.highest_post_number,
         highest_post_number = Y.highest_post_number,
         last_posted_at = Y.last_posted_at,
-        posts_count = Y.posts_count
-      FROM X, Y
+        posts_count = Y.posts_count,
+        word_count = Z.word_count
+      FROM X, Y, Z
       WHERE
         topics.archetype = 'private_message' AND
         X.topic_id = topics.id AND
@@ -894,7 +924,8 @@ class Topic < ActiveRecord::Base
           topics.highest_staff_post_number <> X.highest_post_number OR
           topics.highest_post_number <> Y.highest_post_number OR
           topics.last_posted_at <> Y.last_posted_at OR
-          topics.posts_count <> Y.posts_count
+          topics.posts_count <> Y.posts_count OR
+          topics.word_count <> Z.word_count
         )
     SQL
   end
@@ -926,6 +957,13 @@ class Topic < ActiveRecord::Base
           SELECT count(*) FROM posts
           WHERE deleted_at IS NULL AND
                 topic_id = :topic_id AND
+                post_type <> 4
+                #{post_type}
+        ),
+        word_count = (
+          SELECT SUM(COALESCE(posts.word_count, 0)) FROM posts
+          WHERE topic_id = :topic_id AND
+                deleted_at IS NULL AND
                 post_type <> 4
                 #{post_type}
         ),
@@ -1334,7 +1372,7 @@ class Topic < ActiveRecord::Base
   self.slug_computed_callbacks = []
 
   def slug_for_topic(title)
-    return "" unless title.present?
+    return "" if title.blank?
     slug = Slug.for(title)
 
     # this is a hook for plugins that need to modify the generated slug
@@ -1346,7 +1384,7 @@ class Topic < ActiveRecord::Base
   # Even if the slug column in the database is null, topic.slug will return something:
   def slug
     unless slug = read_attribute(:slug)
-      return "" unless title.present?
+      return "" if title.blank?
       slug = slug_for_topic(title)
       if new_record?
         write_attribute(:slug, slug)
@@ -1407,12 +1445,12 @@ class Topic < ActiveRecord::Base
   end
 
   def clear_pin_for(user)
-    return unless user.present?
+    return if user.blank?
     TopicUser.change(user.id, id, cleared_pinned_at: Time.now)
   end
 
   def re_pin_for(user)
-    return unless user.present?
+    return if user.blank?
     TopicUser.change(user.id, id, cleared_pinned_at: nil)
   end
 
@@ -1805,18 +1843,11 @@ class Topic < ActiveRecord::Base
   end
 
   def convert_to_public_topic(user, category_id: nil)
-    public_topic = TopicConverter.new(self, user).convert_to_public_topic(category_id)
-    Tag.update_counters(public_topic.tags, { public_topic_count: 1 }) if !category.read_restricted
-    add_small_action(user, "public_topic") if public_topic
-    public_topic
+    TopicConverter.new(self, user).convert_to_public_topic(category_id)
   end
 
   def convert_to_private_message(user)
-    read_restricted = category.read_restricted
-    private_topic = TopicConverter.new(self, user).convert_to_private_message
-    Tag.update_counters(private_topic.tags, { public_topic_count: -1 }) if !read_restricted
-    add_small_action(user, "private_topic") if private_topic
-    private_topic
+    TopicConverter.new(self, user).convert_to_private_message
   end
 
   def update_excerpt(excerpt)
@@ -1859,13 +1890,21 @@ class Topic < ActiveRecord::Base
     @is_category_topic ||= Category.exists?(topic_id: self.id.to_i)
   end
 
-  def reset_bumped_at
+  def reset_bumped_at(post_id = nil)
     post =
-      ordered_posts.where(
-        user_deleted: false,
-        hidden: false,
-        post_type: Post.types[:regular],
-      ).last || first_post
+      (
+        if post_id
+          Post.find_by(id: post_id)
+        else
+          ordered_posts.where(
+            user_deleted: false,
+            hidden: false,
+            post_type: Post.types[:regular],
+          ).last || first_post
+        end
+      )
+
+    return if !post
 
     self.bumped_at = post.created_at
     self.save(validate: false)
@@ -2023,7 +2062,7 @@ class Topic < ActiveRecord::Base
 
   def self.publish_stats_to_clients!(topic_id, type, opts = {})
     topic = Topic.find_by(id: topic_id)
-    return unless topic.present?
+    return if topic.blank?
 
     case type
     when :liked, :unliked
@@ -2054,6 +2093,13 @@ class Topic < ActiveRecord::Base
 
   def visible_tags(guardian)
     tags.reject { |tag| guardian.hidden_tag_names.include?(tag[:name]) }
+  end
+
+  def self.editable_custom_fields(guardian)
+    fields = []
+    fields.push(*DiscoursePluginRegistry.public_editable_topic_custom_fields)
+    fields.push(*DiscoursePluginRegistry.staff_editable_topic_custom_fields) if guardian.is_staff?
+    fields
   end
 
   private
@@ -2164,6 +2210,7 @@ end
 #  slow_mode_seconds         :integer          default(0), not null
 #  bannered_until            :datetime
 #  external_id               :string
+#  visibility_reason_id      :integer
 #
 # Indexes
 #

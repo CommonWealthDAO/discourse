@@ -38,7 +38,7 @@ module SecondFactorManager
   end
 
   def authenticate_totp(token)
-    totps = self&.user_second_factors.totps
+    totps = self&.user_second_factors&.totps
     authenticated = false
     totps.each do |totp|
       last_used = 0
@@ -64,20 +64,20 @@ module SecondFactorManager
 
   def totp_enabled?
     !SiteSetting.enable_discourse_connect && SiteSetting.enable_local_logins &&
-      self&.user_second_factors.totps.exists?
+      self&.user_second_factors&.totps&.exists?
   end
 
   def backup_codes_enabled?
     !SiteSetting.enable_discourse_connect && SiteSetting.enable_local_logins &&
-      self&.user_second_factors.backup_codes.exists?
+      self&.user_second_factors&.backup_codes&.exists?
   end
 
   def security_keys_enabled?
     !SiteSetting.enable_discourse_connect && SiteSetting.enable_local_logins &&
       self
         &.security_keys
-        .where(factor_type: UserSecurityKey.factor_types[:second_factor], enabled: true)
-        .exists?
+        &.where(factor_type: UserSecurityKey.factor_types[:second_factor], enabled: true)
+        &.exists?
   end
 
   def has_any_second_factor_methods_enabled?
@@ -163,12 +163,11 @@ module SecondFactorManager
   end
 
   def authenticate_security_key(secure_session, security_key_credential)
-    ::DiscourseWebauthn::SecurityKeyAuthenticationService.new(
+    ::DiscourseWebauthn::AuthenticationService.new(
       self,
       security_key_credential,
-      challenge: DiscourseWebauthn.challenge(self, secure_session),
-      rp_id: DiscourseWebauthn.rp_id,
-      origin: Discourse.base_url,
+      session: secure_session,
+      factor_type: UserSecurityKey.factor_types[:second_factor],
     ).authenticate_security_key
   end
 

@@ -2,7 +2,7 @@
 
 describe "Using #hashtag autocompletion to search for and lookup categories and tags",
          type: :system do
-  fab!(:current_user) { Fabricate(:user) }
+  fab!(:current_user) { Fabricate(:user, refresh_auto_groups: true) }
   fab!(:category) do
     Fabricate(:category, name: "Cool Category", slug: "cool-cat", topic_count: 3234)
   end
@@ -192,8 +192,58 @@ describe "Using #hashtag autocompletion to search for and lookup categories and 
     end
   end
 
+  it "decorates the user activity stream hashtags" do
+    post =
+      Fabricate(
+        :post,
+        raw: "this is a #cool-cat category and a #cooltag tag",
+        topic: topic,
+        user: current_user,
+      )
+    UserActionManager.enable
+    UserActionManager.post_created(post)
+
+    visit("/u/#{current_user.username}/activity")
+    expect(find(".user-stream-item [data-post-id=\"#{post.id}\"]")["innerHTML"]).to have_tag(
+      "a",
+      with: {
+        class: "hashtag-cooked",
+        href: category.url,
+        "data-type": "category",
+        "data-slug": category.slug,
+        "data-id": category.id,
+        "aria-label": category.name,
+      },
+    ) do
+      with_tag(
+        "span",
+        with: {
+          class: "hashtag-category-badge hashtag-color--category-#{category.id}",
+        },
+      )
+    end
+    expect(find(".user-stream-item [data-post-id=\"#{post.id}\"]")["innerHTML"]).to have_tag(
+      "a",
+      with: {
+        class: "hashtag-cooked",
+        href: tag.url,
+        "data-type": "tag",
+        "data-slug": tag.name,
+        "data-id": tag.id,
+        "aria-label": tag.name,
+      },
+    ) do
+      with_tag(
+        "svg",
+        with: {
+          class: "fa d-icon d-icon-tag svg-icon hashtag-color--tag-#{tag.id} svg-string",
+        },
+      ) { with_tag("use", with: { href: "#tag" }) }
+    end
+  end
+
   context "when a user cannot access the category for a hashtag cooked in another post" do
-    fab!(:admin) { Fabricate(:admin) }
+    fab!(:admin)
     fab!(:manager_group) { Fabricate(:group, name: "Managers") }
     fab!(:private_category) do
       Fabricate(:private_category, name: "Management", slug: "management", group: manager_group)
@@ -205,7 +255,10 @@ describe "Using #hashtag autocompletion to search for and lookup categories and 
 
     it "shows a default color and css class for the category icon square" do
       topic_page.visit_topic(topic, post_number: post_with_private_category.post_number)
-      expect(page).to have_css(".hashtag-cooked .hashtag-missing")
+      expect(page).to have_css(".hashtag-cooked .hashtag-category-badge")
+      generated_css = find("#hashtag-css-generator", visible: false).text(:all)
+      expect(generated_css).to include(".hashtag-category-badge")
+      expect(generated_css).not_to include(".hashtag-color--category--#{private_category.id}")
     end
   end
 end

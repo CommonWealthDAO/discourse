@@ -17,8 +17,9 @@ module Chat
     class << self
       def polymorphic_class_mapping = { "DirectMessage" => Chat::DirectMessage }
 
-      def for_user_ids(user_ids)
+      def for_user_ids(user_ids, group: false)
         joins(:users)
+          .where(group: group)
           .group("direct_message_channels.id")
           .having("ARRAY[?] = ARRAY_AGG(users.id ORDER BY users.id)", user_ids.sort)
           .first
@@ -30,10 +31,10 @@ module Chat
     end
 
     def chat_channel_title_for_user(chat_channel, acting_user)
+      return chat_channel.name if group && chat_channel.name.present?
+
       users =
-        (direct_message_users.map(&:user) - [acting_user]).map do |user|
-          user || Chat::DeletedUser.new
-        end
+        (direct_message_users.map(&:user) - [acting_user]).map { |user| user || Chat::NullUser.new }
 
       # direct message to self
       if users.empty?
@@ -68,6 +69,7 @@ end
 # Table name: direct_message_channels
 #
 #  id         :bigint           not null, primary key
+#  group      :boolean
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #

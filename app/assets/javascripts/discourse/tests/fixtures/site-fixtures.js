@@ -138,6 +138,7 @@ export default {
           show_subcategory_list: true,
           default_view: "latest",
           subcategory_list_style: "boxes_with_featured_topics",
+          has_children: true,
         },
         {
           id: 6,
@@ -158,6 +159,7 @@ export default {
           background_url: null,
           show_subcategory_list: false,
           default_view: "latest",
+          has_children: true,
         },
         {
           id: 24,
@@ -309,6 +311,7 @@ export default {
           notification_level: null,
           show_subcategory_list: false,
           default_view: "latest",
+          has_children: true,
         },
         {
           id: 11,
@@ -463,6 +466,7 @@ export default {
           default_view: "latest",
           subcategory_list_style: "boxes",
           default_list_filter: "all",
+          has_children: true,
         },
         {
           id: 240,
@@ -516,6 +520,8 @@ export default {
           parent_category_id: null,
           notification_level: null,
           background_url: null,
+          has_children: true,
+          subcategory_count: 2,
         },
         {
           id: 1002,
@@ -533,6 +539,7 @@ export default {
           parent_category_id: 1001,
           notification_level: null,
           background_url: null,
+          has_children: true,
         },
         {
           id: 1003,
@@ -583,6 +590,7 @@ export default {
           icon: null,
           id: 3,
           is_custom_flag: false,
+          enabled: true
         },
         {
           name_key: "inappropriate",
@@ -595,6 +603,7 @@ export default {
           icon: null,
           id: 4,
           is_custom_flag: false,
+          enabled: true
         },
         {
           name_key: "vote",
@@ -605,6 +614,7 @@ export default {
           icon: null,
           id: 5,
           is_custom_flag: false,
+          enabled: true
         },
         {
           name_key: "spam",
@@ -616,6 +626,7 @@ export default {
           icon: null,
           id: 8,
           is_custom_flag: false,
+          enabled: true
         },
         {
           name_key: "notify_user",
@@ -628,6 +639,7 @@ export default {
           icon: null,
           id: 6,
           is_custom_flag: true,
+          enabled: true
         },
         {
           name_key: "notify_moderators",
@@ -639,6 +651,7 @@ export default {
           icon: null,
           id: 7,
           is_custom_flag: true,
+          enabled: true
         },
       ],
       topic_flag_types: [
@@ -651,6 +664,7 @@ export default {
           icon: null,
           id: 4,
           is_custom_flag: false,
+          enabled: true
         },
         {
           name_key: "spam",
@@ -661,6 +675,7 @@ export default {
           icon: null,
           id: 8,
           is_custom_flag: false,
+          enabled: true
         },
         {
           name_key: "notify_moderators",
@@ -671,6 +686,7 @@ export default {
           icon: null,
           id: 7,
           is_custom_flag: true,
+          enabled: true
         },
       ],
       archetypes: [

@@ -86,6 +86,7 @@ module PageObjects
       def bookmark_message(message)
         if page.has_css?("html.mobile-view", wait: 0)
           click_message_action_mobile(message, "bookmark")
+          expect(page).to have_css(".d-modal:not(.is-animating)")
         else
           hover_message(message)
           find(".bookmark-btn").click
@@ -96,45 +97,9 @@ module PageObjects
         find(".more-buttons").click
       end
 
-      def flag_message(message)
-        hover_message(message)
-        click_more_button
-        find("[data-value='flag']").click
-      end
-
-      def copy_link(message)
-        hover_message(message)
-        click_more_button
-        find("[data-value='copyLink']").click
-      end
-
-      def flag_message(message)
-        hover_message(message)
-        click_more_button
-        find("[data-value='flag']").click
-      end
-
-      def delete_message(message)
-        hover_message(message)
-        click_more_button
-        find("[data-value='delete']").click
-      end
-
-      def restore_message(message)
-        hover_message(message)
-        click_more_button
-        find("[data-value='restore']").click
-      end
-
-      def open_edit_message(message)
-        hover_message(message)
-        click_more_button
-        find("[data-value='edit']").click
-      end
-
       def edit_message(message, text = nil)
-        open_edit_message(message)
-        send_message(message.message + text) if text
+        messages.edit(message)
+        send_message(message.message + " " + text) if text
       end
 
       def send_message(text = nil)
@@ -142,6 +107,7 @@ module PageObjects
         text = text.chomp if text.present? # having \n on the end of the string counts as an Enter keypress
         composer.fill_in(with: text)
         click_send_message
+        expect(page).to have_no_css(".chat-message.-not-processed")
         text
       end
 
@@ -222,7 +188,7 @@ module PageObjects
       end
 
       def thread_list_button_selector
-        ".chat-threads-list-button"
+        ".c-navbar__threads-list-button"
       end
 
       private

@@ -1,6 +1,6 @@
-import RestrictedUserRoute from "discourse/routes/restricted-user";
+import { service } from "@ember/service";
 import { defaultHomepage } from "discourse/lib/utilities";
-import { inject as service } from "@ember/service";
+import RestrictedUserRoute from "discourse/routes/restricted-user";
 
 export default class PreferencesChatRoute extends RestrictedUserRoute {
   @service chat;

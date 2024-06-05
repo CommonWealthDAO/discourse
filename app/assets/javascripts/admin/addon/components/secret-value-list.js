@@ -1,9 +1,8 @@
-import { classNameBindings } from "@ember-decorators/component";
 import Component from "@ember/component";
-import I18n from "I18n";
-import { isEmpty } from "@ember/utils";
-import { on } from "@ember-decorators/object";
 import { action, set } from "@ember/object";
+import { isEmpty } from "@ember/utils";
+import { classNameBindings } from "@ember-decorators/component";
+import I18n from "discourse-i18n";
 
 @classNameBindings(":value-list", ":secret-value-list")
 export default class SecretValueList extends Component {
@@ -12,13 +11,12 @@ export default class SecretValueList extends Component {
   values = null;
   validationMessage = null;
 
-  @on("didReceiveAttrs")
-  _setupCollection() {
-    const values = this.values;
+  didReceiveAttrs() {
+    super.didReceiveAttrs(...arguments);
 
     this.set(
       "collection",
-      this._splitValues(values, this.inputDelimiter || "\n")
+      this._splitValues(this.values, this.inputDelimiter || "\n")
     );
   }
 

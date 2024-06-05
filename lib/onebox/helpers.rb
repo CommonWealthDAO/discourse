@@ -9,30 +9,24 @@ module Onebox
 
     IGNORE_CANONICAL_DOMAINS ||= %w[www.instagram.com medium.com youtube.com]
 
-    def self.symbolize_keys(hash)
-      return {} if hash.nil?
-
-      hash.inject({}) do |result, (key, value)|
-        new_key = key.is_a?(String) ? key.to_sym : key
-        new_value = value.is_a?(Hash) ? symbolize_keys(value) : value
-        result[new_key] = new_value
-        result
-      end
-    end
-
     def self.clean(html)
       html.gsub(/<[^>]+>/, " ").gsub(/\n/, "")
     end
 
+    # Fetches the HTML response body for a URL.
+    #
+    # Note that the size of the response body is capped at `Onebox.options.max_download_kb`. When the limit has been reached,
+    # this method will return the response body that has been downloaded up to the limit.
     def self.fetch_html_doc(url, headers = nil, body_cacher = nil)
       response =
         (
           begin
-            fetch_response(url, headers: headers, body_cacher: body_cacher)
+            fetch_response(url, headers:, body_cacher:, raise_error_when_response_too_large: false)
           rescue StandardError
             nil
           end
         )
+
       doc = Nokogiri.HTML(response)
       uri = Addressable::URI.parse(url)
 
@@ -56,7 +50,12 @@ module Onebox
             response =
               (
                 begin
-                  fetch_response(uri.to_s, headers: headers, body_cacher: body_cacher)
+                  fetch_response(
+                    uri.to_s,
+                    headers:,
+                    body_cacher:,
+                    raise_error_when_response_too_large: false,
+                  )
                 rescue StandardError
                   nil
                 end
@@ -74,7 +73,9 @@ module Onebox
       redirect_limit: 5,
       domain: nil,
       headers: nil,
-      body_cacher: nil
+      body_cacher: nil,
+      raise_error_when_response_too_large: true,
+      allow_cross_domain_cookies: false
     )
       redirect_limit = Onebox.options.redirect_limit if redirect_limit >
         Onebox.options.redirect_limit
@@ -113,6 +114,7 @@ module Onebox
         size_bytes = Onebox.options.max_download_kb * 1024
         http.request(request) do |response|
           if cookie = response.get_fields("set-cookie")
+            headers["Cookie"] = cookie.join("; ") if allow_cross_domain_cookies
             # HACK: If this breaks again in the future, use HTTP::CookieJar from gem 'http-cookie'
             # See test: it "does not send cookies to the wrong domain"
             redir_header = { "Cookie" => cookie.join("; ") }
@@ -122,21 +124,26 @@ module Onebox
 
           code = response.code.to_i
           unless code === 200
-            response.error! unless [301, 302, 303, 307, 308].include?(code)
+            response.error! if [301, 302, 303, 307, 308].exclude?(code)
 
             return(
               fetch_response(
                 response["location"],
                 redirect_limit: redirect_limit - 1,
                 domain: "#{uri.scheme}://#{uri.host}",
-                headers: redir_header,
+                headers: allow_cross_domain_cookies ? headers : redir_header,
+                allow_cross_domain_cookies: allow_cross_domain_cookies,
               )
             )
           end
 
           response.read_body do |chunk|
             result.write(chunk)
-            raise DownloadTooLarge.new if result.size > size_bytes
+
+            if result.size > size_bytes
+              raise_error_when_response_too_large ? raise(DownloadTooLarge.new) : break
+            end
+
             raise Timeout::Error.new if (Time.now - start_time) > Onebox.options.timeout
           end
 
@@ -165,9 +172,7 @@ module Onebox
         end
 
         http.request_head([uri.path, uri.query].join("?")) do |response|
-          code = response.code.to_i
-          return nil unless code === 200 || Onebox::Helpers.blank?(response.content_length)
-          return response.content_length
+          return response.code.to_i == 200 ? response.content_length.presence : nil
         end
       end
     end
@@ -190,27 +195,17 @@ module Onebox
       "<div style=\"background:transparent;position:relative;width:#{width}px;height:#{height}px;top:#{height}px;margin-top:-#{height}px;\" onClick=\"style.pointerEvents='none'\"></div>"
     end
 
-    def self.blank?(value)
-      if value.nil?
-        true
-      elsif String === value
-        value.empty? || !(/[[:^space:]]/ === value)
-      else
-        value.respond_to?(:empty?) ? !!value.empty? : !value
-      end
-    end
-
     def self.truncate(string, length = 50)
       return string if string.nil?
       string.size > length ? string[0...(string.rindex(" ", length) || length)] + "..." : string
     end
 
     def self.get(meta, attr)
-      (meta && !blank?(meta[attr])) ? sanitize(meta[attr]) : nil
+      (meta && meta[attr].present?) ? sanitize(meta[attr]) : nil
     end
 
     def self.sanitize(value, length = 50)
-      return nil if blank?(value)
+      return nil if value.blank?
       Sanitize.fragment(value).strip
     end
 

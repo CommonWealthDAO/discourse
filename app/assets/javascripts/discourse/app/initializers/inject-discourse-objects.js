@@ -1,9 +1,8 @@
+import Session from "discourse/models/session";
+import Site from "discourse/models/site";
 import TopicTrackingState, {
   startTracking,
 } from "discourse/models/topic-tracking-state";
-import DiscourseLocation from "discourse/lib/discourse-location";
-import Session from "discourse/models/session";
-import Site from "discourse/models/site";
 import User from "discourse/models/user";
 
 export default {
@@ -33,8 +32,6 @@ export default {
 
     const session = Session.current();
     app.register("service:session", session, { instantiate: false });
-
-    app.register("location:discourse-location", DiscourseLocation);
 
     startTracking(this.topicTrackingState);
   },

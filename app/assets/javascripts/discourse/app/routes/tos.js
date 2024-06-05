@@ -1,8 +1,8 @@
-import DiscourseRoute from "discourse/routes/discourse";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
 import DiscourseURL from "discourse/lib/url";
 import StaticPage from "discourse/models/static-page";
-import I18n from "I18n";
+import DiscourseRoute from "discourse/routes/discourse";
+import I18n from "discourse-i18n";
 
 export default class TosRoute extends DiscourseRoute {
   @service siteSettings;

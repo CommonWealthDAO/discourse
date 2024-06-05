@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class UrlHelper
-  MAX_URL_LENGTH = 100_000
+  MAX_URL_LENGTH = 2_000
 
   # At the moment this handles invalid URLs that browser address bar accepts
   # where second # is not encoded
@@ -22,6 +22,29 @@ class UrlHelper
       uri
     end
   rescue URI::Error
+  end
+
+  # Heuristic checks to determine if the URL string is a valid absolute URL, path or anchor
+  def self.is_valid_url?(url)
+    uri = URI.parse(url)
+
+    return true if uri.is_a?(URI::Generic) && url.starts_with?("/") || url.match?(/\A\#([^#]*)/)
+
+    if uri.scheme
+      return true if uri.is_a?(URI::MailTo)
+
+      if url.match?(%r{\A#{uri.scheme}://[^/]}) &&
+           (
+             uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS) || uri.is_a?(URI::FTP) ||
+               uri.is_a?(URI::LDAP)
+           )
+        return true
+      end
+    end
+
+    false
+  rescue URI::InvalidURIError
+    false
   end
 
   def self.encode_and_parse(url)
@@ -66,19 +89,12 @@ class UrlHelper
     self.absolute(Upload.secure_uploads_url_from_upload_url(url), nil)
   end
 
-  def self.escape_uri(uri)
-    Discourse.deprecate(
-      "UrlHelper.escape_uri is deprecated. For normalization of user input use `.normalized_encode`. For true encoding, use `.encode`",
-      output_in_test: true,
-      drop_from: "3.0",
-    )
-    normalized_encode(uri)
-  end
-
   def self.normalized_encode(uri)
     url = uri.to_s
 
-    raise ArgumentError.new(:uri, "URL is too long") if url.length > MAX_URL_LENGTH
+    if url.length > MAX_URL_LENGTH
+      raise ArgumentError.new("URL starting with #{url[0..100]} is too long")
+    end
 
     # Ideally we will jump straight to `Addressable::URI.normalized_encode`. However,
     # that implementation has some edge-case issues like https://github.com/sporkmonger/addressable/issues/472.

@@ -1,21 +1,22 @@
-import I18n from "I18n";
+import { getOwner } from "@ember/owner";
+import { click, visit } from "@ember/test-helpers";
+import { test } from "qunit";
+import userFixtures from "discourse/tests/fixtures/user-fixtures";
 import {
   acceptance,
   exists,
   query,
 } from "discourse/tests/helpers/qunit-helpers";
-import { click, visit } from "@ember/test-helpers";
-import User from "discourse/models/user";
-import { test } from "qunit";
-import userFixtures from "discourse/tests/fixtures/user-fixtures";
 import { cloneJSON } from "discourse-common/lib/object";
+import I18n from "discourse-i18n";
 
 acceptance("User Card - Show Local Time", function (needs) {
   needs.user();
   needs.settings({ display_local_time_in_user_card: true });
 
   test("user card local time - does not update timezone for another user", async function (assert) {
-    User.current().user_option.timezone = "Australia/Brisbane";
+    const currentUser = getOwner(this).lookup("service:current-user");
+    currentUser.user_option.timezone = "Australia/Brisbane";
 
     await visit("/t/internationalization-localization/280");
     await click('a[data-user-card="charlie"]');

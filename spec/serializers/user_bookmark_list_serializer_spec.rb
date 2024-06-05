@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe UserBookmarkListSerializer do
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
 
   context "for polymorphic bookmarks" do
     before do
@@ -28,6 +28,17 @@ RSpec.describe UserBookmarkListSerializer do
       expect(serializer.bookmarks.map(&:class).map(&:to_s)).to match_array(
         %w[UserTestBookmarkSerializer UserTopicBookmarkSerializer UserPostBookmarkSerializer],
       )
+    end
+
+    it "serializes categories" do
+      topic_category = Fabricate(:category)
+      topic_bookmark.bookmarkable.update!(category: topic_category)
+      post_category = Fabricate(:category)
+      post_bookmark.bookmarkable.topic.update!(category: post_category)
+
+      serializer = run_serializer
+
+      expect(serializer.categories).to contain_exactly(topic_category, post_category)
     end
   end
 end

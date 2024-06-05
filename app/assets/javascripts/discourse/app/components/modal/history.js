@@ -1,13 +1,13 @@
-import { action } from "@ember/object";
-import { tracked } from "@glimmer/tracking";
-import Category from "discourse/models/category";
 import Component from "@glimmer/component";
-import I18n from "I18n";
-import Post from "discourse/models/post";
+import { tracked } from "@glimmer/tracking";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
 import { categoryBadgeHTML } from "discourse/helpers/category-link";
-import { iconHTML } from "discourse-common/lib/icon-library";
 import { sanitizeAsync } from "discourse/lib/text";
-import { inject as service } from "@ember/service";
+import Category from "discourse/models/category";
+import Post from "discourse/models/post";
+import { iconHTML } from "discourse-common/lib/icon-library";
+import I18n from "discourse-i18n";
 
 function customTagArray(val) {
   if (!val) {
@@ -162,9 +162,11 @@ export default class History extends Component {
   }
 
   get revertToRevisionText() {
-    return I18n.t("post.revisions.controls.revert", {
-      revision: this.previousVersion,
-    });
+    if (this.previousVersion) {
+      return I18n.t("post.revisions.controls.revert", {
+        revision: this.previousVersion,
+      });
+    }
   }
 
   refresh(postId, postVersion) {
@@ -188,26 +190,27 @@ export default class History extends Component {
     );
   }
 
-  revert(post, postVersion) {
-    post
-      .revertToRevision(postVersion)
-      .then((result) => {
-        this.refresh(post.id, postVersion);
-        if (result.topic) {
-          post.set("topic.slug", result.topic.slug);
-          post.set("topic.title", result.topic.title);
-          post.set("topic.fancy_title", result.topic.fancy_title);
-        }
-        if (result.category_id) {
-          post.set("topic.category", Category.findById(result.category_id));
-        }
-        this.args.closeModal();
-      })
-      .catch((e) => {
-        if (e.jqXHR.responseJSON?.errors?.[0]) {
-          this.dialog.alert(e.jqXHR.responseJSON.errors[0]);
-        }
-      });
+  async revert(post, postVersion) {
+    try {
+      const result = await post.revertToRevision(postVersion);
+      this.refresh(post.id, postVersion);
+      if (result.topic) {
+        post.set("topic.slug", result.topic.slug);
+        post.set("topic.title", result.topic.title);
+        post.set("topic.fancy_title", result.topic.fancy_title);
+      }
+      if (result.category_id) {
+        post.set(
+          "topic.category",
+          await Category.asyncFindById(result.category_id)
+        );
+      }
+      this.args.closeModal();
+    } catch (e) {
+      if (e.jqXHR.responseJSON?.errors?.[0]) {
+        this.dialog.alert(e.jqXHR.responseJSON.errors[0]);
+      }
+    }
   }
 
   get editButtonLabel() {
@@ -235,32 +238,27 @@ export default class History extends Component {
   }
 
   get previousCategory() {
-    if (this.postRevision?.category_id_changes) {
+    if (this.postRevision?.category_id_changes?.previous) {
       let category = Category.findById(
         this.postRevision.category_id_changes.previous
       );
-      return categoryBadgeHTML(category, { allowUncategorized: true });
+      return categoryBadgeHTML(category, {
+        allowUncategorized: true,
+        extraClasses: "diff-del",
+      });
     }
   }
 
   get currentCategory() {
-    if (this.postRevision?.category_id_changes) {
+    if (this.postRevision?.category_id_changes?.current) {
       let category = Category.findById(
         this.postRevision.category_id_changes.current
       );
-      return categoryBadgeHTML(category, { allowUncategorized: true });
+      return categoryBadgeHTML(category, {
+        allowUncategorized: true,
+        extraClasses: "diff-ins",
+      });
     }
-  }
-
-  get wikiDisabled() {
-    return !this.postRevision.wiki_changes?.current;
-  }
-
-  get postTypeDisabled() {
-    return (
-      this.postRevision?.post_type_changes?.current !==
-      this.site.post_types.moderator_action
-    );
   }
 
   @action

@@ -1,24 +1,12 @@
 import Component from "@glimmer/component";
 import { action } from "@ember/object";
-import { inject as service } from "@ember/service";
-import { headerOffset } from "discourse/lib/offset-calculator";
+import { service } from "@ember/service";
 import { createPopper } from "@popperjs/core";
-import ChatEmojiPicker from "discourse/plugins/chat/discourse/components/chat-emoji-picker";
 import { modifier } from "ember-modifier";
+import { headerOffset } from "discourse/lib/offset-calculator";
+import ChatEmojiPicker from "discourse/plugins/chat/discourse/components/chat-emoji-picker";
 
 export default class ChatChannelMessageEmojiPicker extends Component {
-  <template>
-    {{! template-lint-disable modifier-name-case }}
-    <ChatEmojiPicker
-      @context="chat-channel-message"
-      @didInsert={{this.didInsert}}
-      @willDestroy={{this.willDestroy}}
-      @didSelectEmoji={{this.didSelectEmoji}}
-      @class="hidden"
-      {{this.listenToBodyScroll}}
-    />
-  </template>
-
   @service site;
   @service chatEmojiPickerManager;
 
@@ -72,6 +60,18 @@ export default class ChatChannelMessageEmojiPicker extends Component {
 
   @action
   willDestroy() {
+    super.willDestroy(...arguments);
     this._popper?.destroy();
   }
+
+  <template>
+    <ChatEmojiPicker
+      {{this.listenToBodyScroll}}
+      @context="chat-channel-message"
+      @didInsert={{this.didInsert}}
+      @willDestroy={{this.willDestroy}}
+      @didSelectEmoji={{this.didSelectEmoji}}
+      class="hidden"
+    />
+  </template>
 }

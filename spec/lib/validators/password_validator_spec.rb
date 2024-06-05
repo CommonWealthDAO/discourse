@@ -2,7 +2,7 @@
 
 RSpec.describe PasswordValidator do
   def password_error_message(key)
-    I18n.t("activerecord.errors.models.user.attributes.password.#{key.to_s}")
+    I18n.t("activerecord.errors.models.user.attributes.password.#{key}")
   end
 
   subject(:validate) { validator.validate_each(record, :password, @password) }
@@ -139,6 +139,29 @@ RSpec.describe PasswordValidator do
       record.password = @password
       validate
       expect(record.errors[:password]).to include(password_error_message(:same_as_current))
+    end
+
+    it "adds an error when new password is same as a previous password" do
+      @password = "thisisaoldpassword"
+      record.save!
+      record.reload
+
+      new_password = "thisisanewpassword"
+
+      _expired_user_password =
+        Fabricate(
+          :expired_user_password,
+          password: new_password,
+          password_algorithm: record.password_algorithm,
+          password_salt: record.salt,
+          user: record,
+        )
+
+      record.password = new_password
+      @password = new_password
+      validate
+
+      expect(record.errors[:password]).to include(password_error_message(:same_as_previous))
     end
 
     it "validation required if password is required" do

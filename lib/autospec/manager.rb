@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "listen"
-require "thread"
 require "fileutils"
 require "autospec/reload_css"
 require "autospec/base_runner"
@@ -267,7 +266,9 @@ class Autospec::Manager
           if k.match(file)
             puts "@@@@@@@@@@@@ #{file} matched a reloader for #{runner}" if @debug
             runner.reload
+            # rubocop:disable Lint/NonLocalExitFromIterator
             return
+            # rubocop:enable Lint/NonLocalExitFromIterator
           end
         end
         # watchers
@@ -316,7 +317,7 @@ class Autospec::Manager
         if @queue.first && @queue.first[0] == "focus"
           focus = @queue.shift
           @queue.unshift([file, spec, runner])
-          unless spec.include?(":") && focus[1].include?(spec.split(":")[0])
+          if spec.exclude?(":") || focus[1].exclude?(spec.split(":")[0])
             @queue.unshift(focus) if focus[1].include?(spec) || file != spec
           end
         else

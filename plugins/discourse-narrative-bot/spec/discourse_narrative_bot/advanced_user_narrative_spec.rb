@@ -5,7 +5,7 @@ RSpec.describe DiscourseNarrativeBot::AdvancedUserNarrative do
   fab!(:discobot_user) { narrative_bot.discobot_user }
   fab!(:discobot_username) { narrative_bot.discobot_username }
   fab!(:first_post) { Fabricate(:post, user: discobot_user) }
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
 
   fab!(:topic) do
     Fabricate(
@@ -29,6 +29,7 @@ RSpec.describe DiscourseNarrativeBot::AdvancedUserNarrative do
     stub_image_size
     Jobs.run_immediately!
     SiteSetting.discourse_narrative_bot_enabled = true
+    Group.refresh_automatic_groups!
   end
 
   describe "#notify_timeout" do
@@ -620,7 +621,7 @@ RSpec.describe DiscourseNarrativeBot::AdvancedUserNarrative do
         end
 
         it "should create the right reply (insufficient trust level)" do
-          user.update(trust_level: 0)
+          user.change_trust_level!(TrustLevel[0])
 
           TopicUser.change(
             user.id,

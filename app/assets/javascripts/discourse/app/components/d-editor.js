@@ -1,45 +1,43 @@
+import Component from "@ember/component";
+import { action, computed } from "@ember/object";
+import { schedule, scheduleOnce } from "@ember/runloop";
+import { service } from "@ember/service";
+import ItsATrap from "@discourse/itsatrap";
+import $ from "jquery";
+import { emojiSearch, isSkinTonableEmoji } from "pretty-text/emoji";
+import { translations } from "pretty-text/emoji/data";
+import { resolveCachedShortUrls } from "pretty-text/upload-short-url";
+import { Promise } from "rsvp";
+import InsertHyperlink from "discourse/components/modal/insert-hyperlink";
 import { ajax } from "discourse/lib/ajax";
+import { SKIP } from "discourse/lib/autocomplete";
+import { setupHashtagAutocomplete } from "discourse/lib/hashtag-autocomplete";
+import { linkSeenHashtagsInContext } from "discourse/lib/hashtag-decorator";
+import { wantsNewWindow } from "discourse/lib/intercept-click";
 import { PLATFORM_KEY_MODIFIER } from "discourse/lib/keyboard-shortcuts";
+import { linkSeenMentions } from "discourse/lib/link-mentions";
+import { loadOneboxes } from "discourse/lib/load-oneboxes";
+import { emojiUrlFor, generateCookFunction } from "discourse/lib/text";
+import { siteDir } from "discourse/lib/text-direction";
 import {
   caretPosition,
   inCodeBlock,
   translateModKey,
 } from "discourse/lib/utilities";
+import TextareaTextManipulation, {
+  getHead,
+} from "discourse/mixins/textarea-text-manipulation";
+import { isTesting } from "discourse-common/config/environment";
+import discourseDebounce from "discourse-common/lib/debounce";
+import deprecated from "discourse-common/lib/deprecated";
+import { getRegister } from "discourse-common/lib/get-owner";
+import { findRawTemplate } from "discourse-common/lib/raw-templates";
 import discourseComputed, {
   bind,
   observes,
   on,
 } from "discourse-common/utils/decorators";
-import { emojiSearch, isSkinTonableEmoji } from "pretty-text/emoji";
-import { emojiUrlFor, generateCookFunction } from "discourse/lib/text";
-import { schedule, scheduleOnce } from "@ember/runloop";
-import Component from "@ember/component";
-import I18n from "I18n";
-import ItsATrap from "@discourse/itsatrap";
-import { Promise } from "rsvp";
-import { SKIP } from "discourse/lib/autocomplete";
-import {
-  linkSeenHashtagsInContext,
-  setupHashtagAutocomplete,
-} from "discourse/lib/hashtag-autocomplete";
-import deprecated from "discourse-common/lib/deprecated";
-import discourseDebounce from "discourse-common/lib/debounce";
-import { findRawTemplate } from "discourse-common/lib/raw-templates";
-import { getRegister } from "discourse-common/lib/get-owner";
-import { isTesting } from "discourse-common/config/environment";
-import { linkSeenMentions } from "discourse/lib/link-mentions";
-import { loadOneboxes } from "discourse/lib/load-oneboxes";
-import loadScript from "discourse/lib/load-script";
-import { resolveCachedShortUrls } from "pretty-text/upload-short-url";
-import { inject as service } from "@ember/service";
-import { siteDir } from "discourse/lib/text-direction";
-import { translations } from "pretty-text/emoji/data";
-import { wantsNewWindow } from "discourse/lib/intercept-click";
-import { action, computed } from "@ember/object";
-import TextareaTextManipulation, {
-  getHead,
-} from "discourse/mixins/textarea-text-manipulation";
-import InsertHyperlink from "discourse/components/modal/insert-hyperlink";
+import I18n from "discourse-i18n";
 
 function getButtonLabel(labelKey, defaultLabel) {
   // use the Font Awesome icon if the label matches the default
@@ -62,22 +60,26 @@ class Toolbar {
       { group: "extras", buttons: [] },
     ];
 
+    const boldLabel = getButtonLabel("composer.bold_label", "B");
+    const boldIcon = boldLabel ? null : "bold";
     this.addButton({
       id: "bold",
       group: "fontStyles",
-      icon: "bold",
-      label: getButtonLabel("composer.bold_label", "B"),
+      icon: boldIcon,
+      label: boldLabel,
       shortcut: "B",
       preventFocus: true,
       trimLeading: true,
       perform: (e) => e.applySurround("**", "**", "bold_text"),
     });
 
+    const italicLabel = getButtonLabel("composer.italic_label", "I");
+    const italicIcon = italicLabel ? null : "italic";
     this.addButton({
       id: "italic",
       group: "fontStyles",
-      icon: "italic",
-      label: getButtonLabel("composer.italic_label", "I"),
+      icon: italicIcon,
+      label: italicLabel,
       shortcut: "I",
       preventFocus: true,
       trimLeading: true,
@@ -87,6 +89,7 @@ class Toolbar {
     if (opts.showLink) {
       this.addButton({
         id: "link",
+        icon: "link",
         group: "insertions",
         shortcut: "K",
         preventFocus: true,
@@ -113,6 +116,7 @@ class Toolbar {
         id: "code",
         group: "insertions",
         shortcut: "E",
+        icon: "code",
         preventFocus: true,
         trimLeading: true,
         action: (...args) => this.context.send("formatCode", args),
@@ -158,44 +162,55 @@ class Toolbar {
     this.groups[this.groups.length - 1].lastGroup = true;
   }
 
-  addButton(button) {
-    const g = this.groups.findBy("group", button.group);
+  addButton(buttonAttrs) {
+    const g = this.groups.findBy("group", buttonAttrs.group);
     if (!g) {
-      throw new Error(`Couldn't find toolbar group ${button.group}`);
+      throw new Error(`Couldn't find toolbar group ${buttonAttrs.group}`);
     }
 
     const createdButton = {
-      id: button.id,
-      tabindex: button.tabindex || "-1",
-      className: button.className || button.id,
-      label: button.label,
-      icon: button.label ? null : button.icon || button.id,
-      action: button.action || ((a) => this.context.send("toolbarButton", a)),
-      perform: button.perform || function () {},
-      trimLeading: button.trimLeading,
-      popupMenu: button.popupMenu || false,
-      preventFocus: button.preventFocus || false,
+      id: buttonAttrs.id,
+      tabindex: buttonAttrs.tabindex || "-1",
+      className: buttonAttrs.className || buttonAttrs.id,
+      label: buttonAttrs.label,
+      icon: buttonAttrs.icon,
+      action: (button) => {
+        buttonAttrs.action
+          ? buttonAttrs.action(button)
+          : this.context.send("toolbarButton", button);
+        this.context.appEvents.trigger(
+          "d-editor:toolbar-button-clicked",
+          button
+        );
+      },
+      perform: buttonAttrs.perform || function () {},
+      trimLeading: buttonAttrs.trimLeading,
+      popupMenu: buttonAttrs.popupMenu || false,
+      preventFocus: buttonAttrs.preventFocus || false,
+      condition: buttonAttrs.condition || (() => true),
     };
 
-    if (button.sendAction) {
-      createdButton.sendAction = button.sendAction;
+    if (buttonAttrs.sendAction) {
+      createdButton.sendAction = buttonAttrs.sendAction;
     }
 
-    const title = I18n.t(button.title || `composer.${button.id}_title`);
-    if (button.shortcut) {
+    const title = I18n.t(
+      buttonAttrs.title || `composer.${buttonAttrs.id}_title`
+    );
+    if (buttonAttrs.shortcut) {
       const shortcutTitle = `${translateModKey(
         PLATFORM_KEY_MODIFIER + "+"
-      )}${translateModKey(button.shortcut)}`;
+      )}${translateModKey(buttonAttrs.shortcut)}`;
 
       createdButton.title = `${title} (${shortcutTitle})`;
       this.shortcuts[
-        `${PLATFORM_KEY_MODIFIER}+${button.shortcut}`.toLowerCase()
+        `${PLATFORM_KEY_MODIFIER}+${buttonAttrs.shortcut}`.toLowerCase()
       ] = createdButton;
     } else {
       createdButton.title = title;
     }
 
-    if (button.unshift) {
+    if (buttonAttrs.unshift) {
       g.buttons.unshift(createdButton);
     } else {
       g.buttons.push(createdButton);
@@ -238,7 +253,7 @@ export default Component.extend(TextareaTextManipulation, {
         return this._selectedFormTemplateId;
       }
 
-      return this.formTemplateIds?.[0];
+      return this.formTemplateId || this.formTemplateIds?.[0];
     },
 
     set(key, value) {
@@ -407,95 +422,102 @@ export default Component.extend(TextareaTextManipulation, {
     return toolbar;
   },
 
-  cachedCookAsync(text) {
-    if (this._cachedCookFunction) {
-      return Promise.resolve(this._cachedCookFunction(text));
-    }
-
-    const markdownOptions = this.markdownOptions || {};
-    return generateCookFunction(markdownOptions).then((cook) => {
-      this._cachedCookFunction = cook;
-      return cook(text);
-    });
+  async cachedCookAsync(text, options) {
+    this._cachedCookFunction ||= await generateCookFunction(options || {});
+    return await this._cachedCookFunction(text);
   },
 
-  _updatePreview() {
-    if (this._state !== "inDOM" || !this.processPreview) {
+  async _updatePreview() {
+    if (
+      this._state !== "inDOM" ||
+      !this.processPreview ||
+      this.isDestroying ||
+      this.isDestroyed
+    ) {
       return;
     }
 
-    const value = this.value;
+    const cooked = await this.cachedCookAsync(this.value, this.markdownOptions);
 
-    this.cachedCookAsync(value).then((cooked) => {
-      if (this.isDestroyed) {
+    if (this.preview === cooked || this.isDestroying || this.isDestroyed) {
+      return;
+    }
+
+    this.set("preview", cooked);
+
+    let unseenMentions, unseenHashtags;
+
+    if (this.siteSettings.enable_diffhtml_preview) {
+      const previewElement = this.element.querySelector(".d-editor-preview");
+      const cookedElement = previewElement.cloneNode(false);
+      cookedElement.innerHTML = cooked;
+
+      unseenMentions = linkSeenMentions(cookedElement, this.siteSettings);
+
+      unseenHashtags = linkSeenHashtagsInContext(
+        this.site.hashtag_configurations["topic-composer"],
+        cookedElement
+      );
+
+      loadOneboxes(
+        cookedElement,
+        ajax,
+        this.topicId,
+        this.categoryId,
+        this.siteSettings.max_oneboxes_per_post,
+        /* refresh */ false,
+        /* offline */ true
+      );
+
+      resolveCachedShortUrls(this.siteSettings, cookedElement);
+
+      // trigger all the "api.decorateCookedElement"
+      this.appEvents.trigger(
+        "decorate-non-stream-cooked-element",
+        cookedElement
+      );
+
+      (await import("morphlex")).morph(
+        previewElement,
+        cookedElement,
+        this.morphingOptions
+      );
+    }
+
+    schedule("afterRender", () => {
+      if (
+        this._state !== "inDOM" ||
+        !this.element ||
+        this.isDestroying ||
+        this.isDestroyed
+      ) {
         return;
       }
 
-      if (this.preview === cooked) {
-        return;
+      const previewElement = this.element.querySelector(".d-editor-preview");
+
+      if (previewElement && this.previewUpdated) {
+        this.previewUpdated(previewElement, unseenMentions, unseenHashtags);
       }
-
-      this.set("preview", cooked);
-
-      let previewPromise = Promise.resolve();
-
-      if (this.siteSettings.enable_diffhtml_preview) {
-        const cookedElement = document.createElement("div");
-        cookedElement.innerHTML = cooked;
-        linkSeenHashtagsInContext(
-          this.site.hashtag_configurations["topic-composer"],
-          cookedElement
-        );
-        linkSeenMentions(cookedElement, this.siteSettings);
-        resolveCachedShortUrls(this.siteSettings, cookedElement);
-        loadOneboxes(
-          cookedElement,
-          ajax,
-          null,
-          null,
-          this.siteSettings.max_oneboxes_per_post,
-          false,
-          true
-        );
-
-        previewPromise = loadScript("/javascripts/diffhtml.min.js").then(() => {
-          const previewElement =
-            this.element.querySelector(".d-editor-preview");
-          // This is a workaround for a known bug in diffHTML
-          // https://github.com/tbranyen/diffhtml/issues/217#issuecomment-1479956332
-          window.diff.release(previewElement);
-          window.diff.innerHTML(previewElement, cookedElement.innerHTML);
-        });
-      }
-
-      previewPromise.then(() => {
-        schedule("afterRender", () => {
-          if (this._state !== "inDOM" || !this.element) {
-            return;
-          }
-
-          const preview = this.element.querySelector(".d-editor-preview");
-          if (!preview) {
-            return;
-          }
-
-          if (this.previewUpdated) {
-            this.previewUpdated(preview);
-          }
-        });
-      });
     });
   },
 
+  morphingOptions: {
+    beforeAttributeUpdated: (element, attributeName) => {
+      // Don't morph the open attribute of <details> elements
+      return !(element.tagName === "DETAILS" && attributeName === "open");
+    },
+  },
+
   @observes("ready", "value", "processPreview")
-  _watchForChanges() {
+  async _watchForChanges() {
     if (!this.ready) {
       return;
     }
 
     // Debouncing in test mode is complicated
     if (isTesting()) {
-      this._updatePreview();
+      await this._updatePreview();
     } else {
       discourseDebounce(this, this._updatePreview, 30);
     }
@@ -529,10 +551,6 @@ export default Component.extend(TextareaTextManipulation, {
       },
 
       onKeyUp: (text, cp) => {
-        if (inCodeBlock(text, cp)) {
-          return false;
-        }
-
         const matches =
           /(?:^|[\s.\?,@\/#!%&*;:\[\]{}=\-_()])(:(?!:).?[\w-]*:?(?!:)(?:t\d?)?:?) ?$/gi.exec(
             text.substring(0, cp)
@@ -636,8 +654,8 @@ export default Component.extend(TextareaTextManipulation, {
           });
       },
 
-      triggerRule: (textarea) =>
-        !inCodeBlock(textarea.value, caretPosition(textarea)),
+      triggerRule: async (textarea) =>
+        !(await inCodeBlock(textarea.value, caretPosition(textarea))),
     });
   },
 

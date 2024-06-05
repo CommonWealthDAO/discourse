@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe Chat::Notifier do
   describe "#notify_new" do
     fab!(:channel) { Fabricate(:category_channel) }
-    fab!(:user_1) { Fabricate(:user) }
+    fab!(:user_1) { Fabricate(:user, refresh_auto_groups: true) }
     fab!(:user_2) { Fabricate(:user) }
 
     before do
@@ -145,10 +143,10 @@ describe Chat::Notifier do
           Jobs.run_immediately!
           msg = build_cooked_msg(mention, user_1)
 
-          Chat::MessageUpdater.update(
+          Chat::UpdateMessage.call(
             guardian: user_1.guardian,
-            chat_message: msg,
-            new_content: "hello @all",
+            message_id: msg.id,
+            message: "hello @all",
           )
 
           described_class.new(msg, msg.created_at).notify_edit
@@ -424,7 +422,6 @@ describe Chat::Notifier do
 
       context "when in a personal message" do
         let(:personal_chat_channel) do
-          Group.refresh_automatic_groups!
           result =
             Chat::CreateDirectMessageChannel.call(
               guardian: user_1.guardian,

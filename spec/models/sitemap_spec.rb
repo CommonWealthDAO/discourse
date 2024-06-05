@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 RSpec.describe Sitemap do
   describe ".regenerate_sitemaps" do
-    fab!(:topic) { Fabricate(:topic) }
+    fab!(:topic)
 
     it "always create the news and recent sitemaps" do
       described_class.regenerate_sitemaps

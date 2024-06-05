@@ -53,8 +53,8 @@ class TopicsController < ApplicationController
   def show
     flash["referer"] ||= request.referer[0..255] if request.referer
 
-    # We'd like to migrate the wordpress feed to another url. This keeps up backwards compatibility with
-    # existing installs.
+    # TODO: We'd like to migrate the wordpress feed to another url. This keeps up backwards
+    # compatibility with existing installs.
     return wordpress if params[:best].present?
 
     # work around people somehow sending in arrays,
@@ -121,7 +121,7 @@ class TopicsController < ApplicationController
 
       deleted =
         guardian.can_see_topic?(ex.obj, false) ||
-          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj.deleted_at)
+          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj&.deleted_at)
 
       if SiteSetting.detailed_404
         if deleted
@@ -212,15 +212,19 @@ class TopicsController < ApplicationController
       :only_moderator_liked,
     )
 
-    opts = {
-      best: params[:best].to_i,
-      min_trust_level: params[:min_trust_level] ? params[:min_trust_level].to_i : 1,
-      min_score: params[:min_score].to_i,
-      min_replies: params[:min_replies].to_i,
-      bypass_trust_level_score: params[:bypass_trust_level_score].to_i, # safe cause 0 means ignore
-      only_moderator_liked: params[:only_moderator_liked].to_s == "true",
-      exclude_hidden: true,
-    }
+    begin
+      opts = {
+        best: params[:best].to_i,
+        min_trust_level: params[:min_trust_level] ? params[:min_trust_level].to_i : 1,
+        min_score: params[:min_score].to_i,
+        min_replies: params[:min_replies].to_i,
+        bypass_trust_level_score: params[:bypass_trust_level_score].to_i, # safe cause 0 means ignore
+        only_moderator_liked: params[:only_moderator_liked].to_s == "true",
+        exclude_hidden: true,
+      }
+    rescue NoMethodError
+      raise Discourse::InvalidParameters
+    end
 
     @topic_view = TopicView.new(params[:topic_id], current_user, opts)
     discourse_expires_in 1.minute
@@ -340,7 +344,7 @@ class TopicsController < ApplicationController
     topic = Topic.find_by(id: params[:id])
     guardian.ensure_can_edit!(topic)
 
-    category = Category.where(id: params[:category_id].to_i).first
+    category = Category.find_by(id: params[:category_id].to_i)
     guardian.ensure_can_publish_topic!(topic, category)
 
     row_count = SharedDraft.where(topic_id: topic.id).update_all(category_id: category.id)
@@ -493,6 +497,18 @@ class TopicsController < ApplicationController
         Topic.find_by(id: topic_id)
       end
 
+    status_opts = { until: params[:until].presence }
+
+    if status == "visible"
+      status_opts[:visibility_reason_id] = (
+        if enabled
+          Topic.visibility_reasons[:manually_relisted]
+        else
+          Topic.visibility_reasons[:manually_unlisted]
+        end
+      )
+    end
+
     case status
     when "closed"
       guardian.ensure_can_close_topic!(@topic)
@@ -506,9 +522,7 @@ class TopicsController < ApplicationController
       guardian.ensure_can_moderate!(@topic)
     end
 
-    params[:until] === "" ? params[:until] = nil : params[:until]
-
-    @topic.update_status(status, enabled, current_user, until: params[:until])
+    @topic.update_status(status, enabled, current_user, status_opts)
 
     render json:
              success_json.merge!(
@@ -971,7 +985,7 @@ class TopicsController < ApplicationController
     rescue Discourse::InvalidAccess => ex
       deleted =
         guardian.can_see_topic?(ex.obj, false) ||
-          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj.deleted_at)
+          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj&.deleted_at)
 
       raise Discourse::NotFound.new(
               nil,
@@ -1006,6 +1020,7 @@ class TopicsController < ApplicationController
           :group,
           :category_id,
           :notification_level_id,
+          :message,
           *DiscoursePluginRegistry.permitted_bulk_action_parameters,
           tags: [],
         )
@@ -1131,28 +1146,30 @@ class TopicsController < ApplicationController
   def convert_topic
     params.require(:id)
     params.require(:type)
+
     topic = Topic.find_by(id: params[:id])
     guardian.ensure_can_convert_topic!(topic)
 
-    if params[:type] == "public"
-      converted_topic =
+    topic =
+      if params[:type] == "public"
         topic.convert_to_public_topic(current_user, category_id: params[:category_id])
-    else
-      converted_topic = topic.convert_to_private_message(current_user)
-    end
-    render_topic_changes(converted_topic)
-  rescue ActiveRecord::RecordInvalid => ex
-    render_json_error(ex)
+      else
+        topic.convert_to_private_message(current_user)
+      end
+
+    topic.valid? ? render_topic_changes(topic) : render_json_error(topic)
   end
 
   def reset_bump_date
     params.require(:id)
+    params.permit(:post_id)
+
     guardian.ensure_can_update_bumped_at!
 
     topic = Topic.find_by(id: params[:id])
     raise Discourse::NotFound.new unless topic
 
-    topic.reset_bumped_at
+    topic.reset_bumped_at(params[:post_id])
     render body: nil
   end
 
@@ -1249,7 +1266,19 @@ class TopicsController < ApplicationController
       raise(SiteSetting.detailed_404 ? ex : Discourse::NotFound)
     end
 
-    opts = params.slice(:page, :print, :filter_top_level_replies)
+    # Allow plugins to append allowed query parameters, so they aren't scrubbed on redirect to proper topic URL
+    additional_allowed_query_parameters =
+      DiscoursePluginRegistry.apply_modifier(
+        :redirect_to_correct_topic_additional_query_parameters,
+        [],
+      )
+
+    opts =
+      params.slice(
+        *%i[page print filter_top_level_replies preview_theme_id].concat(
+          additional_allowed_query_parameters,
+        ),
+      )
     opts.delete(:page) if params[:page] == 0
 
     url = topic.relative_url
@@ -1365,7 +1394,7 @@ class TopicsController < ApplicationController
   end
 
   def check_for_status_presence(key, attr)
-    invalid_param(key) unless %w[pinned pinned_globally visible closed archived].include?(attr)
+    invalid_param(key) if %w[pinned pinned_globally visible closed archived].exclude?(attr)
   end
 
   def invalid_param(key)

@@ -2,13 +2,6 @@
   display: flex;
   flex-grow: 1;
   max-width: 100%;
-
-  &.has-form-template {
-    .d-editor-preview-wrapper {
-      display: none;
-      flex: 0;
-    }
-  }
 }
 
 .d-editor {
@@ -31,7 +24,7 @@
   flex-direction: column;
   background-color: var(--secondary);
   position: relative;
-  border: 1px solid var(--primary-medium);
+  border: 1px solid var(--primary-400);
   border-radius: var(--d-input-border-radius);
   min-height: 0;
 
@@ -62,6 +55,7 @@
   flex-direction: column;
   margin-left: 16px;
   overflow: auto;
+  overflow-anchor: none;
   cursor: default;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -85,6 +79,7 @@
   height: 100%;
   overflow-x: hidden;
   overscroll-behavior: contain;
+  overflow-anchor: none;
   resize: none;
 }
 
@@ -171,8 +166,8 @@
   --resizer-height: 1.75em;
   position: relative;
   display: inline-block;
-  .desktop-view & {
-    // need the extra space on mobile because controls are always visible
+  .discourse-no-touch & {
+    // on hover-capable devices we position the controls within the padding
     padding-bottom: var(--resizer-height);
     margin-bottom: calc(var(--resizer-height) * -1);
   }
@@ -190,12 +185,10 @@
   .button-wrapper {
     min-width: 10em;
     width: 100%;
-
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: 0 0.5em;
-
     position: absolute;
     height: calc(var(--resizer-height) + 0.5em);
     bottom: 0;
@@ -317,7 +310,7 @@
   }
 }
 
-.mobile-view .d-editor-preview .image-wrapper .button-wrapper {
+.discourse-touch .d-editor-preview .image-wrapper .button-wrapper {
   opacity: 1;
 }
 
@@ -366,5 +359,7 @@
   overflow: auto;
   background: var(--primary-very-low);
   padding: 1rem;
-  border: 1px solid var(--primary-medium);
+  border: 1px solid var(--primary-400);
+  margin-bottom: 0;
+  height: 100%;
 }

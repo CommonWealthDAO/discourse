@@ -61,41 +61,55 @@ class PostsController < ApplicationController
   def latest
     params.permit(:before)
     last_post_id = params[:before].to_i
-    last_post_id = Post.last.id if last_post_id <= 0
+    last_post_id = nil if last_post_id <= 0
 
     if params[:id] == "private_posts"
       raise Discourse::NotFound if current_user.nil?
+
+      allowed_private_topics = TopicAllowedUser.where(user_id: current_user.id).select(:topic_id)
+
+      allowed_groups = GroupUser.where(user_id: current_user.id).select(:group_id)
+      allowed_private_topics_by_group =
+        TopicAllowedGroup.where(group_id: allowed_groups).select(:topic_id)
+
+      all_allowed =
+        Topic
+          .where(id: allowed_private_topics)
+          .or(Topic.where(id: allowed_private_topics_by_group))
+          .select(:id)
+
       posts =
         Post
           .private_posts
-          .order(created_at: :desc)
-          .where("posts.id <= ?", last_post_id)
-          .where("posts.id > ?", last_post_id - 50)
+          .order(id: :desc)
           .includes(topic: :category)
           .includes(user: %i[primary_group flair_group])
           .includes(:reply_to_user)
           .limit(50)
       rss_description = I18n.t("rss_description.private_posts")
+
+      posts = posts.where(topic_id: all_allowed) if !current_user.admin?
     else
       posts =
         Post
           .public_posts
           .visible
           .where(post_type: Post.types[:regular])
-          .order(created_at: :desc)
-          .where("posts.id <= ?", last_post_id)
-          .where("posts.id > ?", last_post_id - 50)
+          .order(id: :desc)
           .includes(topic: :category)
           .includes(user: %i[primary_group flair_group])
           .includes(:reply_to_user)
+          .where("categories.id" => Category.secured(guardian).select(:id))
           .limit(50)
+
       rss_description = I18n.t("rss_description.posts")
       @use_canonical = true
     end
 
-    # Remove posts the user doesn't have permission to see
-    # This isn't leaking any information we weren't already through the post ID numbers
-    posts = posts.reject { |post| !guardian.can_see?(post) || post.topic.blank? }
+    posts = posts.where("posts.id <= ?", last_post_id) if last_post_id
+
+    posts = posts.to_a
+
     counts = PostAction.counts_for(posts, current_user)
 
     respond_to do |format|
@@ -310,13 +324,6 @@ class PostsController < ApplicationController
     render json: post.reply_ids(guardian).to_json
   end
 
-  def all_reply_ids
-    Discourse.deprecate("/posts/:id/reply-ids/all is deprecated.", drop_from: "3.0")
-
-    post = find_post_from_params
-    render json: post.reply_ids(guardian, only_replies_to_single_post: false).to_json
-  end
-
   def destroy
     post = find_post_from_params
     force_destroy = ActiveModel::Type::Boolean.new.cast(params[:force_destroy])
@@ -470,7 +477,7 @@ class PostsController < ApplicationController
 
     post = find_post_from_params
     raise Discourse::InvalidParameters.new(:post) if post.blank?
-    raise Discourse::NotFound unless post.revisions.present?
+    raise Discourse::NotFound if post.revisions.blank?
 
     RateLimiter.new(
       current_user,
@@ -846,8 +853,22 @@ class PostsController < ApplicationController
         .permit(*permitted)
         .tap do |allowed|
           allowed[:image_sizes] = params[:image_sizes]
-          # TODO this does not feel right, we should name what meta_data is allowed
-          allowed[:meta_data] = params[:meta_data]
+
+          if params.has_key?(:meta_data)
+            Discourse.deprecate(
+              "the :meta_data param is deprecated, use the :topic_custom_fields param instead",
+              since: "3.2",
+              drop_from: "3.3",
+            )
+          end
+
+          topic_custom_fields = {}
+          topic_custom_fields.merge!(editable_topic_custom_fields(:meta_data))
+          topic_custom_fields.merge!(editable_topic_custom_fields(:topic_custom_fields))
+
+          if topic_custom_fields.present?
+            allowed[:topic_opts] = { custom_fields: topic_custom_fields }
+          end
         end
 
     # Staff are allowed to pass `is_warning`
@@ -907,6 +928,25 @@ class PostsController < ApplicationController
 
     result.permit!
     result.to_h
+  end
+
+  def editable_topic_custom_fields(params_key)
+    if (topic_custom_fields = params[params_key]).present?
+      editable_topic_custom_fields = Topic.editable_custom_fields(guardian)
+
+      if (
+           unpermitted_topic_custom_fields =
+             topic_custom_fields.except(*editable_topic_custom_fields)
+         ).present?
+        raise Discourse::InvalidParameters.new(
+                "The following keys in :#{params_key} are not permitted: #{unpermitted_topic_custom_fields.keys.join(", ")}",
+              )
+      end
+
+      topic_custom_fields.permit(*editable_topic_custom_fields).to_h
+    else
+      {}
+    end
   end
 
   def signature_for(args)

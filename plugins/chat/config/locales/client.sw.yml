@@ -12,6 +12,9 @@ sw:
           always: "Mara kwa mara"
           never: "Kamwe"
     chat:
+      deleted_chat_username: imefutwa
+      dates:
+        yesterday: "Jana"
       create: "Tengeneza"
       cancel: "Ghairi"
       channel_settings:
@@ -20,6 +23,7 @@ sw:
         join: "Jiunge"
         leave: "Ondoka"
       close: "Funga"
+      remove: "Ondoa"
       delete: "Futa"
       muted: "kunyamazisha"
       joined: "alijiunga"
@@ -30,8 +34,6 @@ sw:
       flag: "Bendera"
       join: "Jiunge"
       last_visit: "Mara ya mwisho imetembelewa"
-      mention_warning:
-        dismiss: "ondosha..."
       reply: "Jibu"
       edit: "Hariri"
       rebake_message: "Tengeneza upya HTML"
@@ -46,6 +48,7 @@ sw:
       browse:
         back: "Iliyopita"
         filter_all: Vyote
+        filter_open: Fungua
         filter_closed: Imefungwa
       chat_message_separator:
         today: Leo
@@ -57,9 +60,10 @@ sw:
       channel_info:
         back_to_channel: "Iliyopita"
         tabs:
-          about: Kuhusu
           members: Wanachama
           settings: Mipangilio
+      new_message_modal:
+        filter: "Chuja"
       direct_message_creator:
         title: Ujumbe Mpya
         prefix: "Kwenda:"
@@ -85,6 +89,10 @@ sw:
         saved: "Imehifadhiwa"
         unfollow: "Ondoka"
         admin_title: "Kiongozi"
+        settings_title: "Mipangilio"
+        category_label: "Kategoria"
+        history_label: "Historia"
+        members_label: "Wanachama"
       incoming_webhooks:
         back: "Iliyopita"
         description: "Elezo"
@@ -103,6 +111,10 @@ sw:
           title: "Hamisha kwenda Mada Mpya"
         existing_topic:
           title: "Hamisha kwenda kwenye Mada Iliyopo"
+      retention_reminders:
+        short:
+          one: "siku %{count}"
+          other: "siku %{count}"
       emoji_picker:
         objects: "Vitu"
         flags: "Bendera"

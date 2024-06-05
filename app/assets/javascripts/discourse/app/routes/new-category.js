@@ -1,8 +1,8 @@
-import DiscourseRoute from "discourse/routes/discourse";
-import I18n from "I18n";
+import { service } from "@ember/service";
 import { Promise } from "rsvp";
 import { SEARCH_PRIORITIES } from "discourse/lib/constants";
-import { inject as service } from "@ember/service";
+import DiscourseRoute from "discourse/routes/discourse";
+import I18n from "discourse-i18n";
 
 let _newCategoryColor = "0088CC";
 let _newCategoryTextColor = "FFFFFF";
@@ -12,11 +12,12 @@ export function setNewCategoryDefaultColors(backgroundColor, textColor) {
   _newCategoryTextColor = textColor;
 }
 
-export default DiscourseRoute.extend({
-  router: service(),
+export default class NewCategory extends DiscourseRoute {
+  @service router;
 
-  controllerName: "edit-category-tabs",
-  templateName: "edit-category-tabs",
+  controllerName = "edit-category-tabs";
+
+  templateName = "edit-category-tabs";
 
   beforeModel() {
     if (!this.currentUser) {
@@ -31,7 +32,7 @@ export default DiscourseRoute.extend({
         this.router.replaceWith("/404");
       }
     }
-  },
+  }
 
   model() {
     return Promise.resolve(this.groupPermissions())
@@ -41,7 +42,7 @@ export default DiscourseRoute.extend({
       .catch(() => {
         return this.newCategoryWithPermissions(this.defaultGroupPermissions());
       });
-  },
+  }
 
   newCategoryWithPermissions(group_permissions) {
     return this.store.createRecord("category", {
@@ -57,17 +58,17 @@ export default DiscourseRoute.extend({
       required_tag_groups: [],
       form_template_ids: [],
     });
-  },
+  }
 
   titleToken() {
     return I18n.t("category.create");
-  },
+  }
 
   groupPermissions() {
     // Override this function if you want different groupPermissions from a plugin.
     // If your plugin override fails, permissions will fallback to defaultGroupPermissions
     return this.defaultGroupPermissions();
-  },
+  }
 
   defaultGroupPermissions() {
     return [
@@ -76,5 +77,5 @@ export default DiscourseRoute.extend({
         permission_type: 1,
       },
     ];
-  },
-});
+  }
+}

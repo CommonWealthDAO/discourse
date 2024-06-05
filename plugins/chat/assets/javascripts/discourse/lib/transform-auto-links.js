@@ -1,5 +1,5 @@
+import { generatePlaceholderHashtagHTML } from "discourse/lib/hashtag-decorator";
 import getURL from "discourse-common/lib/get-url";
-import { generatePlaceholderHashtagHTML } from "discourse/lib/hashtag-autocomplete";
 
 const domParser = new DOMParser();
 

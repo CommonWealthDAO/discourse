@@ -131,8 +131,30 @@ RSpec.describe SiteSerializer do
     expect(serialized[:shared_drafts_category_id]).to eq(nil)
   end
 
+  context "with lazy loaded categories enabled" do
+    fab!(:user)
+    fab!(:category)
+    fab!(:sidebar) { Fabricate(:category_sidebar_section_link, linkable: category, user: user) }
+
+    before { SiteSetting.lazy_load_categories_groups = "#{Group::AUTO_GROUPS[:everyone]}" }
+
+    it "does not include any categories for anonymous users" do
+      serialized = described_class.new(Site.new(guardian), scope: guardian, root: false).as_json
+
+      expect(serialized[:categories]).to eq(nil)
+    end
+
+    it "includes preloaded categories for logged in users" do
+      guardian = Guardian.new(user)
+
+      serialized = described_class.new(Site.new(guardian), scope: guardian, root: false).as_json
+
+      expect(serialized[:categories].map { |c| c[:id] }).to contain_exactly(category.id)
+    end
+  end
+
   describe "#anonymous_default_navigation_menu_tags" do
-    fab!(:user) { Fabricate(:user) }
+    fab!(:user)
     fab!(:tag) { Fabricate(:tag, name: "dev", description: "some description") }
     fab!(:tag2) { Fabricate(:tag, name: "random") }
     fab!(:hidden_tag) { Fabricate(:tag, name: "secret") }
@@ -150,13 +172,6 @@ RSpec.describe SiteSerializer do
     it "is not included in the serialised object when tagging is not enabled" do
       SiteSetting.tagging_enabled = false
       guardian = Guardian.new(user)
-
-      serialized = described_class.new(Site.new(guardian), scope: guardian, root: false).as_json
-      expect(serialized[:anonymous_default_navigation_menu_tags]).to eq(nil)
-    end
-
-    it "is not included in the serialised object when navigation menu is legacy" do
-      SiteSetting.navigation_menu = "legacy"
 
       serialized = described_class.new(Site.new(guardian), scope: guardian, root: false).as_json
       expect(serialized[:anonymous_default_navigation_menu_tags]).to eq(nil)
@@ -189,7 +204,7 @@ RSpec.describe SiteSerializer do
   end
 
   describe "#anonymous_sidebar_sections" do
-    fab!(:user) { Fabricate(:user) }
+    fab!(:user)
     fab!(:public_sidebar_section) do
       Fabricate(:sidebar_section, title: "Public section", public: true)
     end
@@ -205,7 +220,7 @@ RSpec.describe SiteSerializer do
 
     it "includes only public sidebar sections serialised object when user is anonymous" do
       serialized = described_class.new(Site.new(guardian), scope: guardian, root: false).as_json
-      expect(serialized[:anonymous_sidebar_sections].map(&:title)).to eq(
+      expect(serialized[:anonymous_sidebar_sections].map { |section| section[:title] }).to eq(
         ["Community", "Public section"],
       )
     end
@@ -222,7 +237,7 @@ RSpec.describe SiteSerializer do
 
           expect(serialized[:anonymous_sidebar_sections].count).to eq(2)
 
-          expect(serialized[:anonymous_sidebar_sections].last.links.map { |link| link.id }).to eq(
+          expect(serialized[:anonymous_sidebar_sections].last[:links].map { |link| link.id }).to eq(
             [public_section_link.linkable.id],
           )
         end.count
@@ -238,7 +253,7 @@ RSpec.describe SiteSerializer do
 
           expect(serialized[:anonymous_sidebar_sections].count).to eq(2)
 
-          expect(serialized[:anonymous_sidebar_sections].last.links.map { |link| link.id }).to eq(
+          expect(serialized[:anonymous_sidebar_sections].last[:links].map { |link| link.id }).to eq(
             [
               public_section_link.linkable.id,
               public_section_link_2.linkable.id,
@@ -251,7 +266,7 @@ RSpec.describe SiteSerializer do
   end
 
   describe "#top_tags" do
-    fab!(:tag) { Fabricate(:tag) }
+    fab!(:tag)
 
     describe "when tagging is not enabled" do
       before { SiteSetting.tagging_enabled = false }
@@ -339,14 +354,6 @@ RSpec.describe SiteSerializer do
       )
     end
 
-    it "should not be serialized if `navigation_menu` site setting is set to `legacy`" do
-      SiteSetting.set(:navigation_menu, "legacy")
-
-      serialized = described_class.new(Site.new(guardian), scope: guardian, root: false).as_json
-
-      expect(serialized[:navigation_menu_site_top_tags]).to eq(nil)
-    end
-
     it "should not be serialized if `tagging_enabled` site setting is set to false" do
       SiteSetting.set(:tagging_enabled, false)
 
@@ -365,7 +372,7 @@ RSpec.describe SiteSerializer do
   end
 
   describe "#whispers_allowed_groups_names" do
-    fab!(:admin) { Fabricate(:admin) }
+    fab!(:admin)
     fab!(:allowed_user) { Fabricate(:user) }
     fab!(:not_allowed_user) { Fabricate(:user) }
     fab!(:group1) { Fabricate(:group, name: "whisperers1", users: [allowed_user]) }

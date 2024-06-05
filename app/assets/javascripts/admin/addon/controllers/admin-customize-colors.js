@@ -1,8 +1,8 @@
 import Controller from "@ember/controller";
 import EmberObject, { action } from "@ember/object";
-import I18n from "I18n";
+import { service } from "@ember/service";
 import discourseComputed from "discourse-common/utils/decorators";
-import { inject as service } from "@ember/service";
+import I18n from "discourse-i18n";
 import ColorSchemeSelectBaseModal from "admin/components/modal/color-scheme-select-base";
 
 export default class AdminCustomizeColorsController extends Controller {

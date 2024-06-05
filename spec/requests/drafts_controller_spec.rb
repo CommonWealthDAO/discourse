@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe DraftsController do
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
 
   describe "#index" do
     it "requires you to be logged in" do
@@ -49,6 +49,21 @@ RSpec.describe DraftsController do
       get "/drafts.json"
       expect(response.status).to eq(200)
       expect(response.parsed_body["drafts"].first["title"]).to eq(nil)
+    end
+
+    it "returns categories when lazy load categories is enabled" do
+      SiteSetting.lazy_load_categories_groups = "#{Group::AUTO_GROUPS[:everyone]}"
+      category = Fabricate(:category)
+      topic = Fabricate(:topic, category: category)
+      Draft.set(topic.user, "topic_#{topic.id}", 0, "{}")
+      sign_in(topic.user)
+
+      get "/drafts.json"
+      expect(response.status).to eq(200)
+      draft_keys = response.parsed_body["drafts"].map { |draft| draft["draft_key"] }
+      expect(draft_keys).to contain_exactly("topic_#{topic.id}")
+      category_ids = response.parsed_body["categories"].map { |cat| cat["id"] }
+      expect(category_ids).to contain_exactly(category.id)
     end
   end
 
@@ -233,6 +248,45 @@ RSpec.describe DraftsController do
           expect(response).to have_http_status :bad_request
         end
       end
+    end
+
+    it "returns 403 when the maximum amount of drafts per users is reached" do
+      SiteSetting.max_drafts_per_user = 2
+
+      user1 = Fabricate(:user)
+      sign_in(user1)
+
+      data = { my: "data" }.to_json
+
+      # creating the first draft should work
+      post "/drafts.json", params: { draft_key: "TOPIC_1", data: data }
+      expect(response.status).to eq(200)
+
+      # same draft key, so shouldn't count against the limit
+      post "/drafts.json", params: { draft_key: "TOPIC_1", data: data, sequence: 0 }
+      expect(response.status).to eq(200)
+
+      # different draft key, so should count against the limit
+      post "/drafts.json", params: { draft_key: "TOPIC_2", data: data }
+      expect(response.status).to eq(200)
+
+      # limit should be reached now
+      post "/drafts.json", params: { draft_key: "TOPIC_3", data: data }
+      expect(response.status).to eq(403)
+
+      # updating existing draft should still work
+      post "/drafts.json", params: { draft_key: "TOPIC_1", data: data, sequence: 1 }
+      expect(response.status).to eq(200)
+
+      # creating a new draft as a different user should still work
+      user2 = Fabricate(:user)
+      sign_in(user2)
+      post "/drafts.json", params: { draft_key: "TOPIC_3", data: data }
+      expect(response.status).to eq(200)
+
+      # check the draft counts just to be safe
+      expect(Draft.where(user_id: user1.id).count).to eq(2)
+      expect(Draft.where(user_id: user2.id).count).to eq(1)
     end
   end
 

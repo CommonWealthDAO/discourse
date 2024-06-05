@@ -1,15 +1,23 @@
 import Component from "@glimmer/component";
-import { action } from "@ember/object";
 import { tracked } from "@glimmer/tracking";
-import { isiPad } from "discourse/lib/utilities";
-import { inject as service } from "@ember/service";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
 import {
   DEFAULT_TYPE_FILTER,
   SEARCH_INPUT_ID,
-  focusSearchButton,
 } from "discourse/components/search-menu";
+import { isiPad } from "discourse/lib/utilities";
 
 const SECOND_ENTER_MAX_DELAY = 15000;
+
+const onKeyUpCallbacks = [];
+
+export function addOnKeyUpCallback(fn) {
+  onKeyUpCallbacks.push(fn);
+}
+export function resetOnKeyUpCallbacks() {
+  onKeyUpCallbacks.clear();
+}
 
 export default class SearchTerm extends Component {
   @service search;
@@ -35,18 +43,32 @@ export default class SearchTerm extends Component {
 
   @action
   focus(element) {
-    element.focus();
-    element.select();
+    if (this.args.autofocus) {
+      element.focus();
+      element.select();
+    }
+  }
+
+  @action
+  onKeydown(e) {
+    if (e.key === "Escape") {
+      this.args.closeSearchMenu();
+      e.preventDefault();
+      e.stopPropagation();
+    }
   }
 
   @action
   onKeyup(e) {
-    if (e.key === "Escape") {
-      focusSearchButton();
-      this.args.closeSearchMenu();
-      e.preventDefault();
-      return false;
+    if (
+      onKeyUpCallbacks.length &&
+      !onKeyUpCallbacks.some((fn) => fn(this, e))
+    ) {
+      // Return early if any callbacks return false
+      return;
     }
+
+    this.args.openSearchMenu();
 
     this.search.handleArrowUpOrDown(e);
 
@@ -55,7 +77,6 @@ export default class SearchTerm extends Component {
         this.lastEnterTimestamp &&
         Date.now() - this.lastEnterTimestamp < SECOND_ENTER_MAX_DELAY;
 
-      // same combination as key-enter-escape mixin
       if (
         e.ctrlKey ||
         e.metaKey ||

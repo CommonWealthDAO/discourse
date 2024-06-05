@@ -1,17 +1,16 @@
+import { getOwner } from "@ember/application";
+import EmberObject from "@ember/object";
+import { click, render, triggerEvent } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { click, render } from "@ember/test-helpers";
 import {
   count,
   exists,
   query,
   queryAll,
 } from "discourse/tests/helpers/qunit-helpers";
-import { hbs } from "ember-cli-htmlbars";
-import EmberObject from "@ember/object";
-import I18n from "I18n";
-import User from "discourse/models/user";
-import { getOwner } from "discourse-common/lib/get-owner";
+import I18n from "discourse-i18n";
 
 module("Integration | Component | Widget | post", function (hooks) {
   setupRenderingTest(hooks);
@@ -193,7 +192,7 @@ module("Integration | Component | Widget | post", function (hooks) {
     assert.ok(!exists(".who-liked a.trigger-user-card"));
   });
 
-  test(`like count with no likes`, async function (assert) {
+  test("like count with no likes", async function (assert) {
     this.set("args", { likeCount: 0 });
 
     await render(
@@ -204,11 +203,23 @@ module("Integration | Component | Widget | post", function (hooks) {
   });
 
   test("share button", async function (assert) {
+    this.siteSettings.post_menu += "|share";
     this.set("args", { shareUrl: "http://share-me.example.com" });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
 
     assert.ok(exists(".actions button.share"), "it renders a share button");
+  });
+
+  test("copy link button", async function (assert) {
+    this.set("args", { shareUrl: "http://share-me.example.com" });
+
+    await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
+
+    assert.ok(
+      exists(".actions button.post-action-menu__copy-link"),
+      "it renders a copy link button"
+    );
   });
 
   test("liking", async function (assert) {
@@ -564,13 +575,21 @@ module("Integration | Component | Widget | post", function (hooks) {
   test("show admin menu", async function (assert) {
     this.set("args", { canManage: true });
 
-    await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
+    await render(
+      hbs`<MountWidget @widget="post" @args={{this.args}} /><DMenus />`
+    );
 
-    assert.ok(!exists(".post-admin-menu"));
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist();
     await click(".post-menu-area .show-post-admin-menu");
-    assert.strictEqual(count(".post-admin-menu"), 1, "it shows the popup");
-    await click(".post-menu-area");
-    assert.ok(!exists(".post-admin-menu"), "clicking outside clears the popup");
+
+    assert.dom("[data-content][data-identifier='admin-post-menu']").exists();
+
+    await triggerEvent(".post-menu-area", "pointerdown");
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("clicking outside clears the popup");
   });
 
   test("permanently delete topic", async function (assert) {
@@ -578,13 +597,17 @@ module("Integration | Component | Widget | post", function (hooks) {
     this.set("permanentlyDeletePost", () => (this.deleted = true));
 
     await render(
-      hbs`<MountWidget @widget="post" @args={{this.args}} @permanentlyDeletePost={{this.permanentlyDeletePost}} />`
+      hbs`<MountWidget @widget="post" @args={{this.args}} @permanentlyDeletePost={{this.permanentlyDeletePost}} /><DMenus />`
     );
 
     await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .permanently-delete");
+    await click(
+      "[data-content][data-identifier='admin-post-menu'] .permanently-delete"
+    );
     assert.ok(this.deleted);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("also hides the menu");
   });
 
   test("permanently delete post", async function (assert) {
@@ -593,12 +616,18 @@ module("Integration | Component | Widget | post", function (hooks) {
 
     await render(hbs`
       <MountWidget @widget="post" @args={{this.args}} @permanentlyDeletePost={{this.permanentlyDeletePost}} />
+      <DMenus />
     `);
 
     await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .permanently-delete");
+
+    await click(
+      "[data-content][data-identifier='admin-post-menu'] .permanently-delete"
+    );
     assert.ok(this.deleted);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("also hides the menu");
   });
 
   test("toggle moderator post", async function (assert) {
@@ -608,29 +637,18 @@ module("Integration | Component | Widget | post", function (hooks) {
 
     await render(hbs`
       <MountWidget @widget="post" @args={{this.args}} @togglePostType={{this.togglePostType}} />
+      <DMenus />
     `);
 
     await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .toggle-post-type");
+    await click(
+      "[data-content][data-identifier='admin-post-menu'] .toggle-post-type"
+    );
 
     assert.ok(this.toggled);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
-  });
-
-  test("toggle moderator post", async function (assert) {
-    this.currentUser.set("moderator", true);
-    this.set("args", { canManage: true });
-    this.set("togglePostType", () => (this.toggled = true));
-
-    await render(hbs`
-      <MountWidget @widget="post" @args={{this.args}} @togglePostType={{this.togglePostType}} />
-    `);
-
-    await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .toggle-post-type");
-
-    assert.ok(this.toggled);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("also hides the menu");
   });
 
   test("rebake post", async function (assert) {
@@ -639,27 +657,41 @@ module("Integration | Component | Widget | post", function (hooks) {
 
     await render(hbs`
       <MountWidget @widget="post" @args={{this.args}} @rebakePost={{this.rebakePost}} />
+      <DMenus />
     `);
 
     await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .rebuild-html");
+    await click(
+      "[data-content][data-identifier='admin-post-menu'] .rebuild-html"
+    );
     assert.ok(this.baked);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("also hides the menu");
   });
 
   test("unhide post", async function (assert) {
+    let unhidden;
     this.currentUser.admin = true;
     this.set("args", { canManage: true, hidden: true });
-    this.set("unhidePost", () => (this.unhidden = true));
+    this.set("unhidePost", () => (unhidden = true));
 
     await render(hbs`
       <MountWidget @widget="post" @args={{this.args}} @unhidePost={{this.unhidePost}} />
+      <DMenus />
     `);
 
     await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .unhide-post");
-    assert.ok(this.unhidden);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
+
+    await click(
+      "[data-content][data-identifier='admin-post-menu'] .unhide-post"
+    );
+
+    assert.ok(unhidden);
+
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("also hides the menu");
   });
 
   test("change owner", async function (assert) {
@@ -669,12 +701,17 @@ module("Integration | Component | Widget | post", function (hooks) {
 
     await render(hbs`
       <MountWidget @widget="post" @args={{this.args}} @changePostOwner={{this.changePostOwner}} />
+      <DMenus />
     `);
 
     await click(".post-menu-area .show-post-admin-menu");
-    await click(".post-admin-menu .change-owner");
+    await click(
+      "[data-content][data-identifier='admin-post-menu'] .change-owner"
+    );
     assert.ok(this.owned);
-    assert.ok(!exists(".post-admin-menu"), "also hides the menu");
+    assert
+      .dom("[data-content][data-identifier='admin-post-menu']")
+      .doesNotExist("also hides the menu");
   });
 
   test("reply", async function (assert) {
@@ -739,133 +776,125 @@ module("Integration | Component | Widget | post", function (hooks) {
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
 
-    assert.ok(!exists(".topic-map"));
+    assert.dom(".topic-map").doesNotExist();
   });
 
   test("topic map - few posts", async function (assert) {
+    const store = getOwner(this).lookup("service:store");
+    const topic = store.createRecord("topic", { id: 123 });
+    topic.details.set("participants", [
+      { username: "eviltrout" },
+      { username: "codinghorror" },
+    ]);
     this.set("args", {
+      topic,
       showTopicMap: true,
       topicPostsCount: 2,
-      participants: [{ username: "eviltrout" }, { username: "codinghorror" }],
     });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
-
-    assert.ok(
-      !exists("li.avatars a.poster"),
-      "shows no participants when collapsed"
-    );
+    assert.dom("li.avatars a.poster").doesNotExist();
 
     await click("nav.buttons button");
-    assert.strictEqual(
-      count(".topic-map-expanded a.poster"),
-      2,
-      "shows all when expanded"
-    );
+    assert.dom(".topic-map-expanded a.poster").exists({ count: 2 });
   });
 
   test("topic map - participants", async function (assert) {
+    const store = getOwner(this).lookup("service:store");
+    const topic = store.createRecord("topic", { id: 123, posts_count: 10 });
+    topic.postStream.setProperties({ userFilters: ["sam", "codinghorror"] });
+    topic.details.set("participants", [
+      { username: "eviltrout" },
+      { username: "codinghorror" },
+      { username: "sam" },
+      { username: "ZogStrIP" },
+    ]);
+
     this.set("args", {
+      topic,
       showTopicMap: true,
-      topicPostsCount: 10,
-      participants: [
-        { username: "eviltrout" },
-        { username: "codinghorror" },
-        { username: "sam" },
-        { username: "ZogStrIP" },
-      ],
-      userFilters: ["sam", "codinghorror"],
     });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
-
-    assert.strictEqual(
-      count("li.avatars a.poster"),
-      3,
-      "limits to three participants"
-    );
+    assert.dom("li.avatars a.poster").exists({ count: 3 });
 
     await click("nav.buttons button");
-    assert.ok(!exists("li.avatars a.poster"));
-    assert.strictEqual(
-      count(".topic-map-expanded a.poster"),
-      4,
-      "shows all when expanded"
-    );
-    assert.strictEqual(count("a.poster.toggled"), 2, "two are toggled");
+    assert.dom("li.avatars a.poster").doesNotExist();
+    assert.dom(".topic-map-expanded a.poster").exists({ count: 4 });
+    assert.dom("a.poster.toggled").exists({ count: 2 });
   });
 
   test("topic map - links", async function (assert) {
-    this.set("args", {
-      showTopicMap: true,
-      topicLinks: [
-        { url: "http://link1.example.com", clicks: 0 },
-        { url: "http://link2.example.com", clicks: 0 },
-        { url: "http://link3.example.com", clicks: 0 },
-        { url: "http://link4.example.com", clicks: 0 },
-        { url: "http://link5.example.com", clicks: 0 },
-        { url: "http://link6.example.com", clicks: 0 },
-      ],
-    });
+    const store = getOwner(this).lookup("service:store");
+    const topic = store.createRecord("topic", { id: 123 });
+    topic.details.set("links", [
+      { url: "http://link1.example.com", clicks: 0 },
+      { url: "http://link2.example.com", clicks: 0 },
+      { url: "http://link3.example.com", clicks: 0 },
+      { url: "http://link4.example.com", clicks: 0 },
+      { url: "http://link5.example.com", clicks: 0 },
+      { url: "http://link6.example.com", clicks: 0 },
+    ]);
+    this.set("args", { topic, showTopicMap: true });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
 
-    assert.strictEqual(count(".topic-map"), 1);
-    assert.strictEqual(count(".map.map-collapsed"), 1);
-    assert.ok(!exists(".topic-map-expanded"));
+    assert.dom(".topic-map").exists({ count: 1 });
+    assert.dom(".map.map-collapsed").exists({ count: 1 });
+    assert.dom(".topic-map-expanded").doesNotExist();
 
     await click("nav.buttons button");
-    assert.ok(!exists(".map.map-collapsed"));
-    assert.strictEqual(count(".topic-map .d-icon-chevron-up"), 1);
-    assert.strictEqual(count(".topic-map-expanded"), 1);
-    assert.strictEqual(
-      count(".topic-map-expanded .topic-link"),
-      5,
-      "it limits the links displayed"
-    );
+    assert.dom(".map.map-collapsed").doesNotExist();
+    assert.dom(".topic-map .d-icon-chevron-up").exists({ count: 1 });
+    assert.dom(".topic-map-expanded").exists({ count: 1 });
+    assert.dom(".topic-map-expanded .topic-link").exists({ count: 5 });
 
     await click(".link-summary button");
-    assert.strictEqual(
-      count(".topic-map-expanded .topic-link"),
-      6,
-      "all links now shown"
-    );
+    assert.dom(".topic-map-expanded .topic-link").exists({ count: 6 });
   });
 
   test("topic map - no summary", async function (assert) {
-    this.set("args", { showTopicMap: true });
+    const store = getOwner(this).lookup("service:store");
+    const topic = store.createRecord("topic", { id: 123 });
+    this.set("args", { topic, showTopicMap: true });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
 
-    assert.ok(!exists(".toggle-summary"));
+    assert.dom(".toggle-summary").doesNotExist();
   });
 
   test("topic map - has top replies summary", async function (assert) {
-    this.set("args", { showTopicMap: true, hasTopRepliesSummary: true });
+    const store = getOwner(this).lookup("service:store");
+    const topic = store.createRecord("topic", { id: 123, has_summary: true });
+    this.set("args", { topic, showTopicMap: true });
     this.set("showTopReplies", () => (this.summaryToggled = true));
 
     await render(
       hbs`<MountWidget @widget="post" @args={{this.args}} @showTopReplies={{this.showTopReplies}} />`
     );
 
-    assert.strictEqual(count(".toggle-summary"), 1);
+    assert.dom(".toggle-summary").exists({ count: 1 });
 
     await click(".toggle-summary button");
     assert.ok(this.summaryToggled);
   });
 
   test("pm map", async function (assert) {
+    const store = getOwner(this).lookup("service:store");
+    const topic = store.createRecord("topic", { id: 123 });
+    topic.details.set("allowed_users", [
+      EmberObject.create({ username: "eviltrout" }),
+    ]);
     this.set("args", {
+      topic,
       showTopicMap: true,
       showPMMap: true,
-      allowedGroups: [],
-      allowedUsers: [EmberObject.create({ username: "eviltrout" })],
     });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
 
-    assert.strictEqual(count(".private-message-map"), 1);
-    assert.strictEqual(count(".private-message-map .user"), 1);
+    assert.dom(".private-message-map").exists({ count: 1 });
+    assert.dom(".private-message-map .user").exists({ count: 1 });
   });
 
   test("post notice - with username", async function (assert) {
@@ -936,7 +965,8 @@ module("Integration | Component | Widget | post", function (hooks) {
       emoji: "tooth",
       description: "off to dentist",
     };
-    const user = User.create({ status });
+    const store = getOwner(this).lookup("service:store");
+    const user = store.createRecord("user", { status });
     this.set("args", { user });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);
@@ -950,7 +980,8 @@ module("Integration | Component | Widget | post", function (hooks) {
       emoji: "tooth",
       description: "off to dentist",
     };
-    const user = User.create({ status });
+    const store = getOwner(this).lookup("service:store");
+    const user = store.createRecord("user", { status });
     this.set("args", { user });
 
     await render(hbs`<MountWidget @widget="post" @args={{this.args}} />`);

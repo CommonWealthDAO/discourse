@@ -1,8 +1,9 @@
 import Component from "@ember/component";
-import I18n from "I18n";
-import discourseComputed from "discourse-common/utils/decorators";
-import { iconHTML } from "discourse-common/lib/icon-library";
 import { htmlSafe } from "@ember/template";
+import $ from "jquery";
+import { iconHTML } from "discourse-common/lib/icon-library";
+import discourseComputed from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 export default Component.extend({
   disableActions: false,
@@ -81,7 +82,17 @@ export default Component.extend({
 
   _set(name, icon, key, iconArgs) {
     this.set(`${name}Icon`, htmlSafe(iconHTML(`${icon}`, iconArgs)));
-    this.set(`${name}Title`, I18n.t(`topic_statuses.${key}.help`));
+
+    const translationParams = {};
+
+    if (name === "invisible") {
+      translationParams.unlistedReason = this.topic.visibilityReasonTranslated;
+    }
+
+    this.set(
+      `${name}Title`,
+      I18n.t(`topic_statuses.${key}.help`, translationParams)
+    );
     return true;
   },
 

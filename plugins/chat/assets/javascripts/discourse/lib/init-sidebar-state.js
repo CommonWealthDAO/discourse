@@ -1,8 +1,9 @@
+import { ADMIN_PANEL, MAIN_PANEL } from "discourse/lib/sidebar/panels";
 import { getUserChatSeparateSidebarMode } from "discourse/plugins/chat/discourse/lib/get-user-chat-separate-sidebar-mode";
 
-export function initSidebarState(api, user) {
-  api.setSidebarPanel("main");
+export const CHAT_PANEL = "chat";
 
+export function initSidebarState(api, user) {
   const chatSeparateSidebarMode = getUserChatSeparateSidebarMode(user);
   if (chatSeparateSidebarMode.fullscreen) {
     api.setCombinedSidebarMode();
@@ -13,4 +14,10 @@ export function initSidebarState(api, user) {
     api.setCombinedSidebarMode();
     api.hideSidebarSwitchPanelButtons();
   }
+
+  if (api.getSidebarPanel()?.key === ADMIN_PANEL) {
+    return;
+  }
+
+  api.setSidebarPanel(MAIN_PANEL);
 }

@@ -1,7 +1,7 @@
 import EmberObject from "@ember/object";
-import I18n from "I18n";
-import discourseComputed from "discourse-common/utils/decorators";
 import { and } from "@ember/object/computed";
+import discourseComputed from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 export default EmberObject.extend({
   sortable: null,
@@ -18,13 +18,23 @@ export default EmberObject.extend({
 
   @discourseComputed
   sortIcon() {
-    const asc = this.parent.ascending ? "up" : "down";
-    return `chevron-${asc}`;
+    const isAscending =
+      (
+        this.parent.ascending ||
+        this.parent.context?.ascending ||
+        ""
+      ).toString() === "true";
+
+    return `chevron-${isAscending ? "up" : "down"}`;
   },
 
   @discourseComputed
   isSorting() {
-    return this.sortable && this.parent.order === this.order;
+    return (
+      this.sortable &&
+      (this.parent.order === this.order ||
+        this.parent.context?.order === this.order)
+    );
   },
 
   @discourseComputed

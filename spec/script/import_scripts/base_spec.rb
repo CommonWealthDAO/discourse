@@ -3,7 +3,10 @@
 require_relative "../../../script/import_scripts/base"
 
 RSpec.describe ImportScripts::Base do
-  before { STDOUT.stubs(:write) }
+  before do
+    I18n.backend.store_translations(:en, { test: "Test" })
+    STDOUT.stubs(:write)
+  end
 
   class MockSpecImporter < ImportScripts::Base
     def initialize(data)
@@ -57,7 +60,7 @@ RSpec.describe ImportScripts::Base do
 
   describe "#create_post" do
     let(:importer) { described_class.new }
-    fab!(:user) { Fabricate(:user) }
+    fab!(:user)
     let(:post_params) do
       { user_id: user.id, raw: "Test post [b]content[/b]", title: "Test topic for post" }
     end

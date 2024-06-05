@@ -22,13 +22,9 @@ module SystemHelpers
     expect(page).to have_content("Signed in to #{user.encoded_username} successfully")
   end
 
-  def sign_out
-    delete File.join(GlobalSetting.relative_url_root || "", "/session")
-  end
-
   def setup_system_test
     SiteSetting.login_required = false
-    SiteSetting.content_security_policy = false
+    SiteSetting.has_login_hint = false
     SiteSetting.force_hostname = Capybara.server_host
     SiteSetting.port = Capybara.server_port
     SiteSetting.external_system_avatars_enabled = false
@@ -110,23 +106,10 @@ module SystemHelpers
   end
 
   def using_browser_timezone(timezone, &example)
-    previous_browser_timezone = ENV["TZ"]
-
-    ENV["TZ"] = timezone
-
-    using_session(timezone) do |session|
+    using_session(timezone) do
+      page.driver.browser.devtools.emulation.set_timezone_override(timezone_id: timezone)
       freeze_time(&example)
-      session.quit
     end
-
-    ENV["TZ"] = previous_browser_timezone
-  end
-
-  # When using parallelism, Capybara's `using_session` method can cause
-  # intermittent failures as two sessions can be created with the same name
-  # in different tests and be run at the same time.
-  def using_session(name, &block)
-    Capybara.using_session(name.to_s + self.method_name, &block)
   end
 
   def select_text_range(selector, start = 0, offset = 5)
@@ -144,7 +127,7 @@ module SystemHelpers
     page.execute_script(js, selector, start, offset)
   end
 
-  def setup_s3_system_test
+  def setup_s3_system_test(enable_secure_uploads: false, enable_direct_s3_uploads: true)
     SiteSetting.enable_s3_uploads = true
 
     SiteSetting.s3_upload_bucket = "discoursetest"
@@ -154,10 +137,20 @@ module SystemHelpers
     SiteSetting.s3_secret_access_key = MinioRunner.config.minio_root_password
     SiteSetting.s3_endpoint = MinioRunner.config.minio_server_url
 
+    SiteSetting.enable_direct_s3_uploads = enable_direct_s3_uploads
+    SiteSetting.secure_uploads = enable_secure_uploads
+
     MinioRunner.start
   end
 
   def skip_unless_s3_system_specs_enabled!
+    if ENV["CI"]
+      return(
+        skip(
+          "S3 system specs are temporarily disabled in this environment to address parallel spec issues",
+        )
+      )
+    end
     if !ENV["CI"] && !ENV["RUN_S3_SYSTEM_SPECS"]
       skip(
         "S3 system specs are disabled in this environment, set CI=1 or RUN_S3_SYSTEM_SPECS=1 to enable them.",

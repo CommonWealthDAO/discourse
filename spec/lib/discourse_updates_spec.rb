@@ -67,7 +67,7 @@ RSpec.describe DiscourseUpdates do
       end
 
       it "queues a version check" do
-        expect_enqueued_with(job: :version_check) { version }
+        expect_enqueued_with(job: :call_discourse_hub) { version }
       end
     end
 
@@ -76,7 +76,7 @@ RSpec.describe DiscourseUpdates do
     context "with old version check data" do
       shared_examples "queue version check and report that version is ok" do
         it "queues a version check" do
-          expect_enqueued_with(job: :version_check) { version }
+          expect_enqueued_with(job: :call_discourse_hub) { version }
         end
 
         it "reports 0 missing versions" do
@@ -105,7 +105,7 @@ RSpec.describe DiscourseUpdates do
 
     shared_examples "when last_installed_version is old" do
       it "queues a version check" do
-        expect_enqueued_with(job: :version_check) { version }
+        expect_enqueued_with(job: :call_discourse_hub) { version }
       end
 
       it "reports 0 missing versions" do
@@ -129,7 +129,7 @@ RSpec.describe DiscourseUpdates do
   end
 
   describe "new features" do
-    fab!(:admin) { Fabricate(:admin) }
+    fab!(:admin)
     fab!(:admin2) { Fabricate(:admin) }
     let!(:last_item_date) { 5.minutes.ago }
     let!(:sample_features) do
@@ -191,9 +191,9 @@ RSpec.describe DiscourseUpdates do
     it "correctly sees newly added features as unseen" do
       DiscourseUpdates.mark_new_features_as_seen(admin.id)
       expect(DiscourseUpdates.has_unseen_features?(admin.id)).to eq(false)
-      expect(DiscourseUpdates.new_features_last_seen(admin.id)).to be_within(1.second).of (
-             last_item_date
-           )
+      expect(DiscourseUpdates.new_features_last_seen(admin.id)).to be_within(1.second).of(
+        last_item_date,
+      )
 
       updated_features = [
         { "emoji" => "🤾", "title" => "Brand New Item", "created_at" => 2.minutes.ago },
@@ -251,7 +251,7 @@ RSpec.describe DiscourseUpdates do
   end
 
   describe "#get_last_viewed_feature_date" do
-    fab!(:user) { Fabricate(:user) }
+    fab!(:user)
 
     it "returns an ActiveSupport::TimeWithZone object" do
       time = Time.zone.parse("2022-12-13T21:33:59Z")

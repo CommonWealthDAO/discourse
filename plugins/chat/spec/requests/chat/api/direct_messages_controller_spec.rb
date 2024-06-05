@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe Chat::Api::DirectMessagesController do
-  fab!(:current_user) { Fabricate(:user) }
+  fab!(:current_user) { Fabricate(:user, refresh_auto_groups: true) }
   fab!(:user1) { Fabricate(:user) }
   fab!(:user2) { Fabricate(:user) }
   fab!(:user3) { Fabricate(:user) }
@@ -13,7 +13,7 @@ RSpec.describe Chat::Api::DirectMessagesController do
   end
 
   def create_dm_channel(user_ids)
-    direct_messages_channel = Chat::DirectMessage.create!
+    direct_messages_channel = Chat::DirectMessage.create!(group: user_ids.length > 2)
     user_ids.each do |user_id|
       direct_messages_channel.direct_message_users.create!(user_id: user_id)
     end
@@ -21,9 +21,10 @@ RSpec.describe Chat::Api::DirectMessagesController do
   end
 
   describe "#create" do
-    before { Group.refresh_automatic_groups! }
+    describe "dm with one other user" do
+      let(:usernames) { user1.username }
+      let(:direct_message_user_ids) { [current_user.id, user1.id] }
 
-    shared_examples "creating dms" do
       it "creates a new dm channel with username(s) provided" do
         expect {
           post "/chat/api/direct-message-channels.json", params: { target_usernames: [usernames] }
@@ -35,31 +36,67 @@ RSpec.describe Chat::Api::DirectMessagesController do
 
       it "returns existing dm channel if one exists for username(s)" do
         create_dm_channel(direct_message_user_ids)
+
         expect {
           post "/chat/api/direct-message-channels.json", params: { target_usernames: [usernames] }
         }.not_to change { Chat::DirectMessage.count }
       end
     end
 
-    describe "dm with one other user" do
-      let(:usernames) { user1.username }
-      let(:direct_message_user_ids) { [current_user.id, user1.id] }
-
-      include_examples "creating dms"
-    end
-
     describe "dm with myself" do
       let(:usernames) { [current_user.username] }
       let(:direct_message_user_ids) { [current_user.id] }
 
-      include_examples "creating dms"
+      it "creates a new dm channel with username(s) provided" do
+        expect {
+          post "/chat/api/direct-message-channels.json", params: { target_usernames: [usernames] }
+        }.to change { Chat::DirectMessage.count }.by(1)
+        expect(Chat::DirectMessage.last.direct_message_users.map(&:user_id)).to match_array(
+          direct_message_user_ids,
+        )
+      end
+
+      it "returns existing dm channel if one exists for username(s)" do
+        create_dm_channel(direct_message_user_ids)
+
+        expect {
+          post "/chat/api/direct-message-channels.json", params: { target_usernames: [usernames] }
+        }.not_to change { Chat::DirectMessage.count }
+      end
     end
 
-    describe "dm with two other users" do
+    describe "dm with multiple users" do
       let(:usernames) { [user1, user2, user3].map(&:username) }
       let(:direct_message_user_ids) { [current_user.id, user1.id, user2.id, user3.id] }
 
-      include_examples "creating dms"
+      it "creates a new dm channel with username(s) provided" do
+        expect {
+          post "/chat/api/direct-message-channels.json", params: { target_usernames: [usernames] }
+        }.to change { Chat::DirectMessage.count }.by(1)
+        expect(Chat::DirectMessage.last.direct_message_users.map(&:user_id)).to match_array(
+          direct_message_user_ids,
+        )
+      end
+
+      it "creates a new dm channel" do
+        create_dm_channel(direct_message_user_ids)
+
+        expect {
+          post "/chat/api/direct-message-channels.json", params: { target_usernames: [usernames] }
+        }.to change { Chat::DirectMessage.count }.by(1)
+      end
+
+      it "returns existing dm channel when upsert is true" do
+        create_dm_channel(direct_message_user_ids)
+
+        expect {
+          post "/chat/api/direct-message-channels.json",
+               params: {
+                 target_usernames: [usernames],
+                 upsert: true,
+               }
+        }.not_to change { Chat::DirectMessage.count }
+      end
     end
 
     it "creates Chat::UserChatChannelMembership records" do

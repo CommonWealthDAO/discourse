@@ -1,16 +1,12 @@
-<div
-  class="summary-box__container"
-  {{did-insert this.subscribe}}
-  {{will-destroy this.unsubscribe}}
->
-  {{#if @postAttrs.hasTopRepliesSummary}}
+<div class="summary-box__container">
+  {{#if @topic.has_summary}}
     <p>{{html-safe this.topRepliesSummaryInfo}}</p>
   {{/if}}
   <div class="summarization-buttons">
-    {{#if @postAttrs.summarizable}}
-      {{#if this.canCollapseSummary}}
+    {{#if @topic.summarizable}}
+      {{#if this.summary.showSummaryBox}}
         <DButton
-          @action={{this.collapseSummary}}
+          @action={{@collapseSummary}}
           @title="summary.buttons.hide"
           @label="summary.buttons.hide"
           @icon="chevron-up"
@@ -18,19 +14,18 @@
         />
       {{else}}
         <DButton
-          @action={{this.generateSummary}}
+          @action={{@showSummary}}
           @translatedLabel={{this.generateSummaryTitle}}
           @translatedTitle={{this.generateSummaryTitle}}
           @icon={{this.generateSummaryIcon}}
-          @disabled={{this.loadingSummary}}
+          @disabled={{this.summary.loading}}
           class="btn-primary topic-strategy-summarization"
         />
       {{/if}}
     {{/if}}
-
-    {{#if @postAttrs.hasTopRepliesSummary}}
+    {{#if @topic.has_summary}}
       <DButton
-        @action={{this.toggleTopRepliesFilter}}
+        @action={{if @postStream.summary @cancelFilter @showTopReplies}}
         @translatedTitle={{this.topRepliesTitle}}
         @translatedLabel={{this.topRepliesLabel}}
         @icon={{this.topRepliesIcon}}
@@ -39,26 +34,29 @@
     {{/if}}
   </div>
 
-  {{#if this.showSummaryBox}}
+  {{#if this.summary.showSummaryBox}}
     <article class="summary-box">
-      {{#if (and this.loadingSummary (not this.summary))}}
+      {{#if (and this.summary.loading (not this.summary.text))}}
         <AiSummarySkeleton />
       {{else}}
-        <div class="generated-summary">{{this.summary}}</div>
+        <div class="generated-summary">{{this.summary.text}}</div>
 
-        {{#if this.summarizedOn}}
+        {{#if this.summary.summarizedOn}}
           <div class="summarized-on">
             <p>
-              {{i18n "summary.summarized_on" date=this.summarizedOn}}
-              <span>
-                {{d-icon "info-circle"}}
-                <DTooltip @placement="top-end">
-                  {{i18n "summary.model_used" model=this.summarizedBy}}
-                </DTooltip>
-              </span>
+              {{i18n "summary.summarized_on" date=this.summary.summarizedOn}}
+
+              <DTooltip @placements={{array "top-end"}}>
+                <:trigger>
+                  {{d-icon "info-circle"}}
+                </:trigger>
+                <:content>
+                  {{i18n "summary.model_used" model=this.summary.summarizedBy}}
+                </:content>
+              </DTooltip>
             </p>
 
-            {{#if this.outdated}}
+            {{#if this.summary.outdated}}
               <p class="outdated-summary">
                 {{this.outdatedSummaryWarningText}}
               </p>

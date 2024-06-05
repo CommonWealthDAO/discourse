@@ -1,8 +1,8 @@
-import Service, { inject as service } from "@ember/service";
-import { disableImplicitInjections } from "discourse/lib/implicit-injections";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
+import Service, { service } from "@ember/service";
 import { focusSearchInput } from "discourse/components/search-menu";
+import { disableImplicitInjections } from "discourse/lib/implicit-injections";
 
 @disableImplicitInjections
 export default class Search extends Service {
@@ -11,6 +11,10 @@ export default class Search extends Service {
   @tracked activeGlobalSearchTerm = "";
   @tracked searchContext;
   @tracked highlightTerm;
+  @tracked inTopicContext = false;
+  @tracked visible = false;
+  @tracked results = {};
+  @tracked noResults = false;
 
   // only relative for the widget search menu
   searchContextEnabled = false; // checkbox to scope search
@@ -28,7 +32,7 @@ export default class Search extends Service {
   // - Results::MoreLink
   // - Results::RecentSearches
   //
-  // To minimze the duplicate logic we will create a shared action here
+  // To minimize the duplicate logic we will create a shared action here
   // that can be reused across all of the components
   @action
   handleResultInsertion(e) {

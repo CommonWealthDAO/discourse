@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 describe "Using #hashtag autocompletion to search for and lookup channels", type: :system do
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
   fab!(:channel1) { Fabricate(:chat_channel, name: "Music Lounge", slug: "music") }
   fab!(:channel2) { Fabricate(:chat_channel, name: "Random", slug: "random") }
   fab!(:category) { Fabricate(:category, name: "Raspberry", slug: "raspberry-beret") }
   fab!(:tag) { Fabricate(:tag, name: "razed") }
-  fab!(:topic) { Fabricate(:topic) }
+  fab!(:topic)
   fab!(:post) { Fabricate(:post, topic: topic) }
   fab!(:message1) { Fabricate(:chat_message, chat_channel: channel1) }
   let(:chat_page) { PageObjects::Pages::Chat.new }
@@ -128,7 +128,7 @@ describe "Using #hashtag autocompletion to search for and lookup channels", type
   end
 
   context "when a user cannot access the category for a cooked channel hashtag" do
-    fab!(:admin) { Fabricate(:admin) }
+    fab!(:admin)
     fab!(:manager_group) { Fabricate(:group, name: "Managers") }
     fab!(:private_category) do
       Fabricate(:private_category, name: "Management", slug: "management", group: manager_group)
@@ -159,13 +159,15 @@ describe "Using #hashtag autocompletion to search for and lookup channels", type
     it "shows a default color and css class for the channel icon in a post" do
       topic_page.visit_topic(topic, post_number: post_with_private_category.post_number)
       expect(page).to have_css(".hashtag-cooked")
-      expect(page).to have_css(".hashtag-cooked .hashtag-missing")
+      css_class = ".hashtag-color--channel--#{management_channel.id}"
+      expect(find("#hashtag-css-generator", visible: false).text(:all)).not_to include(css_class)
     end
 
     it "shows a default color and css class for the channel icon in a channel" do
       chat_page.visit_channel(channel1)
       expect(page).to have_css(".hashtag-cooked")
-      expect(page).to have_css(".hashtag-cooked .hashtag-missing")
+      css_class = ".hashtag-color--channel-#{management_channel.id}"
+      expect(find("#hashtag-css-generator", visible: false).text(:all)).not_to include(css_class)
     end
   end
 end

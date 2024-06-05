@@ -1,8 +1,8 @@
 import Component from "@glimmer/component";
-import { action } from "@ember/object";
 import { tracked } from "@glimmer/tracking";
-import { inject as service } from "@ember/service";
-import I18n from "I18n";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
+import I18n from "discourse-i18n";
 
 export default class StartBackup extends Component {
   @service siteSettings;

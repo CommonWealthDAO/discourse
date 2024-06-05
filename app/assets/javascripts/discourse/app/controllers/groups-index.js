@@ -1,10 +1,10 @@
 import Controller from "@ember/controller";
-import I18n from "I18n";
-import { INPUT_DELAY } from "discourse-common/config/environment";
 import { action } from "@ember/object";
-import discourseComputed from "discourse-common/utils/decorators";
+import { service } from "@ember/service";
+import { INPUT_DELAY } from "discourse-common/config/environment";
 import discourseDebounce from "discourse-common/lib/debounce";
-import { inject as service } from "@ember/service";
+import discourseComputed from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 export default Controller.extend({
   router: service(),

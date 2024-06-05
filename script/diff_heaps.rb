@@ -6,7 +6,6 @@
 # rbtrace -p 15193 -e 'Thread.new{require "objspace"; ObjectSpace.trace_object_allocations_start; GC.start(full_mark: true); ObjectSpace.dump_all(output: File.open("heap.json","w"))}.join'
 #
 #
-require "set"
 require "json"
 
 if ARGV.length != 2
@@ -30,7 +29,7 @@ File
   .each_line do |line|
     parsed = JSON.parse(line)
     if parsed && parsed["address"]
-      diff << parsed unless origs.include? parsed["address"]
+      diff << parsed if origs.exclude? parsed["address"]
     end
   end
 

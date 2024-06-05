@@ -3,8 +3,8 @@
 require "csv"
 
 RSpec.describe Admin::WatchedWordsController do
-  fab!(:admin) { Fabricate(:admin) }
-  fab!(:user) { Fabricate(:user) }
+  fab!(:admin)
+  fab!(:user)
 
   describe "#index" do
     context "when logged in as non-staff user" do
@@ -51,17 +51,14 @@ RSpec.describe Admin::WatchedWordsController do
           ),
         )
         expect(watched_words["compiled_regular_expressions"]["block"].first).to eq(
-          WordWatcher
-            .serializable_word_matcher_regexp(:block, engine: :js)
-            .first
-            .deep_stringify_keys,
+          WordWatcher.serialized_regexps_for_action(:block, engine: :js).first.deep_stringify_keys,
         )
       end
     end
   end
 
   describe "#destroy" do
-    fab!(:watched_word) { Fabricate(:watched_word) }
+    fab!(:watched_word)
 
     context "when logged in as a non-staff user" do
       before { sign_in(user) }
@@ -89,6 +86,20 @@ RSpec.describe Admin::WatchedWordsController do
         expect(WatchedWord.find_by(id: watched_word.id)).to eq(nil)
         expect(UserHistory.where(action: UserHistory.actions[:watched_word_destroy]).count).to eq(1)
       end
+
+      it "should delete watched word group if it's the last word" do
+        watched_word_group = Fabricate(:watched_word_group)
+        watched_word.update!(watched_word_group: watched_word_group)
+
+        delete "/admin/customize/watched_words/#{watched_word.id}.json"
+
+        expect(response.status).to eq(200)
+        expect(WatchedWordGroup.exists?(id: watched_word_group.id)).to be_falsey
+        expect(WatchedWord.exists?(id: watched_word.id)).to be_falsey
+        expect(
+          UserHistory.where(action: UserHistory.actions[:delete_watched_word_group]).count,
+        ).to eq(1)
+      end
     end
   end
 
@@ -107,17 +118,27 @@ RSpec.describe Admin::WatchedWordsController do
       before { sign_in(admin) }
 
       it "creates a word with default case sensitivity" do
-        post "/admin/customize/watched_words.json", params: { action_key: "flag", word: "Deals" }
+        expect {
+          post "/admin/customize/watched_words.json",
+               params: {
+                 action_key: "flag",
+                 words: %w[Deals Offer],
+               }
+        }.to change { WatchedWord.count }.by(2)
 
         expect(response.status).to eq(200)
         expect(WatchedWord.take.word).to eq("Deals")
+        expect(WatchedWord.last.word).to eq("Offer")
+        expect(
+          UserHistory.where(action: UserHistory.actions[:create_watched_word_group]).count,
+        ).to eq(1)
       end
 
       it "creates a word with the given case sensitivity" do
         post "/admin/customize/watched_words.json",
              params: {
                action_key: "flag",
-               word: "PNG",
+               words: ["PNG"],
                case_sensitive: true,
              }
 

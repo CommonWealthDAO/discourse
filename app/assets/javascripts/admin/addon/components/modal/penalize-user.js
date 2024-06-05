@@ -1,10 +1,10 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
+import { service } from "@ember/service";
 import { isEmpty } from "@ember/utils";
-import { inject as service } from "@ember/service";
 import { extractError } from "discourse/lib/ajax-error";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 
 export default class PenalizeUser extends Component {
   @service dialog;
@@ -18,6 +18,13 @@ export default class PenalizeUser extends Component {
   @tracked flash;
   @tracked reason;
   @tracked message;
+
+  constructor() {
+    super(...arguments);
+    if (this.postEdit && this.siteSettings.penalty_include_post_message) {
+      this.message = `-------------------\n${this.postEdit}\n-------------------`;
+    }
+  }
 
   get modalTitle() {
     if (this.args.model.penaltyType === "suspend") {

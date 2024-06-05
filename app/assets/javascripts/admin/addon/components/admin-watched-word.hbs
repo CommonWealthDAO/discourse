@@ -1,6 +1,6 @@
 <span
   role="button"
-  onclick={{action "deleteWord"}}
+  onclick={{this.deleteWord}}
   class="delete-word-record"
 >{{d-icon "times"}}</span>
 {{this.word.word}}
@@ -17,4 +17,7 @@
   <span class="case-sensitive">{{i18n
       "admin.watched_words.case_sensitive"
     }}</span>
+{{/if}}
+{{#if this.isHtml}}
+  <span class="html">{{i18n "admin.watched_words.html"}}</span>
 {{/if}}

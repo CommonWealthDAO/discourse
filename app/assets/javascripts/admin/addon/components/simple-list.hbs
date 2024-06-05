@@ -12,7 +12,7 @@
           title={{value}}
           @value={{value}}
           class="value-input"
-          {{on "focusout" (fn (action "changeValue") index)}}
+          {{on "focusout" (fn this.changeValue index)}}
         />
 
         {{#if this.showUpDownButtons}}
@@ -33,20 +33,33 @@
 {{/if}}
 
 <div class="simple-list-input">
-  <Input
-    @type="text"
-    @value={{this.newValue}}
-    placeholder={{i18n "admin.site_settings.simple_list.add_item"}}
-    class="add-value-input"
-    autocomplete="off"
-    autocorrect="off"
-    autocapitalize="off"
-  />
-
-  <DButton
-    @action={{fn this.addValue this.newValue}}
-    @disabled={{this.inputEmpty}}
-    @icon="plus"
-    class="add-value-btn btn-small"
-  />
+  {{#if this.isPredefinedList}}
+    {{#if (gt this.validValues.length 0)}}
+      <ComboBox
+        @content={{this.validValues}}
+        @value={{this.newValue}}
+        @onChange={{this.addValue}}
+        @valueProperty={{this.setting.computedValueProperty}}
+        @nameProperty={{this.setting.computedNameProperty}}
+        @options={{hash castInteger=true allowAny=false}}
+        class="add-value-input"
+      />
+    {{/if}}
+  {{else}}
+    <Input
+      @type="text"
+      @value={{this.newValue}}
+      placeholder={{i18n "admin.site_settings.simple_list.add_item"}}
+      class="add-value-input"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+    />
+    <DButton
+      @action={{fn this.addValue this.newValue}}
+      @disabled={{this.inputEmpty}}
+      @icon="plus"
+      class="add-value-btn btn-small"
+    />
+  {{/if}}
 </div>

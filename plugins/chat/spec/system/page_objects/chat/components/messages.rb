@@ -6,7 +6,7 @@ module PageObjects
       class Messages < PageObjects::Components::Base
         attr_reader :context
 
-        SELECTOR = ".chat-messages-scroll"
+        SELECTOR = ".chat-messages-scroller"
 
         def initialize(context)
           @context = context
@@ -14,6 +14,31 @@ module PageObjects
 
         def component
           page.find(context)
+        end
+
+        def copy_link(message)
+          find(message).secondary_action("copyLink")
+        end
+
+        def copy_text(message)
+          find(message).secondary_action("copyText")
+        end
+
+        def flag(message)
+          find(message).secondary_action("flag")
+        end
+
+        def delete(message)
+          find(message).secondary_action("delete")
+        end
+
+        def restore(message)
+          find(message).expand
+          find(message).secondary_action("restore")
+        end
+
+        def edit(message)
+          find(message).secondary_action("edit")
         end
 
         def has_action?(action, **args)

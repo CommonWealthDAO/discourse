@@ -1,27 +1,40 @@
-import DiscourseURL from "discourse/lib/url";
-import I18n from "I18n";
-import { addExtraUserClasses } from "discourse/helpers/user-avatar";
-import { avatarImg } from "discourse/widgets/post";
-import { createWidget } from "discourse/widgets/widget";
-import getURL from "discourse-common/lib/get-url";
-import { h } from "virtual-dom";
-import { iconNode } from "discourse-common/lib/icon-library";
 import { schedule } from "@ember/runloop";
-import { scrollTop } from "discourse/mixins/scroll-top";
-import { wantsNewWindow } from "discourse/lib/intercept-click";
-import { logSearchLinkClick } from "discourse/lib/search";
-import RenderGlimmer from "discourse/widgets/render-glimmer";
 import { hbs } from "ember-cli-htmlbars";
-import { SEARCH_BUTTON_ID } from "discourse/components/search-menu";
+import $ from "jquery";
+import { h } from "virtual-dom";
+import { headerButtonsDAG } from "discourse/components/header";
+import { headerIconsDAG } from "discourse/components/header/icons";
+import { addExtraUserClasses } from "discourse/helpers/user-avatar";
+import { wantsNewWindow } from "discourse/lib/intercept-click";
+import scrollLock from "discourse/lib/scroll-lock";
+import { isDocumentRTL } from "discourse/lib/text-direction";
+import DiscourseURL from "discourse/lib/url";
+import { scrollTop } from "discourse/mixins/scroll-top";
+import { avatarImg } from "discourse/widgets/post";
+import RenderGlimmer, {
+  registerWidgetShim,
+} from "discourse/widgets/render-glimmer";
+import { createWidget } from "discourse/widgets/widget";
+import { isTesting } from "discourse-common/config/environment";
+import getURL from "discourse-common/lib/get-url";
+import { iconNode } from "discourse-common/lib/icon-library";
+import discourseLater from "discourse-common/lib/later";
+import I18n from "discourse-i18n";
 
-let _extraHeaderIcons = [];
+const SEARCH_BUTTON_ID = "search-button";
 
-export function addToHeaderIcons(icon) {
-  _extraHeaderIcons.push(icon);
-}
+let _extraHeaderIcons;
+clearExtraHeaderIcons();
+
+let _extraHeaderButtons;
+clearExtraHeaderButtons();
 
 export function clearExtraHeaderIcons() {
-  _extraHeaderIcons = [];
+  _extraHeaderIcons = headerIconsDAG();
+}
+
+export function clearExtraHeaderButtons() {
+  _extraHeaderButtons = headerButtonsDAG();
 }
 
 export const dropdown = {
@@ -68,20 +81,24 @@ createWidget("header-notifications", {
       avatarImg(
         this.settings.avatarSize,
         Object.assign(
-          {
-            alt: "user.avatar.header_title",
-          },
+          { alt: "user.avatar.header_title" },
           addExtraUserClasses(user, avatarAttrs)
         )
       ),
     ];
+
+    if (this.currentUser && this._shouldHighlightAvatar()) {
+      contents.push(this.attach("header-user-tip-shim"));
+    }
 
     if (this.currentUser.status) {
       contents.push(this.attach("user-status-bubble", this.currentUser.status));
     }
 
     if (user.isInDoNotDisturb()) {
-      contents.push(h("div.do-not-disturb-background", iconNode("moon")));
+      contents.push(
+        h("div.do-not-disturb-background", iconNode("discourse-dnd"))
+      );
     } else {
       if (user.new_personal_messages_notifications_count) {
         contents.push(
@@ -136,6 +153,7 @@ createWidget("header-notifications", {
         );
       }
     }
+
     return contents;
   },
 
@@ -147,34 +165,6 @@ createWidget("header-notifications", {
       !user.enforcedSecondFactor &&
       !attrs.active
     );
-  },
-
-  didRenderWidget() {
-    if (!this.currentUser || !this._shouldHighlightAvatar()) {
-      return;
-    }
-
-    this.currentUser.showUserTip({
-      id: "first_notification",
-
-      titleText: I18n.t("user_tips.first_notification.title"),
-      contentText: I18n.t("user_tips.first_notification.content"),
-
-      reference: document
-        .querySelector(".d-header .badge-notification")
-        ?.parentElement?.querySelector(".avatar"),
-      appendTo: document.querySelector(".d-header"),
-
-      placement: "bottom-end",
-    });
-  },
-
-  destroy() {
-    this.userTips.hideTip("first_notification");
-  },
-
-  willRerenderWidget() {
-    this.userTips.hideTip("first_notification");
   },
 });
 
@@ -190,14 +180,14 @@ createWidget(
 
       html(attrs) {
         return h(
-          "button.icon.btn-flat",
+          "button.icon.btn.no-text.btn-flat",
           {
             attributes: {
               "aria-haspopup": true,
               "aria-expanded": attrs.active,
-              href: attrs.user.path,
-              title: attrs.user.name || attrs.user.username,
-              "data-auto-route": true,
+              "aria-label": I18n.t("user.account_possessive", {
+                name: attrs.user.name || attrs.user.username,
+              }),
             },
           },
           this.attach("header-notifications", attrs)
@@ -223,13 +213,11 @@ createWidget(
         }
 
         return h(
-          "button.icon.btn-flat",
+          "button.icon.btn.no-text.btn-flat",
           {
             attributes: {
               "aria-expanded": attrs.active,
               "aria-haspopup": true,
-              href: attrs.href,
-              "data-auto-route": true,
               title,
               "aria-label": title,
               id: attrs.iconId,
@@ -244,7 +232,12 @@ createWidget(
 );
 
 createWidget("header-icons", {
+  services: ["search", "header"],
   tagName: "ul.icons.d-header-icons",
+
+  init() {
+    registerWidgetShim("extra-icon", "span.wrapper", hbs`<@data.component />`);
+  },
 
   html(attrs) {
     if (this.siteSettings.login_required && !this.currentUser) {
@@ -253,72 +246,58 @@ createWidget("header-icons", {
 
     const icons = [];
 
-    if (_extraHeaderIcons) {
-      _extraHeaderIcons.forEach((icon) => {
-        icons.push(this.attach(icon));
-      });
-    }
+    const resolvedIcons = _extraHeaderIcons.resolve();
 
-    const search = this.attach("header-dropdown", {
-      title: "search.title",
-      icon: "search",
-      iconId: SEARCH_BUTTON_ID,
-      action: "toggleSearchMenu",
-      active: attrs.searchVisible,
-      href: getURL("/search"),
-      classNames: ["search-dropdown"],
-    });
-
-    icons.push(search);
-
-    const hamburger = this.attach("header-dropdown", {
-      title: "hamburger_menu",
-      icon: "bars",
-      iconId: "toggle-hamburger-menu",
-      active: attrs.hamburgerVisible,
-      action: "toggleHamburger",
-      href: "",
-      classNames: ["hamburger-dropdown"],
-
-      contents() {
-        let { currentUser } = this;
-        if (
-          currentUser?.reviewable_count &&
-          this.siteSettings.navigation_menu === "legacy"
-        ) {
-          return h(
-            "div.badge-notification.reviewables",
-            {
-              attributes: {
-                title: I18n.t("notifications.reviewable_items"),
-              },
-            },
-            this.currentUser.reviewable_count
+    resolvedIcons.forEach((icon) => {
+      if (icon.key === "search") {
+        if (!this.header.headerButtonsHidden.includes("search")) {
+          icons.push(
+            this.attach("header-dropdown", {
+              title: "search.title",
+              icon: "search",
+              iconId: SEARCH_BUTTON_ID,
+              action: "toggleSearchMenu",
+              active: this.search.visible,
+              href: getURL("/search"),
+              classNames: ["search-dropdown"],
+            })
           );
         }
-      },
+      } else if (icon.key === "user-menu" && attrs.user) {
+        icons.push(
+          this.attach("user-dropdown", {
+            active: attrs.userVisible,
+            action: "toggleUserMenu",
+            user: attrs.user,
+          })
+        );
+      } else if (
+        icon.key === "hamburger" &&
+        (!attrs.sidebarEnabled || this.site.mobileView)
+      ) {
+        icons.push(
+          this.attach("header-dropdown", {
+            title: "hamburger_menu",
+            icon: "bars",
+            iconId: "toggle-hamburger-menu",
+            active: attrs.hamburgerVisible,
+            action: "toggleHamburger",
+            href: "",
+            classNames: ["hamburger-dropdown"],
+          })
+        );
+      } else {
+        icons.push(this.attach("extra-icon", { component: icon.value }));
+      }
     });
-
-    if (!attrs.sidebarEnabled || this.site.mobileView) {
-      icons.push(hamburger);
-    }
-
-    if (attrs.user) {
-      icons.push(
-        this.attach("user-dropdown", {
-          active: attrs.userVisible,
-          action: "toggleUserMenu",
-          user: attrs.user,
-        })
-      );
-    }
 
     return icons;
   },
 });
 
 createWidget("header-buttons", {
-  tagName: "span.header-buttons",
+  services: ["header"],
+  tagName: "span.auth-buttons",
 
   html(attrs) {
     if (this.currentUser) {
@@ -327,7 +306,11 @@ createWidget("header-buttons", {
 
     const buttons = [];
 
-    if (attrs.canSignUp && !attrs.topic) {
+    if (
+      attrs.canSignUp &&
+      !attrs.topic &&
+      !this.header.headerButtonsHidden.includes("signup")
+    ) {
       buttons.push(
         this.attach("button", {
           label: "sign_up",
@@ -337,14 +320,17 @@ createWidget("header-buttons", {
       );
     }
 
-    buttons.push(
-      this.attach("button", {
-        label: "log_in",
-        className: "btn-primary btn-small login-button",
-        action: "showLogin",
-        icon: "user",
-      })
-    );
+    if (!this.header.headerButtonsHidden.includes("login")) {
+      buttons.push(
+        this.attach("button", {
+          label: "log_in",
+          className: "btn-primary btn-small login-button",
+          action: "showLogin",
+          icon: "user",
+        })
+      );
+    }
+
     return buttons;
   },
 });
@@ -363,7 +349,7 @@ export function attachAdditionalPanel(name, toggle, transformAttrs) {
   additionalPanels.push({ name, toggle, transformAttrs });
 }
 
-createWidget("revamped-hamburger-menu-wrapper", {
+createWidget("hamburger-dropdown-wrapper", {
   buildAttributes() {
     return { "data-click-outside": true };
   },
@@ -381,15 +367,41 @@ createWidget("revamped-hamburger-menu-wrapper", {
   click(event) {
     if (
       event.target.closest(".sidebar-section-header-button") ||
-      event.target.closest(".sidebar-section-link-button") ||
       event.target.closest(".sidebar-section-link")
     ) {
       this.sendWidgetAction("toggleHamburger");
     }
   },
 
-  clickOutside() {
-    this.sendWidgetAction("toggleHamburger");
+  clickOutside(e) {
+    if (
+      e.target.classList.contains("header-cloak") &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const panel = document.querySelector(".menu-panel");
+      const headerCloak = document.querySelector(".header-cloak");
+      const finishPosition = isDocumentRTL() ? "340px" : "-340px";
+      panel
+        .animate([{ transform: `translate3d(${finishPosition}, 0, 0)` }], {
+          duration: 200,
+          fill: "forwards",
+          easing: "ease-in",
+        })
+        .finished.then(() => {
+          if (isTesting()) {
+            this.sendWidgetAction("toggleHamburger");
+          } else {
+            discourseLater(() => this.sendWidgetAction("toggleHamburger"));
+          }
+        });
+      headerCloak.animate([{ opacity: 0 }], {
+        duration: 200,
+        fill: "forwards",
+        easing: "ease-in",
+      });
+    } else {
+      this.sendWidgetAction("toggleHamburger");
+    }
   },
 });
 
@@ -415,18 +427,46 @@ createWidget("revamped-user-menu-wrapper", {
     this.sendWidgetAction("toggleUserMenu");
   },
 
-  clickOutside() {
-    this.closeUserMenu();
+  clickOutside(e) {
+    if (
+      e.target.classList.contains("header-cloak") &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const panel = document.querySelector(".menu-panel");
+      const headerCloak = document.querySelector(".header-cloak");
+      const finishPosition = isDocumentRTL() ? "-340px" : "340px";
+      panel
+        .animate([{ transform: `translate3d(${finishPosition}, 0, 0)` }], {
+          duration: 200,
+          fill: "forwards",
+          easing: "ease-in",
+        })
+        .finished.then(() => {
+          if (isTesting) {
+            this.closeUserMenu();
+          } else {
+            discourseLater(() => this.closeUserMenu());
+          }
+        });
+      headerCloak.animate([{ opacity: 0 }], {
+        duration: 200,
+        fill: "forwards",
+        easing: "ease-in",
+      });
+    } else {
+      this.closeUserMenu();
+    }
   },
 });
 
-createWidget("glimmer-search-menu-wrapper", {
+createWidget("search-menu-wrapper", {
+  services: ["search"],
   buildAttributes() {
-    return { "data-click-outside": true, "aria-live": "polite" };
+    return { "aria-live": "polite" };
   },
 
   buildClasses() {
-    return ["search-menu glimmer-search-menu"];
+    return ["search-menu"];
   },
 
   html() {
@@ -434,17 +474,9 @@ createWidget("glimmer-search-menu-wrapper", {
       new RenderGlimmer(
         this,
         "div.widget-component-connector",
-        hbs`<SearchMenu
-          @inTopicContext={{@data.inTopicContext}}
-          @searchVisible={{@data.searchVisible}}
-          @animationClass={{@data.animationClass}}
-          @closeSearchMenu={{@data.closeSearchMenu}}
-        />`,
+        hbs`<SearchMenuPanel @closeSearchMenu={{@data.closeSearchMenu}} />`,
         {
           closeSearchMenu: this.closeSearchMenu.bind(this),
-          inTopicContext: this.attrs.inTopicContext,
-          searchVisible: this.attrs.searchVisible,
-          animationClass: this.attrs.animationClass,
         }
       ),
     ];
@@ -452,6 +484,7 @@ createWidget("glimmer-search-menu-wrapper", {
 
   closeSearchMenu() {
     this.sendWidgetAction("toggleSearchMenu");
+    document.getElementById(SEARCH_BUTTON_ID)?.focus();
   },
 
   clickOutside() {
@@ -463,6 +496,14 @@ export default createWidget("header", {
   tagName: "header.d-header",
   buildKey: () => `header`,
   services: ["router", "search"],
+
+  init() {
+    registerWidgetShim(
+      "extra-button",
+      "span.wrapper",
+      hbs`<@data.component />`
+    );
+  },
 
   defaultState() {
     let states = {
@@ -481,8 +522,7 @@ export default createWidget("header", {
 
   html(attrs, state) {
     let inTopicRoute = false;
-
-    if (this.state.inTopicContext) {
+    if (this.search.inTopicContext) {
       inTopicRoute = this.router.currentRouteName.startsWith("topic.");
     }
 
@@ -490,7 +530,7 @@ export default createWidget("header", {
       const headerIcons = this.attach("header-icons", {
         hamburgerVisible: state.hamburgerVisible,
         userVisible: state.userVisible,
-        searchVisible: state.searchVisible,
+        searchVisible: this.search.visible,
         flagCount: attrs.flagCount,
         user: this.currentUser,
         sidebarEnabled: attrs.sidebarEnabled,
@@ -500,35 +540,23 @@ export default createWidget("header", {
         return headerIcons;
       }
 
-      const panels = [this.attach("header-buttons", attrs), headerIcons];
+      const buttons = [];
+      const resolvedButtons = _extraHeaderButtons.resolve();
+      resolvedButtons.forEach((button) => {
+        if (button.key === "auth") {
+          buttons.push(this.attach("header-buttons", attrs));
+        }
+        buttons.push(this.attach("extra-button", { component: button.value }));
+      });
 
-      if (state.searchVisible) {
-        if (this.currentUser?.experimental_search_menu_groups_enabled) {
-          panels.push(
-            this.attach("glimmer-search-menu-wrapper", {
-              inTopicContext: state.inTopicContext && inTopicRoute,
-              searchVisible: state.searchVisible,
-              animationClass: this.animationClass(),
-            })
-          );
-        } else {
-          panels.push(
-            this.attach("search-menu", {
-              inTopicContext: state.inTopicContext && inTopicRoute,
-            })
-          );
-        }
+      const panels = [];
+      panels.push(h("span.header-buttons", buttons), headerIcons);
+
+      if (this.search.visible) {
+        this.search.inTopicContext = this.search.inTopicContext && inTopicRoute;
+        panels.push(this.attach("search-menu-wrapper"));
       } else if (state.hamburgerVisible) {
-        if (
-          attrs.navigationMenuQueryParamOverride === "header_dropdown" ||
-          (attrs.navigationMenuQueryParamOverride !== "legacy" &&
-            this.siteSettings.navigation_menu !== "legacy" &&
-            (!attrs.sidebarEnabled || this.site.narrowDesktopView))
-        ) {
-          panels.push(this.attach("revamped-hamburger-menu-wrapper", {}));
-        } else {
-          panels.push(this.attach("hamburger-menu"));
-        }
+        panels.push(this.attach("hamburger-dropdown-wrapper", {}));
       } else if (state.userVisible) {
         panels.push(this.attach("revamped-user-menu-wrapper", {}));
       }
@@ -556,47 +584,36 @@ export default createWidget("header", {
       minimized: !!attrs.topic,
     };
 
-    return h(
-      "div.wrap",
-      this.attach("header-contents", { ...attrs, ...contentsAttrs })
-    );
+    return [
+      h(
+        "div.wrap",
+        this.attach("header-contents", { ...attrs, ...contentsAttrs })
+      ),
+      new RenderGlimmer(
+        this,
+        "div.widget-component-connector",
+        hbs`
+          <PluginOutlet
+            @name="after-header"
+            @outletArgs={{hash minimized=@data.minimized}}
+          />
+        `,
+        { minimized: !!attrs.topic }
+      ),
+    ];
   },
 
   updateHighlight() {
-    if (!this.state.searchVisible) {
-      this.search.set("highlightTerm", "");
+    if (!this.search.visible) {
+      this.search.highlightTerm = "";
     }
-  },
-
-  animationClass() {
-    return this.site.mobileView || this.site.narrowDesktopView
-      ? "slide-in"
-      : "drop-down";
   },
 
   closeAll() {
     this.state.userVisible = false;
     this.state.hamburgerVisible = false;
-    this.state.searchVisible = false;
+    this.search.visible = false;
     this.toggleBodyScrolling(false);
-  },
-
-  linkClickedEvent(attrs) {
-    let searchContextEnabled = false;
-    if (attrs) {
-      searchContextEnabled = attrs.searchContextEnabled;
-
-      const { searchLogId, searchResultId, searchResultType } = attrs;
-      if (searchLogId && searchResultId && searchResultType) {
-        logSearchLinkClick({ searchLogId, searchResultId, searchResultType });
-      }
-    }
-
-    if (!searchContextEnabled) {
-      this.closeAll();
-    }
-
-    this.updateHighlight();
   },
 
   toggleSearchMenu() {
@@ -617,13 +634,11 @@ export default createWidget("header", {
       }
     }
 
-    this.state.searchVisible = !this.state.searchVisible;
+    this.search.visible = !this.search.visible;
     this.updateHighlight();
 
-    if (this.state.searchVisible) {
-      this.focusSearchInput();
-    } else {
-      this.state.inTopicContext = false;
+    if (!this.search.searchVisible) {
+      this.search.inTopicContext = false;
     }
   },
 
@@ -638,76 +653,31 @@ export default createWidget("header", {
   },
 
   toggleHamburger() {
-    if (
-      this.siteSettings.navigation_menu !== "legacy" &&
-      this.attrs.sidebarEnabled &&
-      !this.site.narrowDesktopView
-    ) {
-      this.sendWidgetAction("toggleSidebar");
+    if (this.attrs.sidebarEnabled && !this.site.narrowDesktopView) {
+      if (!this.attrs.showSidebar) {
+        this.sendWidgetAction("toggleSidebar");
+        this.closeAll();
+      } else {
+        this.state.hamburgerVisible = !this.state.hamburgerVisible;
+      }
     } else {
       this.state.hamburgerVisible = !this.state.hamburgerVisible;
       this.toggleBodyScrolling(this.state.hamburgerVisible);
-
       schedule("afterRender", () => {
-        if (this.siteSettings.navigation_menu !== "legacy") {
-          // Remove focus from hamburger toggle button
-          document.querySelector("#toggle-hamburger-menu")?.blur();
-        } else {
-          // auto focus on first link in dropdown
-          document.querySelector(".hamburger-panel .menu-links a")?.focus();
-        }
+        // Remove focus from hamburger toggle button
+        document.querySelector("#toggle-hamburger-menu")?.blur();
       });
     }
   },
 
   toggleBodyScrolling(bool) {
-    if (!this.site.mobileView) {
-      return;
+    if (this.site.mobileView) {
+      scrollLock(bool);
     }
-    if (bool) {
-      document.body.addEventListener("touchmove", this.preventDefault, {
-        passive: false,
-      });
-    } else {
-      document.body.removeEventListener("touchmove", this.preventDefault, {
-        passive: false,
-      });
-    }
-  },
-
-  preventDefault(e) {
-    const windowHeight = window.innerHeight;
-
-    // allow profile menu tabs to scroll if they're taller than the window
-    if (e.target.closest(".menu-panel .menu-tabs-container")) {
-      const topTabs = document.querySelector(".menu-panel .top-tabs");
-      const bottomTabs = document.querySelector(".menu-panel .bottom-tabs");
-      const profileTabsHeight =
-        topTabs?.offsetHeight + bottomTabs?.offsetHeight || 0;
-
-      if (profileTabsHeight > windowHeight) {
-        return;
-      }
-    }
-
-    // allow menu panels to scroll if contents are taller than the window
-    if (e.target.closest(".menu-panel")) {
-      const menuContentHeight =
-        document.querySelector(".menu-panel .panel-body-contents")
-          .offsetHeight || 0;
-
-      if (menuContentHeight > windowHeight) {
-        return;
-      }
-    }
-
-    e.preventDefault();
   },
 
   togglePageSearch() {
-    const { state } = this;
-    state.inTopicContext = false;
-
+    this.search.inTopicContext = false;
     let showSearch = this.router.currentRouteName.startsWith("topic.");
 
     // If we're viewing a topic, only intercept search if there are cloaked posts
@@ -721,13 +691,13 @@ export default createWidget("header", {
         $(".topic-post .cooked, .small-action:not(.time-gap)").length < total;
     }
 
-    if (state.searchVisible) {
+    if (this.search.visible) {
       this.toggleSearchMenu();
       return showSearch;
     }
 
     if (showSearch) {
-      state.inTopicContext = true;
+      this.search.inTopicContext = true;
       this.toggleSearchMenu();
       return false;
     }
@@ -738,7 +708,7 @@ export default createWidget("header", {
   domClean() {
     const { state } = this;
 
-    if (state.searchVisible || state.hamburgerVisible || state.userVisible) {
+    if (this.search.visible || state.hamburgerVisible || state.userVisible) {
       this.closeAll();
     }
   },
@@ -761,30 +731,5 @@ export default createWidget("header", {
         }
         break;
     }
-  },
-
-  focusSearchInput() {
-    // the glimmer search menu handles the focusing of the search
-    // input within the search component
-    if (
-      this.state.searchVisible &&
-      !this.currentUser?.experimental_search_menu_groups_enabled
-    ) {
-      schedule("afterRender", () => {
-        const searchInput = document.querySelector("#search-term");
-        searchInput.focus();
-        searchInput.select();
-      });
-    }
-  },
-
-  setTopicContext() {
-    this.state.inTopicContext = true;
-    this.focusSearchInput();
-  },
-
-  clearContext() {
-    this.state.inTopicContext = false;
-    this.focusSearchInput();
   },
 });

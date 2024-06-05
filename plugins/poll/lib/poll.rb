@@ -198,12 +198,20 @@ class DiscoursePoll::Poll
 
   def self.grouped_poll_results(user, post_id, poll_name, user_field_name)
     raise Discourse::InvalidParameters.new(:post_id) if !Post.where(id: post_id).exists?
-
     poll =
-      Poll.includes(:poll_options).includes(:poll_votes).find_by(post_id: post_id, name: poll_name)
+      Poll.includes(:poll_options, :poll_votes, post: :topic).find_by(
+        post_id: post_id,
+        name: poll_name,
+      )
     raise Discourse::InvalidParameters.new(:poll_name) unless poll
 
-    unless SiteSetting.poll_groupable_user_fields.split("|").include?(user_field_name)
+    # user must be allowed to post in topic
+    guardian = Guardian.new(user)
+    if !guardian.can_create_post?(poll.post.topic)
+      raise DiscoursePoll::Error.new I18n.t("poll.user_cant_post_in_topic")
+    end
+
+    if SiteSetting.poll_groupable_user_fields.split("|").exclude?(user_field_name)
       raise Discourse::InvalidParameters.new(:user_field_name)
     end
 
@@ -309,6 +317,9 @@ class DiscoursePoll::Poll
     # Poll Post handlers get called very early in the post
     # creation process. `raw` could be nil here.
     return [] if raw.blank?
+
+    # bail-out early if the post does not contain a poll
+    return [] if !raw.include?("[/poll]")
 
     # TODO: we should fix the callback mess so that the cooked version is available
     # in the validators instead of cooking twice

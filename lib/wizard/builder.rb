@@ -10,7 +10,6 @@ class Wizard
       return @wizard unless SiteSetting.wizard_enabled? && @wizard.user.try(:staff?)
 
       @wizard.append_step("introduction") do |step|
-        step.banner = "welcome-illustration"
         step.emoji = "wave"
         step.description_vars = { base_path: Discourse.base_path }
 
@@ -59,7 +58,6 @@ class Wizard
       end
 
       @wizard.append_step("privacy") do |step|
-        step.banner = "members-illustration"
         step.emoji = "hugs"
         step.add_field(
           id: "login_required",
@@ -91,25 +89,16 @@ class Wizard
           )
         end
 
-        step.add_field(
-          id: "enable_sidebar",
-          type: "checkbox",
-          icon: "bars",
-          value: SiteSetting.navigation_menu == NavigationMenuSiteSetting::SIDEBAR,
-        )
-
         step.on_update do |updater|
           updater.update_setting(:login_required, updater.fields[:login_required])
           updater.update_setting(:invite_only, updater.fields[:invite_only])
           updater.update_setting(:must_approve_users, updater.fields[:must_approve_users])
           updater.update_setting(:chat_enabled, updater.fields[:chat_enabled]) if defined?(::Chat)
-          updater.update_setting(:navigation_menu, updater.fields[:enable_sidebar])
         end
       end
 
       @wizard.append_step("ready") do |step|
         # no form on this page, just info.
-        step.banner = "finished-illustration"
         step.emoji = "rocket"
       end
 
@@ -197,7 +186,7 @@ class Wizard
         style.add_choice("latest")
         CategoryPageStyle.values.each { |page| style.add_choice(page[:value]) }
 
-        step.add_field(id: "styling_preview", type: "component")
+        step.add_field(id: "styling_preview", type: "styling-preview")
 
         step.on_update do |updater|
           updater.update_setting(:base_font, updater.fields[:body_font])

@@ -1,14 +1,14 @@
-import { module, test } from "qunit";
-import { exists, query } from "discourse/tests/helpers/qunit-helpers";
-import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import ClassicComponent from "@ember/component";
 import { click, fillIn, render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { exists, query } from "discourse/tests/helpers/qunit-helpers";
 import widgetHbs from "discourse/widgets/hbs-compiler";
-import Widget, { deleteFromRegistry } from "discourse/widgets/widget";
-import ClassicComponent from "@ember/component";
 import RenderGlimmer, {
   registerWidgetShim,
 } from "discourse/widgets/render-glimmer";
+import Widget, { deleteFromRegistry } from "discourse/widgets/widget";
 import { bind } from "discourse-common/utils/decorators";
 
 class DemoWidget extends Widget {
@@ -68,18 +68,22 @@ class DemoComponent extends ClassicComponent {
   }
 
   didInsertElement() {
+    super.didInsertElement(...arguments);
     DemoComponent.eventLog.push("didInsertElement");
   }
 
   willDestroyElement() {
+    super.willDestroyElement(...arguments);
     DemoComponent.eventLog.push("willDestroyElement");
   }
 
   didReceiveAttrs() {
+    super.didReceiveAttrs(...arguments);
     DemoComponent.eventLog.push("didReceiveAttrs");
   }
 
   willDestroy() {
+    super.willDestroy(...arguments);
     DemoComponent.eventLog.push("willDestroy");
   }
 }

@@ -2,12 +2,12 @@
 
 RSpec.describe Jobs::BulkInvite do
   describe "#execute" do
-    fab!(:user) { Fabricate(:user) }
-    fab!(:admin) { Fabricate(:admin) }
-    fab!(:east_coast_user) { Fabricate(:east_coast_user) }
+    fab!(:user)
+    fab!(:admin)
+    fab!(:east_coast_user)
     fab!(:group1) { Fabricate(:group, name: "group1") }
     fab!(:group2) { Fabricate(:group, name: "group2") }
-    fab!(:topic) { Fabricate(:topic) }
+    fab!(:topic)
     let(:staged_user) { Fabricate(:user, staged: true, active: false) }
     let(:email) { "test@discourse.org" }
     let(:invites) do
@@ -18,6 +18,13 @@ RSpec.describe Jobs::BulkInvite do
         { email: "test@discourse.org", groups: "GROUP1;group2", topic_id: topic.id },
         { email: "invalid" },
       ]
+    end
+
+    def parse_skipped_and_failed_emails(input)
+      skipped_invites_emails = input[/Skipped Invites for Emails?:\s+``` text\n(.+?)\n```/m, 1]
+      failed_invites_emails = input[/Failed Invites for Emails?:\s+``` text\n(.+?)\n```/m, 1]
+
+      { skipped_invites: skipped_invites_emails, failed_invites: failed_invites_emails }
     end
 
     it "raises an error when the invites array is missing" do
@@ -55,7 +62,6 @@ RSpec.describe Jobs::BulkInvite do
     it "handles daylight savings time correctly" do
       # EDT (-04:00) transitions to EST (-05:00) on the first Sunday in November.
       # Freeze time to the last Day of October, so that the creation and expiration date will be in different time zones.
-
       Time.use_zone("Eastern Time (US & Canada)") do
         freeze_time DateTime.parse("2023-10-31 06:00:00 -0400")
         described_class.new.execute(current_user_id: east_coast_user.id, invites: invites)
@@ -128,6 +134,18 @@ RSpec.describe Jobs::BulkInvite do
       expect(new_staged_user.user_fields[user_field.id.to_s]).to eq("value 3")
     end
 
+    it "includes any skipped and failed emails in the private message" do
+      described_class.new.execute(
+        current_user_id: admin.id,
+        invites: [{ email: "bad_email" }, { email: user.email }, { email: "test@discourse.org" }],
+      )
+
+      post = Post.last
+      result = parse_skipped_and_failed_emails(post.raw)
+      expect(result[:skipped_invites]).to eq(user.email)
+      expect(result[:failed_invites]).to eq("bad_email")
+    end
+
     context "when there are more than 200 invites" do
       let(:bulk_invites) { [] }
 
@@ -141,6 +159,15 @@ RSpec.describe Jobs::BulkInvite do
         expect(invite.emailed_status).to eq(Invite.emailed_status_types[:bulk_pending])
         expect(Jobs::ProcessBulkInviteEmails.jobs.size).to eq(1)
       end
+    end
+
+    it "does not send an invite email when skip_email_bulk_invites is true" do
+      SiteSetting.skip_email_bulk_invites = true
+
+      described_class.new.execute(current_user_id: admin.id, invites: invites)
+
+      invite = Invite.last
+      expect(invite.emailed_status).to eq(Invite.emailed_status_types[:not_required])
     end
   end
 end

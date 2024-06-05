@@ -1,9 +1,9 @@
-import { module, test } from "qunit";
-import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import { render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
+import { module, test } from "qunit";
 import sinon from "sinon";
-import I18n from "I18n";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import I18n from "discourse-i18n";
 import { HEADER_INDICATOR_PREFERENCE_ALL_NEW } from "discourse/plugins/chat/discourse/controllers/preferences-chat";
 
 module("Discourse Chat | Component | chat-header-icon", function (hooks) {

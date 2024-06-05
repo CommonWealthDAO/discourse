@@ -16,7 +16,7 @@ class ReviewablesController < ApplicationController
     end
 
     status = (params[:status] || "pending").to_sym
-    raise Discourse::InvalidParameters.new(:status) unless allowed_statuses.include?(status)
+    raise Discourse::InvalidParameters.new(:status) if allowed_statuses.exclude?(status)
 
     topic_id = params[:topic_id] ? params[:topic_id].to_i : nil
     category_id = params[:category_id] ? params[:category_id].to_i : nil
@@ -185,7 +185,7 @@ class ReviewablesController < ApplicationController
     end
 
     editable = reviewable.editable_for(guardian)
-    raise Discourse::InvalidAccess.new unless editable.present?
+    raise Discourse::InvalidAccess.new if editable.blank?
 
     # Validate parameters are all editable
     edit_params = params[:reviewable] || {}
@@ -222,11 +222,8 @@ class ReviewablesController < ApplicationController
         return render_json_error(error)
       end
 
-      if reviewable.type == "ReviewableUser"
-        args.merge!(
-          reject_reason: params[:reject_reason],
-          send_email: params[:send_email] != "false",
-        )
+      if reviewable.type_class.respond_to?(:additional_args)
+        args.merge!(reviewable.type_class.additional_args(params) || {})
       end
 
       plugin_params =

@@ -20,7 +20,12 @@ module Chat
       end
 
       def base.chat_header_indicator_preferences
-        @chat_header_indicator_preferences ||= { all_new: 0, dm_and_mentions: 1, never: 2 }
+        @chat_header_indicator_preferences ||= {
+          all_new: 0,
+          dm_and_mentions: 1,
+          never: 2,
+          only_mentions: 3,
+        }
       end
 
       # Avoid attempting to override when autoloading
@@ -39,6 +44,10 @@ module Chat
         base.enum :chat_separate_sidebar_mode,
                   base.chat_separate_sidebar_mode,
                   prefix: "chat_separate_sidebar_mode"
+      end
+
+      if !base.method_defined?(:show_thread_title_prompts?)
+        base.attribute :show_thread_title_prompts, :boolean, default: true
       end
     end
   end

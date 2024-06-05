@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe Admin::UserFieldsController do
-  fab!(:admin) { Fabricate(:admin) }
-  fab!(:moderator) { Fabricate(:moderator) }
-  fab!(:user) { Fabricate(:user) }
+  fab!(:admin)
+  fab!(:moderator)
+  fab!(:user)
 
   describe "#create" do
     context "when logged in as an admin" do
@@ -17,6 +17,7 @@ RSpec.describe Admin::UserFieldsController do
                    name: "hello",
                    description: "hello desc",
                    field_type: "text",
+                   requirement: "on_signup",
                  },
                }
 
@@ -33,6 +34,7 @@ RSpec.describe Admin::UserFieldsController do
                    description: "hello desc",
                    field_type: "dropdown",
                    options: %w[a b c],
+                   requirement: "on_signup",
                  },
                }
 
@@ -75,7 +77,7 @@ RSpec.describe Admin::UserFieldsController do
   end
 
   describe "#index" do
-    fab!(:user_field) { Fabricate(:user_field) }
+    fab!(:user_field)
 
     context "when logged in as an admin" do
       before { sign_in(admin) }
@@ -112,7 +114,7 @@ RSpec.describe Admin::UserFieldsController do
   end
 
   describe "#destroy" do
-    fab!(:user_field) { Fabricate(:user_field) }
+    fab!(:user_field)
 
     context "when logged in as an admin" do
       before { sign_in(admin) }
@@ -150,7 +152,7 @@ RSpec.describe Admin::UserFieldsController do
   end
 
   describe "#update" do
-    fab!(:user_field) { Fabricate(:user_field) }
+    fab!(:user_field)
 
     context "when logged in as an admin" do
       before { sign_in(admin) }
@@ -162,13 +164,16 @@ RSpec.describe Admin::UserFieldsController do
                 name: "fraggle",
                 field_type: "confirm",
                 description: "muppet",
+                requirement: "optional",
               },
             }
 
         expect(response.status).to eq(200)
-        user_field.reload
-        expect(user_field.name).to eq("fraggle")
-        expect(user_field.field_type).to eq("confirm")
+        expect(user_field.reload).to have_attributes(
+          name: "fraggle",
+          field_type: "confirm",
+          required?: false,
+        )
       end
 
       it "updates the user field options" do

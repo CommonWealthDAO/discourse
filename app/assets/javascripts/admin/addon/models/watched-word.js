@@ -1,6 +1,6 @@
 import EmberObject from "@ember/object";
-import I18n from "I18n";
 import { ajax } from "discourse/lib/ajax";
+import I18n from "discourse-i18n";
 
 export default class WatchedWord extends EmberObject {
   static findAll() {
@@ -34,10 +34,11 @@ export default class WatchedWord extends EmberObject {
       {
         type: this.id ? "PUT" : "POST",
         data: {
-          word: this.word,
+          words: this.words,
           replacement: this.replacement,
           action_key: this.action,
           case_sensitive: this.isCaseSensitive,
+          html: this.isHtml,
         },
         dataType: "json",
       }

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe Draft do
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
 
-  fab!(:post) { Fabricate(:post) }
+  fab!(:post)
 
   it { is_expected.to have_many(:upload_references).dependent(:delete_all) }
 
@@ -133,6 +133,7 @@ RSpec.describe Draft do
     key = Draft::NEW_TOPIC
 
     Draft.set(user, key, 0, "draft")
+
     Draft.cleanup!
     expect(Draft.count).to eq 1
     expect(user.user_stat.draft_count).to eq(1)
@@ -142,10 +143,16 @@ RSpec.describe Draft do
     Draft.set(user, key, seq, "draft")
     DraftSequence.update_all("sequence = sequence + 1")
 
+    draft = Draft.first
+    draft.upload_references << UploadReference.create!(target: draft, upload: Fabricate(:upload))
+
+    expect(UploadReference.count).to eq(1)
+
     Draft.cleanup!
 
     expect(Draft.count).to eq 0
     expect(user.reload.user_stat.draft_count).to eq(0)
+    expect(UploadReference.count).to eq(0)
 
     Draft.set(Fabricate(:user), Draft::NEW_TOPIC, 0, "draft")
 
@@ -298,4 +305,6 @@ RSpec.describe Draft do
       expect(drafts[0].post.id).to eq(post.id)
     end
   end
+
+  it { is_expected.to validate_length_of(:draft_key).is_at_most(25) }
 end

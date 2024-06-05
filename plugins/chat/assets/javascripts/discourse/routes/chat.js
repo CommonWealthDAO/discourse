@@ -1,12 +1,15 @@
-import DiscourseRoute from "discourse/routes/discourse";
-import I18n from "I18n";
-import { defaultHomepage } from "discourse/lib/utilities";
-import { inject as service } from "@ember/service";
-import { scrollTop } from "discourse/mixins/scroll-top";
 import { schedule } from "@ember/runloop";
+import { service } from "@ember/service";
 import { withPluginApi } from "discourse/lib/plugin-api";
-import { initSidebarState } from "discourse/plugins/chat/discourse/lib/init-sidebar-state";
+import { defaultHomepage } from "discourse/lib/utilities";
+import { scrollTop } from "discourse/mixins/scroll-top";
+import DiscourseRoute from "discourse/routes/discourse";
+import I18n from "discourse-i18n";
 import { getUserChatSeparateSidebarMode } from "discourse/plugins/chat/discourse/lib/get-user-chat-separate-sidebar-mode";
+import {
+  CHAT_PANEL,
+  initSidebarState,
+} from "discourse/plugins/chat/discourse/lib/init-sidebar-state";
 
 export default class ChatRoute extends DiscourseRoute {
   @service chat;
@@ -25,9 +28,13 @@ export default class ChatRoute extends DiscourseRoute {
 
     const INTERCEPTABLE_ROUTES = [
       "chat.channel",
+      "chat.direct-messages",
+      "chat.channels",
+      "chat.threads",
       "chat.channel.thread",
       "chat.channel.thread.index",
       "chat.channel.thread.near-message",
+      "chat.channel.near-message-with-thread",
       "chat.channel.threads",
       "chat.channel.index",
       "chat.channel.near-message",
@@ -62,7 +69,7 @@ export default class ChatRoute extends DiscourseRoute {
 
   activate() {
     withPluginApi("1.8.0", (api) => {
-      api.setSidebarPanel("chat");
+      api.setSidebarPanel(CHAT_PANEL);
 
       const chatSeparateSidebarMode = getUserChatSeparateSidebarMode(
         this.currentUser
@@ -92,7 +99,12 @@ export default class ChatRoute extends DiscourseRoute {
     });
 
     if (transition) {
-      const url = this.router.urlFor(transition.from.name);
+      let url = this.router.urlFor(transition.from.name);
+
+      if (this.router.rootURL !== "/") {
+        url = url.replace(new RegExp(`^${this.router.rootURL}`), "/");
+      }
+
       this.chatStateManager.storeChatURL(url);
     }
 

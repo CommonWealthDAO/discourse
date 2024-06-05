@@ -12,6 +12,9 @@ bs_BA:
           always: "Uvijek"
           never: "Nikad"
     chat:
+      deleted_chat_username: obrisano
+      dates:
+        yesterday: "Yesterday"
       create: "napravi"
       cancel: "Odustani"
       channel_settings:
@@ -20,6 +23,7 @@ bs_BA:
         join: "Učlani se"
         leave: "Napusti"
       close: "Zatvori"
+      remove: "Ukloni"
       delete: "Delete"
       edited: "promjenjeno"
       muted: "utišani"
@@ -31,8 +35,6 @@ bs_BA:
       flag: "Prijavi"
       join: "Učlani se"
       last_visit: "zadnja posjeta"
-      mention_warning:
-        dismiss: "odbaci"
       reply: "Odgovori"
       edit: "Edit"
       rebake_message: "Popravi HTML"
@@ -47,6 +49,7 @@ bs_BA:
       browse:
         back: "Prethodno"
         filter_all: All
+        filter_open: Otvori
         filter_closed: Zatvoreno
       chat_message_separator:
         today: Today
@@ -58,11 +61,11 @@ bs_BA:
       channel_info:
         back_to_channel: "Prethodno"
         tabs:
-          about: O nama
           members: Članovi
           settings: Postavke
       new_message_modal:
         no_items: "Nema stavki"
+        filter: "Filter"
       direct_message_creator:
         title: Nova poruka
         prefix: "Za:"
@@ -88,6 +91,10 @@ bs_BA:
         saved: "Spašeno"
         unfollow: "Napusti"
         admin_title: "Admin"
+        settings_title: "Postavke"
+        category_label: "Kategorija"
+        history_label: "Historija"
+        members_label: "Članovi"
       incoming_webhooks:
         back: "Prethodno"
         description: "Opis"

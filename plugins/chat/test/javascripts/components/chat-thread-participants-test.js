@@ -1,59 +1,68 @@
-import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import hbs from "htmlbars-inline-precompile";
-import fabricators from "discourse/plugins/chat/discourse/lib/fabricators";
+import { getOwner } from "@ember/application";
 import { render } from "@ember/test-helpers";
+import hbs from "htmlbars-inline-precompile";
 import { module, test } from "qunit";
+import CoreFabricators from "discourse/lib/fabricators";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import ChatFabricators from "discourse/plugins/chat/discourse/lib/fabricators";
 
 module(
-  "Discourse Chat | Component | <Chat::Thread::Participants />",
+  "Discourse Chat | Component | <ChatThreadParticipants />",
   function (hooks) {
     setupRenderingTest(hooks);
 
     test("no participants", async function (assert) {
-      this.thread = fabricators.thread();
-      await render(hbs`<Chat::Thread::Participants @thread={{this.thread}} />`);
+      this.thread = new ChatFabricators(getOwner(this)).thread();
+      await render(hbs`<ChatThreadParticipants @thread={{this.thread}} />`);
 
       assert.dom(".chat-thread-participants").doesNotExist();
     });
 
-    test("includeOriginalMessageUser=true", async function (assert) {
-      const orignalMessageUser = fabricators.user({ username: "bob" });
-      this.thread = fabricators.thread({
-        original_message: fabricators.message({ user: orignalMessageUser }),
-        preview: fabricators.threadPreview({
+    test("@includeOriginalMessageUser=true", async function (assert) {
+      const originalMessageUser = new CoreFabricators(getOwner(this)).user({
+        username: "bob",
+      });
+      this.thread = new ChatFabricators(getOwner(this)).thread({
+        original_message: new ChatFabricators(getOwner(this)).message({
+          user: originalMessageUser,
+        }),
+        preview: new ChatFabricators(getOwner(this)).threadPreview({
           channel: this.channel,
           participant_users: [
-            orignalMessageUser,
-            fabricators.user({ username: "alice" }),
+            originalMessageUser,
+            new CoreFabricators(getOwner(this)).user({ username: "alice" }),
           ],
         }),
       });
 
-      await render(hbs`<Chat::Thread::Participants @thread={{this.thread}} />`);
+      await render(hbs`<ChatThreadParticipants @thread={{this.thread}} />`);
 
-      assert.dom('.chat-user-avatar [data-user-card="bob"]').exists();
-      assert.dom('.chat-user-avatar [data-user-card="alice"]').exists();
+      assert.dom(".chat-user-avatar[data-username]").exists({ count: 2 });
     });
 
-    test("includeOriginalMessageUser=false", async function (assert) {
-      const orignalMessageUser = fabricators.user({ username: "bob" });
-      this.thread = fabricators.thread({
-        original_message: fabricators.message({ user: orignalMessageUser }),
-        preview: fabricators.threadPreview({
+    test("@includeOriginalMessageUser=false", async function (assert) {
+      const originalMessageUser = new CoreFabricators(getOwner(this)).user({
+        username: "bob",
+      });
+      this.thread = new ChatFabricators(getOwner(this)).thread({
+        original_message: new ChatFabricators(getOwner(this)).message({
+          user: originalMessageUser,
+        }),
+        preview: new ChatFabricators(getOwner(this)).threadPreview({
           channel: this.channel,
           participant_users: [
-            orignalMessageUser,
-            fabricators.user({ username: "alice" }),
+            originalMessageUser,
+            new CoreFabricators(getOwner(this)).user({ username: "alice" }),
           ],
         }),
       });
 
       await render(
-        hbs`<Chat::Thread::Participants @thread={{this.thread}} @includeOriginalMessageUser={{false}} />`
+        hbs`<ChatThreadParticipants @thread={{this.thread}} @includeOriginalMessageUser={{false}} />`
       );
 
-      assert.dom('.chat-user-avatar [data-user-card="bob"]').doesNotExist();
-      assert.dom('.chat-user-avatar [data-user-card="alice"]').exists();
+      assert.dom('.chat-user-avatar[data-username="bob"]').doesNotExist();
+      assert.dom('.chat-user-avatar[data-username="alice"]').exists();
     });
   }
 );

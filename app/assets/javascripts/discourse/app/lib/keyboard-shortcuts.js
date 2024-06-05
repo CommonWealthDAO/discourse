@@ -1,19 +1,17 @@
-import { bind } from "discourse-common/utils/decorators";
-import discourseDebounce from "discourse-common/lib/debounce";
 import { getOwner, setOwner } from "@ember/application";
 import { run, throttle } from "@ember/runloop";
-import discourseLater from "discourse-common/lib/later";
+import { ajax } from "discourse/lib/ajax";
+import { headerOffset } from "discourse/lib/offset-calculator";
 import {
   nextTopicUrl,
   previousTopicUrl,
 } from "discourse/lib/topic-list-tracker";
-import Composer from "discourse/models/composer";
 import DiscourseURL from "discourse/lib/url";
-import domUtils from "discourse-common/utils/dom-utils";
-import { INPUT_DELAY } from "discourse-common/config/environment";
-import { ajax } from "discourse/lib/ajax";
-import { headerOffset } from "discourse/lib/offset-calculator";
+import Composer from "discourse/models/composer";
 import { capabilities } from "discourse/services/capabilities";
+import { INPUT_DELAY } from "discourse-common/config/environment";
+import discourseLater from "discourse-common/lib/later";
+import domUtils from "discourse-common/utils/dom-utils";
 
 let extraKeyboardShortcutsHelp = {};
 function addExtraKeyboardShortcutHelp(help) {
@@ -43,10 +41,13 @@ const DEFAULT_BINDINGS = {
   "!": { postAction: "showFlags" },
   "#": { handler: "goToPost", anonymous: true },
   "/": { handler: "toggleSearch", anonymous: true },
+  "meta+/": { handler: "filterSidebar", anonymous: true },
+  [`${PLATFORM_KEY_MODIFIER}+/`]: { handler: "filterSidebar", anonymous: true },
   "ctrl+alt+f": { handler: "toggleSearch", anonymous: true, global: true },
   "=": { handler: "toggleHamburgerMenu", anonymous: true },
   "?": { handler: "showHelpModal", anonymous: true },
   ".": { click: ".alert.alert-info.clickable", anonymous: true }, // show incoming/updated topics
+  a: { handler: "toggleArchivePM" },
   b: { handler: "toggleBookmark" },
   c: { handler: "createTopic" },
   "shift+c": { handler: "focusComposer" },
@@ -115,12 +116,14 @@ const DEFAULT_BINDINGS = {
   "shift+f11": { handler: "fullscreenComposer", global: true },
   "shift+u": { handler: "deferTopic" },
   "shift+a": { handler: "toggleAdminActions" },
+  "shift+b": { handler: "toggleBulkSelect" },
   t: { postAction: "replyAsNewTopic" },
   u: { handler: "goBack", anonymous: true },
-  "x r": {
-    click: "#dismiss-new-bottom,#dismiss-new-top",
-  }, // dismiss new
-  "x t": { click: "#dismiss-topics-bottom,#dismiss-topics-top" }, // dismiss topics
+  x: { handler: "bulkSelectItem" },
+  "shift+d": {
+    click:
+      "#dismiss-new-bottom, #dismiss-new-top, #dismiss-topics-bottom, #dismiss-topics-top",
+  }, // dismiss new or unread
 };
 
 const animationDuration = 100;
@@ -404,11 +407,18 @@ export default {
   },
 
   selectDown() {
-    this._moveSelection(1);
+    this._moveSelection({ direction: 1, scrollWithinPosts: true });
   },
 
   selectUp() {
-    this._moveSelection(-1);
+    this._moveSelection({ direction: -1, scrollWithinPosts: true });
+  },
+
+  bulkSelectItem() {
+    const elem = document.querySelector(
+      ".selected input.bulk-select, .selected .select-post"
+    );
+    elem?.click();
   },
 
   goBack() {
@@ -468,6 +478,15 @@ export default {
       event.stopPropagation();
     }
     composer.focusComposer(event);
+  },
+
+  filterSidebar() {
+    const filterInput = document.querySelector(".sidebar-filter__input");
+
+    if (filterInput) {
+      this._scrollTo(0);
+      filterInput.focus();
+    }
   },
 
   fullscreenComposer() {
@@ -641,7 +660,7 @@ export default {
     }
   },
 
-  _moveSelection(direction) {
+  _moveSelection({ direction, scrollWithinPosts }) {
     // Pressing a move key (J/K) very quick (i.e. keeping J or K pressed) will
     // move fast by disabling smooth page scrolling.
     const now = +new Date();
@@ -692,7 +711,7 @@ export default {
     let article = selected;
 
     // Try doing a page scroll in the context of current post.
-    if (!fast && direction !== 0 && article) {
+    if (!fast && direction !== 0 && article && scrollWithinPosts) {
       // The beginning of first article is the beginning of the page.
       const beginArticle =
         article.classList.contains("topic-post") &&
@@ -749,8 +768,11 @@ export default {
 
     for (const a of articles) {
       a.classList.remove("selected");
+      a.removeAttribute("tabindex");
     }
     article.classList.add("selected");
+    article.setAttribute("tabindex", "0");
+    article.focus();
 
     this.appEvents.trigger("keyboard:move-selection", {
       articles,
@@ -759,7 +781,12 @@ export default {
 
     const articleTop = domUtils.offset(article).top,
       articleTopPosition = articleTop - headerOffset();
-    if (!fast && direction < 0 && article.offsetHeight > window.innerHeight) {
+    if (
+      scrollWithinPosts &&
+      !fast &&
+      direction < 0 &&
+      article.offsetHeight > window.innerHeight
+    ) {
       // Scrolling to the last "page" of the previous post if post has multiple
       // "pages" (if its height does not fit in the screen).
       return this._scrollTo(
@@ -767,8 +794,7 @@ export default {
       );
     } else if (article.classList.contains("topic-post")) {
       return this._scrollTo(
-        article.querySelector("#post_1") ? 0 : articleTopPosition,
-        { focusTabLoc: true }
+        article.querySelector("#post_1") ? 0 : articleTopPosition
       );
     }
 
@@ -785,25 +811,11 @@ export default {
     this._scrollTo(articleTopPosition - window.innerHeight * scrollRatio);
   },
 
-  _scrollTo(scrollTop, opts = {}) {
+  _scrollTo(scrollTop) {
     window.scrollTo({
       top: scrollTop,
       behavior: "smooth",
     });
-
-    if (opts.focusTabLoc) {
-      window.addEventListener("scroll", this._onScrollEnds, { passive: true });
-    }
-  },
-
-  @bind
-  _onScrollEnds() {
-    window.removeEventListener("scroll", this._onScrollEnds, { passive: true });
-    discourseDebounce(this, this._onScrollEndsCallback, animationDuration);
-  },
-
-  _onScrollEndsCallback() {
-    document.querySelector(".topic-post.selected span.tabLoc")?.focus();
   },
 
   categoriesTopicsList() {
@@ -832,20 +844,26 @@ export default {
       );
     } else if (document.querySelector(".topic-list")) {
       return document.querySelectorAll(".topic-list .topic-list-item");
-    } else if ((categoriesTopicsList = this.categoriesTopicsList())) {
-      return categoriesTopicsList;
     } else if (document.querySelector(".search-results")) {
       return document.querySelectorAll(".search-results .fps-result");
+    } else if ((categoriesTopicsList = this.categoriesTopicsList())) {
+      return categoriesTopicsList;
     }
   },
 
   _changeSection(direction) {
-    const sections = Array.from(document.querySelectorAll(".nav.nav-pills li"));
-    const active = document.querySelector(".nav.nav-pills li.active");
-    const index = sections.indexOf(active) + direction;
+    if (document.querySelector(".post-stream")) {
+      this._moveSelection({ direction, scrollWithinPosts: false });
+    } else {
+      const sections = Array.from(
+        document.querySelectorAll(".nav.nav-pills li")
+      );
+      const active = document.querySelector(".nav.nav-pills li.active");
+      const index = sections.indexOf(active) + direction;
 
-    if (index >= 0 && index < sections.length) {
-      sections[index].querySelector("a")?.click();
+      if (index >= 0 && index < sections.length) {
+        sections[index].querySelector("a, button")?.click();
+      }
     }
   },
 
@@ -886,7 +904,21 @@ export default {
   },
 
   toggleAdminActions() {
-    this.appEvents.trigger("topic:toggle-actions");
+    document.querySelector(".toggle-admin-menu")?.click();
+  },
+
+  toggleBulkSelect() {
+    const bulkSelect = document.querySelector("button.bulk-select");
+
+    if (bulkSelect) {
+      bulkSelect.click();
+    } else {
+      getOwner(this).lookup("controller:topic").send("toggleMultiSelect");
+    }
+  },
+
+  toggleArchivePM() {
+    getOwner(this).lookup("controller:topic").send("toggleArchiveMessage");
   },
 
   webviewKeyboardBack() {

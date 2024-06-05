@@ -5,6 +5,7 @@
 {{/let}}
 
 <DiscourseTopic
+  {{sticky-avatars}}
   @multiSelect={{this.multiSelect}}
   @enteredAt={{this.enteredAt}}
   @topic={{this.model}}
@@ -16,10 +17,9 @@
       @tags={{this.model.tags}}
     />
     <AddTopicStatusClasses @topic={{this.model}} />
+    {{body-class (concat "archetype-" this.model.archetype)}}
     <div class="container">
       <DiscourseBanner
-        @user={{this.currentUser}}
-        @banner={{this.site.banner}}
         @overlay={{this.hasScrolled}}
         @hide={{this.model.errorLoading}}
       />
@@ -64,9 +64,9 @@
 
             {{#if this.showCategoryChooser}}
               <CategoryChooser
-                @class="small"
                 @value={{this.buffered.category_id}}
                 @onChange={{action "topicCategoryChanged"}}
+                class="small"
               />
             {{/if}}
 
@@ -155,7 +155,7 @@
                 href
                 {{on "click" this.editTopic}}
                 class="edit-topic"
-                title={{i18n "edit"}}
+                title={{i18n "edit_topic"}}
               >{{d-icon "pencil-alt"}}</a>
             {{/if}}
 
@@ -165,7 +165,7 @@
             />
           </h1>
 
-          <TopicCategory @topic={{this.model}} @class="topic-category" />
+          <TopicCategory @topic={{this.model}} class="topic-category" />
         {{/if}}
       </TopicTitle>
 
@@ -219,18 +219,21 @@
       <PluginOutlet @name="above-timeline" @connectorTagName="div" />
 
       <TopicNavigation
-        @class="topic-navigation"
         @topic={{this.model}}
         @jumpToDate={{action "jumpToDate"}}
         @jumpToIndex={{action "jumpToIndex"}}
+        class="topic-navigation"
         as |info|
       >
         <PluginOutlet
           @name="topic-navigation"
           @connectorTagName="div"
-          @outletArgs={{hash topic=this.model}}
+          @outletArgs={{hash
+            topic=this.model
+            renderTimeline=info.renderTimeline
+            topicProgressExpanded=info.topicProgressExpanded
+          }}
         />
-
         {{#if info.renderTimeline}}
           <TopicTimeline
             @info={{info}}
@@ -277,7 +280,7 @@
                 }}
               />
             </span>
-            <TopicAdminMenuButton
+            <TopicAdminMenu
               @topic={{this.model}}
               @openUpwards="true"
               @rightSide="true"
@@ -358,6 +361,8 @@
                 @toggleWiki={{action "toggleWiki"}}
                 @showTopReplies={{action "showTopReplies"}}
                 @cancelFilter={{action "cancelFilter"}}
+                @collapseSummary={{action "collapseSummary"}}
+                @showSummary={{action "showSummary"}}
                 @removeAllowedUser={{action "removeAllowedUser"}}
                 @removeAllowedGroup={{action "removeAllowedGroup"}}
                 @topVisibleChanged={{action "topVisibleChanged"}}
@@ -388,7 +393,10 @@
               {{#if this.model.pending_posts}}
                 <div class="pending-posts">
                   {{#each this.model.pending_posts as |pending|}}
-                    <div class="reviewable-item">
+                    <div
+                      class="reviewable-item"
+                      data-reviewable-id={{pending.id}}
+                    >
                       <div class="reviewable-meta-data">
                         <span class="reviewable-type">
                           {{i18n "review.awaiting_approval"}}
@@ -413,6 +421,10 @@
                         </div>
                       </div>
                       <div class="reviewable-actions">
+                        <PluginOutlet
+                          @name="topic-additional-reviewable-actions"
+                          @outletArgs={{hash pending=pending}}
+                        />
                         <DButton
                           @label="review.delete"
                           @icon="trash-alt"
@@ -458,6 +470,7 @@
               <TopicTimerInfo
                 @topicClosed={{this.model.closed}}
                 @statusType={{this.model.topic_timer.status_type}}
+                @statusUpdate={{this.model.topic_status_update}}
                 @executeAt={{this.model.topic_timer.execute_at}}
                 @basedOnLastPost={{this.model.topic_timer.based_on_last_post}}
                 @durationMinutes={{this.model.topic_timer.duration_minutes}}
@@ -496,6 +509,11 @@
             {{/if}}
           </ConditionalLoadingSpinner>
 
+          <PluginOutlet
+            @name="topic-area-bottom"
+            @connectorTagName="div"
+            @outletArgs={{hash model=this.model}}
+          />
         </section>
       </div>
 
@@ -538,12 +556,7 @@
           />
         {{else}}
           <div id="topic-footer-buttons">
-            <DButton
-              @icon="reply"
-              @action={{route-action "showLogin"}}
-              @label="topic.reply.title"
-              class="btn-primary pull-right"
-            />
+            <AnonymousTopicFooterButtons @topic={{this.model}} />
           </div>
         {{/if}}
       {{/if}}
@@ -559,6 +572,10 @@
       </span>
 
       <MoreTopics @topic={{this.model}} />
+      <PluginOutlet
+        @name="topic-below-suggested"
+        @outletArgs={{hash model=this.model}}
+      />
     {{/if}}
   {{else}}
     <div class="container">
@@ -592,9 +609,10 @@
     </div>
   {{/if}}
 
-  <QuoteButton
+  <PostTextSelection
     @quoteState={{this.quoteState}}
     @selectText={{action "selectText"}}
+    @buildQuoteMarkdown={{this.buildQuoteMarkdown}}
     @editPost={{action "editPost"}}
     @topic={{this.model}}
   />

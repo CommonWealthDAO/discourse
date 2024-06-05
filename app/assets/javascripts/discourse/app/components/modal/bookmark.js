@@ -1,24 +1,23 @@
 import Component from "@glimmer/component";
-import { extractError } from "discourse/lib/ajax-error";
-import { sanitize } from "discourse/lib/text";
-import { CLOSE_INITIATED_BY_CLICK_OUTSIDE } from "discourse/components/d-modal";
-import { inject as service } from "@ember/service";
 import { tracked } from "@glimmer/tracking";
-import { now, parseCustomDatetime, startOfDay } from "discourse/lib/time-utils";
-import { AUTO_DELETE_PREFERENCES } from "discourse/models/bookmark";
-import I18n from "I18n";
-import KeyboardShortcuts from "discourse/lib/keyboard-shortcuts";
+import { action } from "@ember/object";
+import { and, notEmpty } from "@ember/object/computed";
+import { service } from "@ember/service";
 import ItsATrap from "@discourse/itsatrap";
 import { Promise } from "rsvp";
-import {
-  TIME_SHORTCUT_TYPES,
-  defaultTimeShortcuts,
-} from "discourse/lib/time-shortcut";
-import { action } from "@ember/object";
-import { ajax } from "discourse/lib/ajax";
+import { CLOSE_INITIATED_BY_CLICK_OUTSIDE } from "discourse/components/d-modal";
+import { extractError } from "discourse/lib/ajax-error";
 import { formattedReminderTime } from "discourse/lib/bookmark";
-import { and, notEmpty } from "@ember/object/computed";
+import KeyboardShortcuts from "discourse/lib/keyboard-shortcuts";
+import { sanitize } from "discourse/lib/text";
+import {
+  defaultTimeShortcuts,
+  TIME_SHORTCUT_TYPES,
+} from "discourse/lib/time-shortcut";
+import { now, parseCustomDatetime, startOfDay } from "discourse/lib/time-utils";
+import { AUTO_DELETE_PREFERENCES } from "discourse/models/bookmark";
 import discourseLater from "discourse-common/lib/later";
+import I18n from "discourse-i18n";
 
 const BOOKMARK_BINDINGS = {
   enter: { handler: "saveAndClose" },
@@ -29,6 +28,7 @@ export default class BookmarkModal extends Component {
   @service dialog;
   @service currentUser;
   @service site;
+  @service bookmarkApi;
 
   @tracked postDetectedLocalDate = null;
   @tracked postDetectedLocalTime = null;
@@ -128,6 +128,7 @@ export default class BookmarkModal extends Component {
   }
 
   willDestroy() {
+    super.willDestroy(...arguments);
     this._itsatrap?.destroy();
     this._itsatrap = null;
     KeyboardShortcuts.unpause();
@@ -176,6 +177,7 @@ export default class BookmarkModal extends Component {
   onTimeSelected(type, time) {
     this.bookmark.selectedReminderType = type;
     this.bookmark.selectedDatetime = time;
+    this.bookmark.reminderAt = time;
 
     // If the type is custom, we need to wait for the user to click save, as
     // they could still be adjusting the date and time
@@ -263,31 +265,19 @@ export default class BookmarkModal extends Component {
     }
 
     if (this.editingExistingBookmark) {
-      return ajax(`/bookmarks/${this.bookmark.id}`, {
-        type: "PUT",
-        data: this.bookmark.saveData,
-      }).then(() => {
-        this.args.model.afterSave?.(this.bookmark.saveData);
+      return this.bookmarkApi.update(this.bookmark).then(() => {
+        this.args.model.afterSave?.(this.bookmark);
       });
     } else {
-      return ajax("/bookmarks", {
-        type: "POST",
-        data: this.bookmark.saveData,
-      }).then((response) => {
-        this.bookmark.id = response.id;
-        this.args.model.afterSave?.(this.bookmark.saveData);
+      return this.bookmarkApi.create(this.bookmark).then(() => {
+        this.args.model.afterSave?.(this.bookmark);
       });
     }
   }
 
   #deleteBookmark() {
-    return ajax("/bookmarks/" + this.bookmark.id, {
-      type: "DELETE",
-    }).then((response) => {
-      this.args.model.afterDelete?.(
-        response.topic_bookmarked,
-        this.bookmark.id
-      );
+    return this.bookmarkApi.delete(this.bookmark.id).then((response) => {
+      this.args.model.afterDelete?.(response, this.bookmark.id);
     });
   }
 

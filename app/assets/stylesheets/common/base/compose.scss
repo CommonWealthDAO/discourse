@@ -21,11 +21,15 @@ html.composer-open {
     max-width: 740px;
   }
 
-  &:has(.has-form-template) {
-    max-width: 740px;
-
-    .toggle-preview {
+  .with-form-template {
+    .toggle-preview,
+    #mobile-file-upload,
+    .submit-panel .mobile-preview {
       display: none;
+    }
+    .d-editor-preview-wrapper {
+      display: none;
+      flex: 0;
     }
   }
 
@@ -41,6 +45,11 @@ html.composer-open {
   .reply-area {
     display: flex;
     flex-direction: column;
+
+    &.with-form-template {
+      max-height: 100%;
+      box-sizing: border-box;
+    }
   }
 
   .saving-text,
@@ -167,10 +176,6 @@ html.composer-open {
       display: flex;
       gap: 8px;
       margin-left: 8px;
-
-      .d-icon {
-        color: var(--primary-medium);
-      }
     }
   }
 
@@ -249,6 +254,12 @@ html.composer-open {
       max-width: 100%;
       width: auto;
 
+      &.has-selection {
+        .name {
+          font-size: var(--font-up-1);
+        }
+      }
+
       .select-kit-header {
         color: var(--primary-high);
         white-space: nowrap;
@@ -259,21 +270,19 @@ html.composer-open {
         max-width: 450px;
       }
 
-      // below needed for text-overflow: ellipsis;
       .selected-name {
         max-width: 100%;
         overflow: hidden;
         .name {
-          max-width: 100%;
-          overflow: hidden;
           display: flex;
-          .badge-wrapper {
+          max-width: 100%;
+          gap: 0 0.5em;
+          .badge-category {
             overflow: hidden;
           }
           // This prevents the first category from being too-truncated at the expense of a long subcategory
-          .badge-wrapper:first-of-type:not(:last-of-type) {
-            flex: 1 0 auto;
-            max-width: 50%;
+          > span:last-of-type:not(:first-of-type) {
+            flex-shrink: 10;
           }
         }
       }
@@ -317,7 +326,8 @@ html.composer-open {
 
   .category-input + .mini-tag-chooser {
     margin-left: 8px;
-    width: unset;
+    width: auto;
+    max-width: calc(50% - 4px);
   }
 
   .mini-tag-chooser {
@@ -424,8 +434,8 @@ html.composer-open {
 .autocomplete {
   z-index: z("composer", "dropdown") + 1;
   position: absolute;
-  max-width: 300px;
-  width: 300px;
+  max-width: 370px;
+  min-width: 300px;
   background-color: var(--secondary);
   border: 1px solid var(--primary-low);
   box-shadow: var(--shadow-dropdown);

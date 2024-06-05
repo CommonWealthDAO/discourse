@@ -2,8 +2,8 @@
 
 RSpec.describe TopicsFilter do
   fab!(:user) { Fabricate(:user, username: "username") }
-  fab!(:admin) { Fabricate(:admin) }
-  fab!(:group) { Fabricate(:group) }
+  fab!(:admin)
+  fab!(:group)
 
   describe "#filter_from_query_string" do
     describe "when filtering with multiple filters" do
@@ -25,7 +25,7 @@ RSpec.describe TopicsFilter do
     end
 
     describe "when filtering with the `in` filter" do
-      fab!(:topic) { Fabricate(:topic) }
+      fab!(:topic)
 
       fab!(:pinned_topic) do
         Fabricate(:topic, pinned_at: Time.zone.now, pinned_until: 1.hour.from_now)
@@ -613,10 +613,24 @@ RSpec.describe TopicsFilter do
     end
 
     describe "when filtering by status" do
-      fab!(:topic) { Fabricate(:topic) }
+      fab!(:topic)
       fab!(:closed_topic) { Fabricate(:topic, closed: true) }
       fab!(:archived_topic) { Fabricate(:topic, archived: true) }
       fab!(:deleted_topic_id) { Fabricate(:topic, deleted_at: Time.zone.now).id }
+      fab!(:foobar_topic) { Fabricate(:topic, closed: true, word_count: 42) }
+
+      after { TopicsFilter.custom_status_filters.clear }
+
+      it "supports custom status filters" do
+        TopicsFilter.add_filter_by_status("foobar") { |scope| scope.where("word_count = 42") }
+
+        expect(
+          TopicsFilter
+            .new(guardian: Guardian.new)
+            .filter_from_query_string("status:foobar")
+            .pluck(:id),
+        ).to contain_exactly(foobar_topic.id)
+      end
 
       it "should only return topics that have not been closed or archived when query string is `status:open`" do
         expect(
@@ -642,7 +656,7 @@ RSpec.describe TopicsFilter do
             .new(guardian: Guardian.new)
             .filter_from_query_string("status:deleted")
             .pluck(:id),
-        ).to contain_exactly(topic.id, closed_topic.id, archived_topic.id)
+        ).to contain_exactly(topic.id, closed_topic.id, archived_topic.id, foobar_topic.id)
       end
 
       it "should only return topics that have been archived when query string is `status:archived`" do
@@ -714,7 +728,7 @@ RSpec.describe TopicsFilter do
       fab!(:tag3) { Fabricate(:tag, name: "tag3") }
 
       fab!(:group_only_tag) { Fabricate(:tag, name: "group-only-tag") }
-      fab!(:group) { Fabricate(:group) }
+      fab!(:group)
 
       let!(:staff_tag_group) do
         Fabricate(

@@ -1,13 +1,13 @@
-import { classNameBindings, classNames } from "@ember-decorators/component";
 import Component from "@ember/component";
+import { classNameBindings, classNames } from "@ember-decorators/component";
 import highlightHTML from "discourse/lib/highlight-html";
-import { on } from "@ember-decorators/object";
 
 @classNames("site-text")
 @classNameBindings("siteText.overridden")
 export default class SiteTextSummary extends Component {
-  @on("didInsertElement")
-  highlightTerm() {
+  didInsertElement() {
+    super.didInsertElement(...arguments);
+
     const term = this._searchTerm();
 
     if (term) {

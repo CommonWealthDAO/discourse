@@ -4,8 +4,8 @@
 # TODO - test pinning, create_moderator_post
 
 RSpec.describe TopicStatusUpdater do
-  fab!(:user) { Fabricate(:user) }
-  fab!(:admin) { Fabricate(:admin) }
+  fab!(:user) { Fabricate(:user, refresh_auto_groups: true) }
+  fab!(:admin)
 
   it "avoids notifying on automatically closed topics" do
     # TODO: TopicStatusUpdater should suppress message bus updates from the users it "pretends to read"
@@ -203,6 +203,25 @@ RSpec.describe TopicStatusUpdater do
       updated = TopicStatusUpdater.new(topic, admin).update!("autoclosed", false)
       expect(updated).to eq(false)
       expect(topic.posts.where(post_type: Post.types[:small_action]).count).to eq(2)
+    end
+
+    it "sets visibility_reason_id" do
+      topic = Fabricate(:topic)
+
+      updated = TopicStatusUpdater.new(topic, admin).update!("visible", false)
+      expect(updated).to eq(true)
+      expect(topic.visible).to eq(false)
+      expect(topic.visibility_reason_id).to eq(Topic.visibility_reasons[:unknown])
+
+      updated =
+        TopicStatusUpdater.new(topic, admin).update!(
+          "visible",
+          true,
+          { visibility_reason_id: Topic.visibility_reasons[:manually_relisted] },
+        )
+      expect(updated).to eq(true)
+      expect(topic.visible).to eq(true)
+      expect(topic.visibility_reason_id).to eq(Topic.visibility_reasons[:manually_relisted])
     end
   end
 end

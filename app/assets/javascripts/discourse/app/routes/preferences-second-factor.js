@@ -1,29 +1,30 @@
-import RestrictedUserRoute from "discourse/routes/restricted-user";
 import { action } from "@ember/object";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
+import RestrictedUserRoute from "discourse/routes/restricted-user";
 
-export default RestrictedUserRoute.extend({
-  currentUser: service(),
-  siteSettings: service(),
+export default class PreferencesSecondFactor extends RestrictedUserRoute {
+  @service currentUser;
+  @service siteSettings;
+  @service router;
 
   model() {
     return this.modelFor("user");
-  },
+  }
 
   setupController(controller, model) {
     controller.setProperties({ model, newUsername: model.username });
     controller.set("loading", true);
 
     model
-      .loadSecondFactorCodes("")
+      .loadSecondFactorCodes()
       .then((response) => {
         if (response.error) {
           controller.set("errorMessage", response.error);
+        } else if (response.unconfirmed_session) {
+          this.router.transitionTo("preferences.security");
         } else {
           controller.setProperties({
             errorMessage: null,
-            loaded: !response.password_required,
-            dirty: !!response.password_required,
             totps: response.totps,
             security_keys: response.security_keys,
           });
@@ -31,11 +32,11 @@ export default RestrictedUserRoute.extend({
       })
       .catch(controller.popupAjaxError)
       .finally(() => controller.set("loading", false));
-  },
+  }
 
   @action
   willTransition(transition) {
-    this._super(...arguments);
+    super.willTransition(...arguments);
 
     if (
       transition.targetName === "preferences.second-factor" ||
@@ -51,5 +52,5 @@ export default RestrictedUserRoute.extend({
 
     transition.abort();
     return false;
-  },
-});
+  }
+}

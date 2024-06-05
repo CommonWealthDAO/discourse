@@ -1,11 +1,11 @@
 import Component from "@glimmer/component";
-import { action } from "@ember/object";
-import { inject as service } from "@ember/service";
 import { tracked } from "@glimmer/tracking";
-import I18n from "I18n";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
+import { reload } from "discourse/helpers/page-reloader";
 import { MAX_MESSAGE_LENGTH } from "discourse/models/post-action-type";
 import User from "discourse/models/user";
-import { reload } from "discourse/helpers/page-reloader";
+import I18n from "discourse-i18n";
 
 const NOTIFY_MODERATORS_KEY = "notify_moderators";
 
@@ -19,6 +19,7 @@ export default class Flag extends Component {
   @tracked userDetails;
   @tracked selected;
   @tracked message;
+  @tracked isConfirmed = false;
   @tracked isWarning = false;
   @tracked spammerDetails;
 
@@ -36,7 +37,7 @@ export default class Flag extends Component {
       label: I18n.t("flagging.take_action"),
       actions: [
         {
-          id: "agree_and_keep",
+          id: "agree_and_hide",
           icon: "thumbs-up",
           label: I18n.t("flagging.take_action_options.default.title"),
           description: I18n.t("flagging.take_action_options.default.details"),
@@ -67,6 +68,10 @@ export default class Flag extends Component {
     );
   }
 
+  get showDeleteSpammer() {
+    return this.spammerDetails?.canDelete && this.selected?.name_key === "spam";
+  }
+
   get submitLabel() {
     if (this.selected?.is_custom_flag) {
       return this.args.model.flagTarget.customSubmitLabel();
@@ -80,7 +85,7 @@ export default class Flag extends Component {
   }
 
   get flagsAvailable() {
-    return this.args.model.flagTarget.flagsAvailable(this);
+    return this.args.model.flagTarget.flagsAvailable(this).filterBy("enabled");
   }
 
   get staffFlagsAvailable() {
@@ -94,6 +99,10 @@ export default class Flag extends Component {
 
     if (!this.selected.is_custom_flag) {
       return true;
+    }
+
+    if (this.selected.isIllegal && !this.isConfirmed) {
+      return false;
     }
 
     const len = this.message?.length || 0;

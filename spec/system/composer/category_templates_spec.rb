@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe "Composer Form Templates", type: :system do
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user) { Fabricate(:user, refresh_auto_groups: true) }
   fab!(:form_template_1) do
     Fabricate(
       :form_template,
@@ -54,6 +54,31 @@ describe "Composer Form Templates", type: :system do
             label: "Any additional docs"
             validations:
             required: false"),
+    )
+  end
+  fab!(:form_template_6) do
+    Fabricate(
+      :form_template,
+      name: "Descriptions",
+      template:
+        %Q(
+        - type: input
+          id: full-name
+          attributes:
+            label: "Full name"
+            description: "What is your full name?"
+            placeholder: "John Smith"
+          validations:
+            required: false
+        - type: upload
+          id: prescription
+          attributes:
+            file_types: ".jpg, .png"
+            allow_multiple: false
+            label: "Prescription"
+            description: "Upload your prescription"
+          validations:
+            required: true"),
     )
   end
   fab!(:category_with_template_1) do
@@ -114,6 +139,15 @@ describe "Composer Form Templates", type: :system do
       topic_template: "Testing",
     )
   end
+  fab!(:category_with_template_6) do
+    Fabricate(
+      :category,
+      name: "Descriptions",
+      slug: "descriptions",
+      topic_count: 2,
+      form_template_ids: [form_template_6.id],
+    )
+  end
 
   let(:category_page) { PageObjects::Pages::Category.new }
   let(:composer) { PageObjects::Components::Composer.new }
@@ -124,6 +158,77 @@ describe "Composer Form Templates", type: :system do
     SiteSetting.experimental_form_templates = true
     SiteSetting.authorized_extensions = "*"
     sign_in user
+  end
+
+  describe "discard draft modal" do
+    it "does not show the modal if there is no draft on a topic without a template" do
+      category_page.visit(category_no_template)
+      category_page.new_topic_button.click
+      composer.close
+      expect(composer).to be_closed
+    end
+
+    it "shows the modal if there is a draft on a topic without a template" do
+      category_page.visit(category_no_template)
+      category_page.new_topic_button.click
+      composer.fill_content("abc")
+      composer.close
+      expect(composer).to be_opened
+      expect(composer).to have_discard_draft_modal
+    end
+
+    it "does not show the modal if there is no draft on a topic with a topic template" do
+      category_page.visit(category_topic_template)
+      category_page.new_topic_button.click
+      composer.close
+      expect(composer).to be_closed
+    end
+
+    it "shows the modal if there is a draft on a topic with a topic template" do
+      category_page.visit(category_topic_template)
+      category_page.new_topic_button.click
+      composer.append_content(" some more content")
+      composer.close
+      expect(composer).to be_opened
+      expect(composer).to have_discard_draft_modal
+    end
+
+    it "does not show the modal if on a topic with a form template" do
+      category_page.visit(category_with_template_1)
+      category_page.new_topic_button.click
+      composer.close
+      expect(composer).to be_closed
+    end
+
+    context "when the default template has a topic template" do
+      SiteSetting.default_composer_category =
+        (
+          if SiteSetting.general_category_id != -1
+            SiteSetting.general_category_id
+          else
+            SiteSetting.uncategorized_category_id
+          end
+        )
+      let(:default_category) { Category.find(SiteSetting.default_composer_category) }
+
+      before { default_category.update!(topic_template: "Testing") }
+
+      it "does not show the modal if there is no draft" do
+        category_page.visit(default_category)
+        category_page.new_topic_button.click
+        composer.close
+        expect(composer).to be_closed
+      end
+
+      it "shows the modal if there is a draft" do
+        category_page.visit(default_category)
+        category_page.new_topic_button.click
+        composer.append_content(" some more content")
+        composer.close
+        expect(composer).to be_opened
+        expect(composer).to have_discard_draft_modal
+      end
+    end
   end
 
   it "shows a textarea when no form template is assigned to the category" do
@@ -265,6 +370,7 @@ describe "Composer Form Templates", type: :system do
     expect(find("#dialog-holder .dialog-body p", visible: :all)).to have_content(
       I18n.t("js.pick_files_button.unsupported_file_picked", { types: ".jpg, .png" }),
     )
+    expect(page).to have_no_css(".form-template-field__uploaded-files")
   end
 
   it "creates a post with multiple uploads" do
@@ -291,6 +397,39 @@ describe "Composer Form Templates", type: :system do
     )
     expect(find("#{topic_page.post_by_number_selector(1)} .cooked")).to have_css("a.attachment")
     expect(find("#{topic_page.post_by_number_selector(1)} .cooked")).to have_css("audio")
-    expect(find("#{topic_page.post_by_number_selector(1)} .cooked")).to have_css("video")
+    expect(find("#{topic_page.post_by_number_selector(1)} .cooked")).to have_css(
+      ".video-placeholder-container",
+    )
+  end
+
+  it "overrides uploaded file if allow_multiple false" do
+    topic_title = "Peter Parker's Medication"
+
+    category_page.visit(category_with_upload_template)
+    category_page.new_topic_button.click
+    attach_file "prescription-uploader",
+                "#{Rails.root}/spec/fixtures/images/logo.png",
+                make_visible: true
+    composer.fill_title(topic_title)
+    attach_file "prescription-uploader",
+                "#{Rails.root}/spec/fixtures/images/fake.jpg",
+                make_visible: true
+
+    expect(find(".form-template-field__uploaded-files")).to have_css("li", count: 1)
+  end
+
+  it "shows labels and descriptions when a form template is assigned to the category" do
+    category_page.visit(category_with_template_6)
+    category_page.new_topic_button.click
+    expect(composer).to have_no_composer_input
+    expect(composer).to have_form_template
+
+    expect(composer).to have_form_template_field("input")
+    expect(composer).to have_form_template_field_label("Full name")
+    expect(composer).to have_form_template_field_description("What is your full name?")
+
+    expect(composer).to have_form_template_field("upload")
+    expect(composer).to have_form_template_field_label("Prescription")
+    expect(composer).to have_form_template_field_description("Upload your prescription")
   end
 end

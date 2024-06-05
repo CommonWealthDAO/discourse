@@ -1,22 +1,15 @@
-import Component from "@ember/component";
-import { ajax } from "discourse/lib/ajax";
-import { isEmpty } from "@ember/utils";
-import { extractError } from "discourse/lib/ajax-error";
-import { inject as service } from "@ember/service";
-import I18n from "I18n";
-import { sanitize } from "discourse/lib/text";
 import { cached, tracked } from "@glimmer/tracking";
 import { A } from "@ember/array";
-import { SIDEBAR_SECTION, SIDEBAR_URL } from "discourse/lib/constants";
-import { bind } from "discourse-common/utils/decorators";
+import Component from "@ember/component";
 import { action } from "@ember/object";
-import RouteInfoHelper from "discourse/lib/sidebar/route-info-helper";
-
-const FULL_RELOAD_LINKS_REGEX = [
-  /^\/my\/[a-z_\-\/]+$/,
-  /^\/pub\/[a-z_\-\/]+$/,
-  /^\/safe-mode$/,
-];
+import { service } from "@ember/service";
+import { isEmpty } from "@ember/utils";
+import { ajax } from "discourse/lib/ajax";
+import { extractError } from "discourse/lib/ajax-error";
+import { SIDEBAR_SECTION, SIDEBAR_URL } from "discourse/lib/constants";
+import { sanitize } from "discourse/lib/text";
+import { afterRender, bind } from "discourse-common/utils/decorators";
+import I18n from "discourse-i18n";
 
 class Section {
   @tracked title;
@@ -173,17 +166,6 @@ class SectionLink {
     return this.value === undefined || this.validValue ? "" : "warning";
   }
 
-  get external() {
-    return (
-      this.value &&
-      !(
-        this.value.startsWith(this.httpHost) ||
-        this.value.startsWith(this.httpsHost) ||
-        this.value.startsWith("/")
-      )
-    );
-  }
-
   get isPrimary() {
     return this.segment === "primary";
   }
@@ -213,27 +195,15 @@ class SectionLink {
   }
 
   get #invalidValue() {
-    return (
-      this.path &&
-      (this.external ? !this.#validExternal() : !this.#validInternal())
-    );
+    return this.path && !this.#validLink();
   }
 
-  #validExternal() {
+  #validLink() {
     try {
-      return new URL(this.value);
+      return new URL(this.value, document.location.origin);
     } catch {
       return false;
     }
-  }
-
-  #validInternal() {
-    const routeInfoHelper = new RouteInfoHelper(this.router, this.path);
-
-    return (
-      routeInfoHelper.route !== "unknown" ||
-      FULL_RELOAD_LINKS_REGEX.some((regex) => this.path.match(regex))
-    );
   }
 }
 
@@ -328,6 +298,23 @@ export default class SidebarSectionForm extends Component {
   }
 
   update() {
+    this.wasPublic || this.isPublic
+      ? this.#updateWithConfirm()
+      : this.#updateCall();
+  }
+
+  #updateWithConfirm() {
+    return this.dialog.yesNoConfirm({
+      message: this.isPublic
+        ? I18n.t("sidebar.sections.custom.update_public_confirm")
+        : I18n.t("sidebar.sections.custom.mark_as_private_confirm"),
+      didConfirm: () => {
+        return this.#updateCall();
+      },
+    });
+  }
+
+  #updateCall() {
     return ajax(`/sidebar_sections/${this.transformedModel.id}`, {
       type: "PUT",
       contentType: "application/json",
@@ -383,39 +370,52 @@ export default class SidebarSectionForm extends Component {
       : "sidebar.sections.custom.add";
   }
 
+  get isPublic() {
+    return this.transformedModel.public;
+  }
+
+  get wasPublic() {
+    return this.model?.section?.public;
+  }
+
+  @afterRender
+  focusNewRowInput(id) {
+    document
+      .querySelector(`[data-row-id="${id}"] .icon-picker summary`)
+      .focus();
+  }
+
   @bind
-  reorder(linkFromId, linkTo, above) {
-    if (linkFromId === linkTo.objectId) {
+  setDraggedLink(link) {
+    this.draggedLink = link;
+  }
+
+  @bind
+  reorder(targetLink, above) {
+    if (this.draggedLink === targetLink) {
       return;
     }
-    let linkFrom = this.transformedModel.links.find(
-      (link) => link.objectId === linkFromId
-    );
-    if (!linkFrom) {
-      linkFrom = this.transformedModel.secondaryLinks.find(
-        (link) => link.objectId === linkFromId
-      );
-    }
 
-    if (linkFrom.isPrimary) {
-      this.transformedModel.links.removeObject(linkFrom);
+    if (this.draggedLink.isPrimary) {
+      this.transformedModel.links.removeObject(this.draggedLink);
     } else {
-      this.transformedModel.secondaryLinks?.removeObject(linkFrom);
+      this.transformedModel.secondaryLinks?.removeObject(this.draggedLink);
     }
 
-    if (linkTo.isPrimary) {
-      const toPosition = this.transformedModel.links.indexOf(linkTo);
-      linkFrom.segment = "primary";
+    if (targetLink.isPrimary) {
+      const toPosition = this.transformedModel.links.indexOf(targetLink);
+      this.draggedLink.segment = "primary";
       this.transformedModel.links.insertAt(
         above ? toPosition : toPosition + 1,
-        linkFrom
+        this.draggedLink
       );
     } else {
-      linkFrom.segment = "secondary";
-      const toPosition = this.transformedModel.secondaryLinks.indexOf(linkTo);
+      this.draggedLink.segment = "secondary";
+      const toPosition =
+        this.transformedModel.secondaryLinks.indexOf(targetLink);
       this.transformedModel.secondaryLinks.insertAt(
         above ? toPosition : toPosition + 1,
-        linkFrom
+        this.draggedLink
       );
     }
   }
@@ -447,6 +447,8 @@ export default class SidebarSectionForm extends Component {
         segment: "primary",
       })
     );
+
+    this.focusNewRowInput(this.nextObjectId);
   }
 
   @action
@@ -459,6 +461,8 @@ export default class SidebarSectionForm extends Component {
         segment: "secondary",
       })
     );
+
+    this.focusNewRowInput(this.nextObjectId);
   }
 
   @action
@@ -481,6 +485,9 @@ export default class SidebarSectionForm extends Component {
             this.flashType = "error";
           });
       },
+      didCancel: () => {
+        this.closeModal();
+      },
     });
   }
 
@@ -492,7 +499,9 @@ export default class SidebarSectionForm extends Component {
   @action
   delete() {
     return this.dialog.yesNoConfirm({
-      message: I18n.t("sidebar.sections.custom.delete_confirm"),
+      message: this.model.section.public
+        ? I18n.t("sidebar.sections.custom.delete_public_confirm")
+        : I18n.t("sidebar.sections.custom.delete_confirm"),
       didConfirm: () => {
         return ajax(`/sidebar_sections/${this.transformedModel.id}`, {
           type: "DELETE",

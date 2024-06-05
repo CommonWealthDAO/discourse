@@ -1,11 +1,19 @@
 # frozen_string_literal: true
 
 class ThemeField < ActiveRecord::Base
+  MIGRATION_NAME_PART_MAX_LENGTH = 150
+
+  # This string is not 'secret'. It's just randomized to avoid accidental clashes with genuine theme field content.
+  CSP_NONCE_PLACEHOLDER = "__CSP__NONCE__PLACEHOLDER__f72bff1b1768168a34ee092ce759f192__"
+
   belongs_to :upload
   has_one :javascript_cache, dependent: :destroy
   has_one :upload_reference, as: :target, dependent: :destroy
+  has_one :theme_settings_migration
 
   validates :value, { length: { maximum: 1024**2 } }
+
+  validate :migration_filename_is_valid, if: :migration_field?
 
   after_save do
     if self.type_id == ThemeField.types[:theme_upload_var] && saved_change_to_upload_id?
@@ -14,19 +22,19 @@ class ThemeField < ActiveRecord::Base
   end
 
   scope :find_by_theme_ids,
-        ->(theme_ids) {
-          return none unless theme_ids.present?
+        ->(theme_ids) do
+          return none if theme_ids.blank?
 
           where(theme_id: theme_ids).joins(
             "JOIN (
           SELECT #{theme_ids.map.with_index { |id, idx| "#{id.to_i} AS theme_id, #{idx} AS theme_sort_column" }.join(" UNION ALL SELECT ")}
         ) as X ON X.theme_id = theme_fields.theme_id",
           ).order("theme_sort_column")
-        }
+        end
 
   scope :filter_locale_fields,
-        ->(locale_codes) {
-          return none unless locale_codes.present?
+        ->(locale_codes) do
+          return none if locale_codes.blank?
 
           where(target_id: Theme.targets[:translations], name: locale_codes).joins(
             DB.sql_fragment(
@@ -36,20 +44,20 @@ class ThemeField < ActiveRecord::Base
               *locale_codes.map.with_index { |code, index| [code, index] },
             ),
           ).order("Y.locale_sort_column")
-        }
+        end
 
   scope :find_first_locale_fields,
-        ->(theme_ids, locale_codes) {
+        ->(theme_ids, locale_codes) do
           find_by_theme_ids(theme_ids)
             .filter_locale_fields(locale_codes)
             .reorder("X.theme_sort_column", "Y.locale_sort_column")
             .select("DISTINCT ON (X.theme_sort_column) *")
-        }
+        end
 
   scope :svg_sprite_fields,
-        -> {
+        -> do
           where(type_id: ThemeField.theme_var_type_ids, name: SvgSprite.theme_sprite_variable_name)
-        }
+        end
 
   def self.types
     @types ||=
@@ -149,6 +157,7 @@ class ThemeField < ActiveRecord::Base
           js_compiler.append_module(
             js,
             "discourse/initializers/#{initializer_name}",
+            "js",
             include_variables: true,
           )
         rescue ThemeJavascriptCompiler::CompileError => ex
@@ -162,12 +171,15 @@ class ThemeField < ActiveRecord::Base
     doc
       .css("script")
       .each_with_index do |node, index|
-        next unless inline_javascript?(node)
-        js_compiler.append_raw_script(
-          "_html/#{Theme.targets[self.target_id]}/#{name}_#{index + 1}.js",
-          node.inner_html,
-        )
-        node.remove
+        if inline_javascript?(node)
+          js_compiler.append_raw_script(
+            "_html/#{Theme.targets[self.target_id]}/#{name}_#{index + 1}.js",
+            node.inner_html,
+          )
+          node.remove
+        else
+          node["nonce"] = CSP_NONCE_PLACEHOLDER
+        end
       end
 
     settings_hash = theme.build_settings_hash
@@ -179,9 +191,8 @@ class ThemeField < ActiveRecord::Base
     javascript_cache.save!
 
     doc.add_child(<<~HTML.html_safe) if javascript_cache.content.present?
-          <link rel="preload" href="#{javascript_cache.url}" as="script">
-          <script defer src='#{javascript_cache.url}' data-theme-id='#{theme_id}'></script>
-        HTML
+      <script defer src='#{javascript_cache.url}' data-theme-id='#{theme_id}' nonce="#{CSP_NONCE_PLACEHOLDER}"></script>
+    HTML
     [doc.to_s, errors&.join("\n")]
   end
 
@@ -204,7 +215,11 @@ class ThemeField < ActiveRecord::Base
 
     begin
       content = File.read(path)
-      Nokogiri.XML(content) { |config| config.options = Nokogiri::XML::ParseOptions::NOBLANKS }
+      if content.to_s.bytesize > SvgSprite::MAX_THEME_SPRITE_SIZE
+        error = "Error with #{self.name}: Icon sprite file is too large"
+      else
+        Nokogiri.XML(content) { |config| config.options = Nokogiri::XML::ParseOptions::NOBLANKS }
+      end
     rescue => e
       error = "Error with #{self.name}: #{e.inspect}"
     end
@@ -272,6 +287,7 @@ class ThemeField < ActiveRecord::Base
       js_compiler.append_module(
         js,
         "discourse/pre-initializers/theme-#{theme_id}-translations",
+        "js",
         include_variables: false,
       )
     rescue ThemeTranslationParser::InvalidYaml => e
@@ -283,8 +299,7 @@ class ThemeField < ActiveRecord::Base
     javascript_cache.save!
     doc = ""
     doc = <<~HTML.html_safe if javascript_cache.content.present?
-          <link rel="preload" href="#{javascript_cache.url}" as="script">
-          <script defer src='#{javascript_cache.url}' data-theme-id='#{theme_id}'></script>
+          <script defer src="#{javascript_cache.url}" data-theme-id="#{theme_id}" nonce="#{ThemeField::CSP_NONCE_PLACEHOLDER}"></script>
         HTML
     [doc, errors&.join("\n")]
   end
@@ -293,6 +308,7 @@ class ThemeField < ActiveRecord::Base
     return unless self.name == "yaml"
 
     errors = []
+
     begin
       ThemeSettingsParser
         .new(self)
@@ -308,16 +324,21 @@ class ThemeField < ActiveRecord::Base
             end
           end
 
-          errors << I18n.t("#{translation_key}.default_value_missing", name: name) if default.nil?
-
-          if (min = opts[:min]) && (max = opts[:max])
-            unless ThemeSetting.value_in_range?(default, (min..max), type)
-              errors << I18n.t("#{translation_key}.default_out_range", name: name)
-            end
+          unless ThemeSettingsValidator.is_value_present?(default)
+            errors << I18n.t("#{translation_key}.default_value_missing", name: name)
+            next
           end
 
-          unless ThemeSetting.acceptable_value_for_type?(default, type)
+          unless ThemeSettingsValidator.is_valid_value_type?(default, type)
             errors << I18n.t("#{translation_key}.default_not_match_type", name: name)
+          end
+
+          if (setting_errors = ThemeSettingsValidator.validate_value(default, type, opts)).present?
+            errors << I18n.t(
+              "#{translation_key}.default_value_not_valid",
+              name: name,
+              error_messages: setting_errors.join(" "),
+            )
           end
         end
     rescue ThemeSettingsParser::InvalidYaml => e
@@ -334,7 +355,7 @@ class ThemeField < ActiveRecord::Base
       types[:scss]
     elsif target.to_s == "extra_scss"
       types[:scss]
-    elsif target.to_s == "extra_js"
+    elsif %w[migrations extra_js].include?(target.to_s)
       types[:js]
     elsif target.to_s == "settings" || target.to_s == "translations"
       types[:yaml]
@@ -388,6 +409,10 @@ class ThemeField < ActiveRecord::Base
       self.name == SvgSprite.theme_sprite_variable_name
   end
 
+  def migration_field?
+    Theme.targets[:migrations] == self.target_id
+  end
+
   def ensure_baked!
     needs_baking = !self.value_baked || compiler_version != Theme.compiler_version
     return unless needs_baking
@@ -395,7 +420,7 @@ class ThemeField < ActiveRecord::Base
     if basic_html_field? || translation_field?
       self.value_baked, self.error =
         translation_field? ? process_translation : process_html(self.value)
-      self.error = nil unless self.error.present?
+      self.error = nil if self.error.blank?
       self.compiler_version = Theme.compiler_version
       CSP::Extension.clear_theme_extensions_cache!
     elsif extra_js_field? || js_tests_field?
@@ -416,6 +441,9 @@ class ThemeField < ActiveRecord::Base
       self.error = validate_svg_sprite_xml
       self.value_baked = "baked"
       self.compiler_version = Theme.compiler_version
+    elsif migration_field?
+      self.value_baked = "baked"
+      self.compiler_version = Theme.compiler_version
     end
 
     if self.will_save_change_to_value_baked? || self.will_save_change_to_compiler_version? ||
@@ -433,7 +461,7 @@ class ThemeField < ActiveRecord::Base
 
     self.theme.with_scss_load_paths do |load_paths|
       Stylesheet::Compiler.compile(
-        "#{prepended_scss} #{self.theme.scss_variables.to_s} #{self.value}",
+        "#{prepended_scss} #{self.theme.scss_variables} #{self.value}",
         "#{Theme.targets[self.target_id]}.scss",
         theme: self.theme,
         load_paths: load_paths,
@@ -597,6 +625,13 @@ class ThemeField < ActiveRecord::Base
       targets: :common,
       canonical: ->(h) { "assets/#{h[:name]}#{File.extname(h[:filename])}" },
     ),
+    ThemeFileMatcher.new(
+      regex: %r{\Amigrations/settings/(?<name>[^/]+)\.js\z},
+      names: nil,
+      types: :js,
+      targets: :migrations,
+      canonical: ->(h) { "migrations/settings/#{h[:name]}.js" },
+    ),
   ]
 
   # For now just work for standard fields
@@ -639,6 +674,8 @@ class ThemeField < ActiveRecord::Base
           name: ThemeField.scss_fields + ThemeField.html_fields,
         )
       )
+    elsif translation_field? && name == "en" # en is fallback for all other locales
+      return theme.theme_fields.where(target_id: Theme.targets[:translations]).where.not(name: "en")
     end
     ThemeField.none
   end
@@ -667,7 +704,7 @@ class ThemeField < ActiveRecord::Base
     rescue => e
       Discourse.warn_exception(e, message: "Failed to fetch svg sprite for theme field #{id}")
     else
-      if content.length > 4 * 1024**2
+      if content.length > SvgSprite::MAX_THEME_SPRITE_SIZE
         Rails.logger.warn(
           "can't store theme svg sprite for theme #{theme_id} and upload #{upload_id}, sprite too big",
         )
@@ -708,6 +745,28 @@ class ThemeField < ActiveRecord::Base
       JAVASCRIPT_TYPES.include?(node["type"].downcase)
     else
       true
+    end
+  end
+
+  def migration_filename_is_valid
+    if !name.match?(/\A\d{4}-[a-zA-Z0-9]+/)
+      self.errors.add(
+        :base,
+        I18n.t("themes.import_error.migrations.invalid_filename", filename: name),
+      )
+      return
+    end
+
+    # the 5 here is the length of the first 4 digits and the dash that follows
+    # them
+    if name.size - 5 > MIGRATION_NAME_PART_MAX_LENGTH
+      self.errors.add(
+        :base,
+        I18n.t(
+          "themes.import_error.migrations.name_too_long",
+          count: MIGRATION_NAME_PART_MAX_LENGTH,
+        ),
+      )
     end
   end
 end

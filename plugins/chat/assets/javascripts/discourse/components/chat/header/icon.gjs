@@ -1,31 +1,14 @@
-import { inject as service } from "@ember/service";
 import Component from "@glimmer/component";
-import getURL from "discourse-common/lib/get-url";
-import { getUserChatSeparateSidebarMode } from "discourse/plugins/chat/discourse/lib/get-user-chat-separate-sidebar-mode";
-import ChatHeaderIconUnreadIndicator from "discourse/plugins/chat/discourse/components/chat/header/icon/unread-indicator";
-import icon from "discourse-common/helpers/d-icon";
+import { service } from "@ember/service";
+import DButton from "discourse/components/d-button";
 import concatClass from "discourse/helpers/concat-class";
-import I18n from "I18n";
+import icon from "discourse-common/helpers/d-icon";
+import getURL from "discourse-common/lib/get-url";
+import I18n from "discourse-i18n";
+import ChatHeaderIconUnreadIndicator from "discourse/plugins/chat/discourse/components/chat/header/icon/unread-indicator";
+import { getUserChatSeparateSidebarMode } from "discourse/plugins/chat/discourse/lib/get-user-chat-separate-sidebar-mode";
 
 export default class ChatHeaderIcon extends Component {
-  <template>
-    <a
-      href={{this.href}}
-      tabindex="0"
-      class={{concatClass "icon" "btn-flat" (if this.isActive "active")}}
-      title={{this.title}}
-    >
-      {{~icon this.icon~}}
-      {{#if this.showUnreadIndicator}}
-        <ChatHeaderIconUnreadIndicator
-          @urgentCount={{@urgentCount}}
-          @unreadCount={{@unreadCount}}
-          @indicatorPreference={{@indicatorPreference}}
-        />
-      {{/if}}
-    </a>
-  </template>
-
   @service currentUser;
   @service site;
   @service chatStateManager;
@@ -58,7 +41,7 @@ export default class ChatHeaderIcon extends Component {
     if (
       this.chatStateManager.isFullPageActive &&
       !this.chatSeparateSidebarMode.never &&
-      !this.site.mobileView
+      this.site.desktopView
     ) {
       return I18n.t("sidebar.panels.forum.label");
     }
@@ -70,7 +53,7 @@ export default class ChatHeaderIcon extends Component {
     if (
       this.chatStateManager.isFullPageActive &&
       !this.chatSeparateSidebarMode.never &&
-      !this.site.mobileView
+      this.site.desktopView
     ) {
       return "random";
     }
@@ -96,4 +79,24 @@ export default class ChatHeaderIcon extends Component {
 
     return getURL(this.chatStateManager.lastKnownChatURL || "/chat");
   }
+
+  <template>
+    <li class="header-dropdown-toggle chat-header-icon">
+      <DButton
+        @href={{this.href}}
+        tabindex="0"
+        class={{concatClass "icon" "btn-flat" (if this.isActive "active")}}
+        title={{this.title}}
+      >
+        {{~icon this.icon~}}
+        {{#if this.showUnreadIndicator}}
+          <ChatHeaderIconUnreadIndicator
+            @urgentCount={{@urgentCount}}
+            @unreadCount={{@unreadCount}}
+            @indicatorPreference={{@indicatorPreference}}
+          />
+        {{/if}}
+      </DButton>
+    </li>
+  </template>
 }

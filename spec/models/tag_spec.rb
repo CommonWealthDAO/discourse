@@ -13,11 +13,11 @@ RSpec.describe Tag do
   let(:tag) { Fabricate(:tag) }
   let(:tag2) { Fabricate(:tag) }
   let(:topic) { Fabricate(:topic, tags: [tag]) }
-  fab!(:user) { Fabricate(:user) }
+  fab!(:user)
 
   before do
     SiteSetting.tagging_enabled = true
-    SiteSetting.min_trust_level_to_tag_topics = 0
+    SiteSetting.tag_topic_allowed_groups = Group::AUTO_GROUPS[:trust_level_0]
   end
 
   describe "Associations" do
@@ -299,6 +299,7 @@ RSpec.describe Tag do
       )
     end
     let!(:tag_group) { Fabricate(:tag_group, tag_names: [tag_in_group.name]) }
+    let!(:synonym_tag) { Fabricate(:tag, target_tag: tags.first) }
 
     it "returns the correct tags" do
       expect(Tag.unused.pluck(:name)).to contain_exactly("unused1", "unused2")
@@ -366,7 +367,7 @@ RSpec.describe Tag do
   end
 
   describe ".topic_count_column" do
-    fab!(:admin) { Fabricate(:admin) }
+    fab!(:admin)
 
     it "returns 'staff_topic_count' when user is staff" do
       expect(Tag.topic_count_column(Guardian.new(admin))).to eq("staff_topic_count")

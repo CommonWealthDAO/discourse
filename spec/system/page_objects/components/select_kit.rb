@@ -38,6 +38,10 @@ module PageObjects
         has_css?(context + ":not(.is-expanded)", wait: 0)
       end
 
+      def is_not_disabled?
+        has_css?(@context + ":not(.disabled)", wait: 0)
+      end
+
       def has_selected_value?(value)
         component.find(".select-kit-header[data-value='#{value}']")
       end
@@ -52,6 +56,10 @@ module PageObjects
 
       def has_option_name?(name)
         component.find(".select-kit-collection li[data-name='#{name}']")
+      end
+
+      def has_option_value?(value)
+        component.find(".select-kit-collection li[data-value='#{value}']")
       end
 
       def expand

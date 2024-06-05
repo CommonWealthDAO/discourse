@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PostTiming do
-  fab!(:post) { Fabricate(:post) }
+  fab!(:post)
 
   it { is_expected.to validate_presence_of :post_number }
   it { is_expected.to validate_presence_of :msecs }
@@ -83,6 +83,7 @@ RSpec.describe PostTiming do
 
       (2..5).each { |i| Fabricate(:post, topic: post.topic, post_number: i) }
       user2 = Fabricate(:coding_horror, created_at: 1.day.ago)
+      Topic.reset_highest(post.topic.id)
 
       PostActionCreator.like(user2, post)
 

@@ -158,7 +158,7 @@ class ImportScripts::MylittleforumSQL < ImportScripts::Base
     username.gsub!(/[._]+/, "_") # can't have 2 special in a row
     username.gsub!(/_+/, "_") # could result in dupes, but wtf?
     username.gsub!(/_$/, "") # could result in dupes, but wtf?
-    print_warning ("#{olduser} --> #{username}") if olduser != username
+    print_warning("#{olduser} --> #{username}") if olduser != username
     username
   end
 
@@ -224,7 +224,7 @@ class ImportScripts::MylittleforumSQL < ImportScripts::Base
         raw = clean_up(discussion["Body"])
 
         youtube = nil
-        unless discussion["youtube"].blank?
+        if discussion["youtube"].present?
           youtube = clean_youtube(discussion["youtube"])
           raw += "\n#{youtube}\n"
           print_warning(raw)
@@ -286,7 +286,7 @@ class ImportScripts::MylittleforumSQL < ImportScripts::Base
         next if comment["Body"].blank?
         raw = clean_up(comment["Body"])
         youtube = nil
-        unless comment["youtube"].blank?
+        if comment["youtube"].present?
           youtube = clean_youtube(comment["youtube"])
           raw += "\n#{youtube}\n"
         end

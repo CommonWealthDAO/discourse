@@ -1,11 +1,11 @@
-import Badge from "discourse/models/badge";
-import I18n from "I18n";
-import Route from "@ember/routing/route";
-import { ajax } from "discourse/lib/ajax";
 import { action, get } from "@ember/object";
-import { inject as service } from "@ember/service";
-import EditBadgeGroupingsModal from "../../components/modal/edit-badge-groupings";
+import Route from "@ember/routing/route";
+import { service } from "@ember/service";
+import { ajax } from "discourse/lib/ajax";
+import Badge from "discourse/models/badge";
+import I18n from "discourse-i18n";
 import BadgePreviewModal from "../../components/modal/badge-preview";
+import EditBadgeGroupingsModal from "../../components/modal/edit-badge-groupings";
 
 export default class AdminBadgesShowRoute extends Route {
   @service dialog;

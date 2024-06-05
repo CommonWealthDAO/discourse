@@ -1,12 +1,13 @@
 import Component from "@glimmer/component";
-import { action } from "@ember/object";
-import { inject as service } from "@ember/service";
-import I18n from "I18n";
-import { popupAjaxError } from "discourse/lib/ajax-error";
 import { tracked } from "@glimmer/tracking";
-import { FORMAT } from "select-kit/components/future-date-input-selector";
-import TopicTimer from "discourse/models/topic-timer";
+import { action } from "@ember/object";
+import { next } from "@ember/runloop";
+import { service } from "@ember/service";
 import { TrackedObject } from "@ember-compat/tracked-built-ins";
+import { popupAjaxError } from "discourse/lib/ajax-error";
+import TopicTimer from "discourse/models/topic-timer";
+import I18n from "discourse-i18n";
+import { FORMAT } from "select-kit/components/future-date-input-selector";
 
 export const CLOSE_STATUS_TYPE = "close";
 export const CLOSE_AFTER_LAST_POST_STATUS_TYPE = "close_after_last_post";
@@ -19,12 +20,22 @@ export const DELETE_REPLIES_TYPE = "delete_replies";
 export default class EditTopicTimer extends Component {
   @service currentUser;
 
-  @tracked
-  topicTimer = new TrackedObject(
-    this.args.model.topic?.topic_timer || this.createDefaultTimer()
-  );
+  @tracked topicTimer;
   @tracked loading = false;
   @tracked flash;
+
+  constructor() {
+    super(...arguments);
+
+    if (this.args.model.topic?.topic_timer) {
+      this.topicTimer = new TrackedObject(this.args.model.topic?.topic_timer);
+    } else {
+      // TODO: next() is a hack, to-be-removed
+      next(() => {
+        this.topicTimer = new TrackedObject(this.createDefaultTimer());
+      });
+    }
+  }
 
   get defaultStatusType() {
     return this.publicTimerTypes[0].id;

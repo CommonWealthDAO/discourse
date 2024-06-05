@@ -9,6 +9,7 @@ describe "Thread tracking state | full page", type: :system do
   let(:chat_page) { PageObjects::Pages::Chat.new }
   let(:channel_page) { PageObjects::Pages::ChatChannel.new }
   let(:thread_page) { PageObjects::Pages::ChatThread.new }
+  let(:channel_threads_page) { PageObjects::Pages::ChatChannelThreads.new }
   let(:thread_list_page) { PageObjects::Components::Chat::ThreadList.new }
   let(:sidebar_page) { PageObjects::Pages::Sidebar.new }
 
@@ -26,6 +27,8 @@ describe "Thread tracking state | full page", type: :system do
 
     it "shows the count of threads with unread messages on the thread list button" do
       chat_page.visit_channel(channel)
+      channel_threads_page.close
+
       expect(channel_page).to have_unread_thread_indicator(count: 1)
     end
 
@@ -37,16 +40,18 @@ describe "Thread tracking state | full page", type: :system do
 
     it "shows an indicator on the unread thread in the list" do
       chat_page.visit_channel(channel)
-      channel_page.open_thread_list
+
       expect(thread_list_page).to have_unread_item(thread.id, count: 1)
     end
 
     it "marks the thread as read and removes both indicators when the user opens it" do
       chat_page.visit_channel(channel)
-      channel_page.open_thread_list
       thread_list_page.item_by_id(thread.id).click
+
       expect(thread_page).to have_no_unread_list_indicator
-      thread_page.back_to_previous_route
+
+      thread_page.back
+
       expect(thread_list_page).to have_no_unread_item(thread.id)
     end
 
@@ -80,9 +85,11 @@ describe "Thread tracking state | full page", type: :system do
       Fabricate(:chat_message, thread: new_thread, use_service: true)
       chat_page.visit_thread(new_thread)
       thread_page.notification_level = :tracking
+
       expect(thread_page).to have_notification_level("tracking")
+
       chat_page.visit_channel(channel)
-      channel_page.open_thread_list
+
       expect(thread_list_page).to have_thread(new_thread)
     end
 
@@ -107,6 +114,8 @@ describe "Thread tracking state | full page", type: :system do
 
       it "clears the sidebar unread indicator for the channel when opening it but keeps the thread list unread indicator" do
         chat_page.visit_channel(channel)
+        channel_threads_page.close
+
         expect(sidebar_page).to have_no_unread_channel(channel)
         expect(channel_page).to have_unread_thread_indicator(count: 1)
       end

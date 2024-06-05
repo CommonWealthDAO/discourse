@@ -1,15 +1,15 @@
+import { click, fillIn, visit } from "@ember/test-helpers";
+import { test } from "qunit";
+import sinon from "sinon";
+import PreloadStore from "discourse/lib/preload-store";
+import DiscourseURL from "discourse/lib/url";
+import { parsePostData } from "discourse/tests/helpers/create-pretender";
 import {
   acceptance,
   exists,
   query,
 } from "discourse/tests/helpers/qunit-helpers";
-import { click, fillIn, visit } from "@ember/test-helpers";
-import DiscourseURL from "discourse/lib/url";
-import I18n from "I18n";
-import PreloadStore from "discourse/lib/preload-store";
-import { parsePostData } from "discourse/tests/helpers/create-pretender";
-import sinon from "sinon";
-import { test } from "qunit";
+import I18n from "discourse-i18n";
 
 acceptance("Password Reset", function (needs) {
   needs.pretender((server, helper) => {
@@ -27,6 +27,7 @@ acceptance("Password Reset", function (needs) {
         return helper.response({
           success: false,
           errors: { password: ["is the name of your cat"] },
+          friendly_messages: ["Password is the name of your cat"],
         });
       } else {
         return helper.response({
@@ -52,6 +53,7 @@ acceptance("Password Reset", function (needs) {
         return helper.response({
           success: false,
           errors: { password: ["invalid"] },
+          friendly_messages: ["Password is invalid"],
         });
       } else {
         return helper.response({
@@ -76,7 +78,9 @@ acceptance("Password Reset", function (needs) {
     assert.ok(exists(".password-reset .tip.bad"), "input is not valid");
     assert.ok(
       query(".password-reset .tip.bad").innerHTML.includes(
-        I18n.t("user.password.too_short")
+        I18n.t("user.password.too_short", {
+          count: this.siteSettings.min_password_length,
+        })
       ),
       "password too short"
     );
@@ -86,7 +90,7 @@ acceptance("Password Reset", function (needs) {
     assert.ok(exists(".password-reset .tip.bad"), "input is not valid");
     assert.ok(
       query(".password-reset .tip.bad").innerHTML.includes(
-        "is the name of your cat"
+        "Password is the name of your cat"
       ),
       "server validation error message shows"
     );

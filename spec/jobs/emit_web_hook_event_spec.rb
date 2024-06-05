@@ -7,8 +7,8 @@ RSpec.describe Jobs::EmitWebHookEvent do
 
   fab!(:post_hook) { Fabricate(:web_hook) }
   fab!(:inactive_hook) { Fabricate(:inactive_web_hook) }
-  fab!(:post) { Fabricate(:post) }
-  fab!(:user) { Fabricate(:user) }
+  fab!(:post)
+  fab!(:user)
 
   it "raises an error when there is no web hook record" do
     expect { job.execute(event_type: "post", payload: {}) }.to raise_error(
@@ -34,7 +34,7 @@ RSpec.describe Jobs::EmitWebHookEvent do
     job.execute(
       web_hook_id: post_hook.id,
       payload: { id: post.id }.to_json,
-      event_type: WebHookEventType::POST,
+      event_type: WebHookEventType::TYPES[:post_created],
     )
 
     expect(WebHookEvent.last.web_hook_id).to eq(post_hook.id)
@@ -175,8 +175,8 @@ RSpec.describe Jobs::EmitWebHookEvent do
   end
 
   context "with category filters" do
-    fab!(:category) { Fabricate(:category) }
-    fab!(:topic) { Fabricate(:topic) }
+    fab!(:category)
+    fab!(:topic)
     fab!(:topic_with_category) { Fabricate(:topic, category_id: category.id) }
     fab!(:topic_hook) { Fabricate(:topic_web_hook, categories: [category]) }
 
@@ -204,7 +204,7 @@ RSpec.describe Jobs::EmitWebHookEvent do
   end
 
   context "with tag filters" do
-    fab!(:tag) { Fabricate(:tag) }
+    fab!(:tag)
     fab!(:topic) { Fabricate(:topic, tags: [tag]) }
     fab!(:topic_hook) { Fabricate(:topic_web_hook, tags: [tag]) }
 
@@ -240,7 +240,7 @@ RSpec.describe Jobs::EmitWebHookEvent do
   end
 
   context "with group filters" do
-    fab!(:group) { Fabricate(:group) }
+    fab!(:group)
     fab!(:user) { Fabricate(:user, groups: [group]) }
     fab!(:like_hook) { Fabricate(:like_web_hook, groups: [group]) }
 
@@ -280,7 +280,7 @@ RSpec.describe Jobs::EmitWebHookEvent do
       stub_request(:post, post_hook.payload_url).to_return(body: "OK", status: 200)
 
       topic_event_type = WebHookEventType.all.first
-      web_hook_id = Fabricate("#{topic_event_type.name}_web_hook").id
+      web_hook_id = Fabricate("#{topic_event_type.name.gsub("_created", "")}_web_hook").id
 
       expect do
         job.execute(
@@ -344,6 +344,38 @@ RSpec.describe Jobs::EmitWebHookEvent do
         "sha256=162f107f6b5022353274eb1a7197885cfd35744d8d08e5bcea025d309386b7d6",
       )
       expect(event.payload).to eq(MultiJson.dump(ping: "OK"))
+    end
+
+    context "with `webhook_event_headers` modifier" do
+      let(:modifier_block) do
+        Proc.new do |headers, _, _|
+          headers["D-Test-Woo"] = "xyz"
+          headers
+        end
+      end
+      it "Allows for header modifications" do
+        plugin_instance = Plugin::Instance.new
+        plugin_instance.register_modifier(:web_hook_event_headers, &modifier_block)
+
+        stub_request(:post, post_hook.payload_url).to_return(body: "OK", status: 200)
+
+        topic_event_type = WebHookEventType.all.first
+        web_hook_id = Fabricate("#{topic_event_type.name.gsub("_created", "")}_web_hook").id
+
+        job.execute(
+          web_hook_id: web_hook_id,
+          event_type: topic_event_type.name,
+          payload: { test: "some payload" }.to_json,
+        )
+        webhook_event = WebHookEvent.last
+        expect(JSON.parse(webhook_event.headers)).to include("D-Test-Woo" => "xyz")
+      ensure
+        DiscoursePluginRegistry.unregister_modifier(
+          plugin_instance,
+          :web_hook_event_headers,
+          &modifier_block
+        )
+      end
     end
   end
 end

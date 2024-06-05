@@ -1,8 +1,8 @@
 import Component from "@glimmer/component";
-import I18n from "I18n";
-import { translateModKey } from "discourse/lib/utilities";
+import { service } from "@ember/service";
 import { extraKeyboardShortcutsHelp } from "discourse/lib/keyboard-shortcuts";
-import { inject as service } from "@ember/service";
+import { translateModKey } from "discourse/lib/utilities";
+import I18n from "discourse-i18n";
 
 const KEY = "keyboard_shortcuts_help";
 const SHIFT = I18n.t("shortcut_modifier_key.shift");
@@ -83,12 +83,19 @@ export default class KeyboardShortcutsHelp extends Component {
             keys2: [CTRL, ALT, "f"],
             keysDelimiter: PLUS,
           }),
-          help: buildShortcut("application.help", { keys1: ["?"] }),
-          dismiss_new: buildShortcut("application.dismiss_new", {
-            keys1: ["x", "r"],
+          filter_sidebar: buildShortcut("application.filter_sidebar", {
+            keys1: [META, "/"],
+            keysDelimiter: PLUS,
           }),
-          dismiss_topics: buildShortcut("application.dismiss_topics", {
-            keys1: ["x", "t"],
+          help: buildShortcut("application.help", { keys1: ["?"] }),
+          bulk_select: buildShortcut("application.toggle_bulk_select", {
+            keys1: [SHIFT, "b"],
+          }),
+          dismiss: buildShortcut("application.dismiss", {
+            keys1: [SHIFT, "d"],
+          }),
+          x: buildShortcut("application.x", {
+            keys1: ["x"],
           }),
           log_out: buildShortcut("application.log_out", {
             keys1: [SHIFT, "z"],
@@ -150,6 +157,12 @@ export default class KeyboardShortcutsHelp extends Component {
             keys1: [SHIFT, "a"],
             keysDelimiter: PLUS,
           }),
+          archive_private_message: buildShortcut(
+            "actions.archive_private_message",
+            {
+              keys1: ["a"],
+            }
+          ),
         },
       },
       navigation: {

@@ -1,6 +1,6 @@
 import cookie, { removeCookie } from "discourse/lib/cookie";
-import I18n from "I18n";
 import deprecated from "discourse-common/lib/deprecated";
+import I18n from "discourse-i18n";
 
 const keySelector = "meta[name=discourse_theme_id]";
 const COOKIE_NAME = "theme_ids";
@@ -11,7 +11,7 @@ export function currentThemeKey() {
   if (console && console.warn && console.trace) {
     // TODO: Remove this code Jan 2019
     deprecated(
-      "'currentThemeKey' is is deprecated use 'currentThemeId' instead. A theme component may require updating.",
+      "'currentThemeKey' is deprecated use 'currentThemeId' instead. A theme component may require updating.",
       { id: "discourse.current-theme-key" }
     );
   }

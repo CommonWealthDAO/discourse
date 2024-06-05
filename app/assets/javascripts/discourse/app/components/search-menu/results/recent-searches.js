@@ -1,8 +1,7 @@
 import Component from "@glimmer/component";
-import { inject as service } from "@ember/service";
-import User from "discourse/models/user";
 import { action } from "@ember/object";
-import { focusSearchButton } from "discourse/components/search-menu";
+import { service } from "@ember/service";
+import User from "discourse/models/user";
 
 export default class RecentSearches extends Component {
   @service currentUser;
@@ -21,18 +20,16 @@ export default class RecentSearches extends Component {
   }
 
   @action
-  clearRecent() {
-    return User.resetRecentSearches().then((result) => {
-      if (result.success) {
-        this.currentUser.recent_searches.clear();
-      }
-    });
+  async clearRecent() {
+    const result = await User.resetRecentSearches();
+    if (result.success) {
+      this.currentUser.recent_searches.clear();
+    }
   }
 
   @action
   onKeyup(e) {
     if (e.key === "Escape") {
-      focusSearchButton();
       this.args.closeSearchMenu();
       e.preventDefault();
       return false;
@@ -41,11 +38,10 @@ export default class RecentSearches extends Component {
     this.search.handleArrowUpOrDown(e);
   }
 
-  loadRecentSearches() {
-    User.loadRecentSearches().then((result) => {
-      if (result.success && result.recent_searches?.length) {
-        this.currentUser.set("recent_searches", result.recent_searches);
-      }
-    });
+  async loadRecentSearches() {
+    const result = await User.loadRecentSearches();
+    if (result.success && result.recent_searches?.length) {
+      this.currentUser.set("recent_searches", result.recent_searches);
+    }
   }
 }

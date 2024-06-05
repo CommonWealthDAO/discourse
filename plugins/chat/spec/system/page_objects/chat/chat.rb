@@ -27,12 +27,17 @@ module PageObjects
         find(".chat-header-icon").click
       end
 
+      def close_from_header
+        find(".chat-header-icon").click
+      end
+
       def has_header_href?(href)
         find(".chat-header-icon").has_link?(href: href)
       end
 
-      def open
+      def open(with_preloaded_channels: true)
         visit("/chat")
+        has_finished_loading?(with_preloaded_channels: with_preloaded_channels)
       end
 
       def open_new_message(ensure_open: true)
@@ -48,10 +53,14 @@ module PageObjects
         drawer?(expectation: false, channel_id: channel_id, expanded: expanded)
       end
 
-      def visit_channel(channel, message_id: nil)
+      def visit_channel(channel, message_id: nil, with_preloaded_channels: true)
         visit(channel.url + (message_id ? "/#{message_id}" : ""))
-        has_no_css?(".chat-channel--not-loaded-once")
-        has_no_css?(".chat-skeleton")
+        has_finished_loading?(with_preloaded_channels: with_preloaded_channels)
+      end
+
+      def visit_user_threads
+        visit("/chat/threads")
+        has_finished_loading?
       end
 
       def visit_thread(thread)
@@ -59,12 +68,13 @@ module PageObjects
         has_css?(".chat-thread:not(.loading)[data-id=\"#{thread.id}\"]")
       end
 
-      def visit_channel_settings(channel)
-        visit(channel.url + "/info/settings")
+      def visit_threads_list(channel)
+        visit(channel.url + "/t")
+        has_finished_loading?
       end
 
-      def visit_channel_about(channel)
-        visit(channel.url + "/info/about")
+      def visit_channel_settings(channel)
+        visit(channel.url + "/info/settings")
       end
 
       def visit_channel_members(channel)
@@ -82,11 +92,31 @@ module PageObjects
         PageObjects::Pages::ChatBrowse.new.has_finished_loading?
       end
 
-      def minimize_full_page
-        find(".open-drawer-btn").click
+      def visit_new_message(recipients)
+        if recipients.is_a?(Array)
+          recipients = recipients.map(&:username).join(",")
+        elsif recipients.respond_to?(:username)
+          recipients = recipients.username
+        end
+
+        visit("/chat/new-message?recipients=#{recipients}")
       end
 
-      NEW_CHANNEL_BUTTON_SELECTOR = ".new-channel-btn"
+      def has_preloaded_channels?
+        has_css?("body.has-preloaded-chat-channels")
+      end
+
+      def has_finished_loading?(with_preloaded_channels: true)
+        has_preloaded_channels? if with_preloaded_channels
+        has_no_css?(".chat-channel--not-loaded-once")
+        has_no_css?(".chat-skeleton")
+      end
+
+      def minimize_full_page
+        find(".c-navbar__open-drawer-button").click
+      end
+
+      NEW_CHANNEL_BUTTON_SELECTOR = ".c-navbar__new-channel-button"
 
       def new_channel_button
         find(NEW_CHANNEL_BUTTON_SELECTOR)

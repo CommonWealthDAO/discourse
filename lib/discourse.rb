@@ -8,6 +8,7 @@ require "version"
 module Discourse
   DB_POST_MIGRATE_PATH ||= "db/post_migrate"
   REQUESTED_HOSTNAME ||= "REQUESTED_HOSTNAME"
+  MAX_METADATA_FILE_SIZE = 64.kilobytes
 
   class Utils
     URI_REGEXP ||= URI.regexp(%w[http https])
@@ -312,11 +313,11 @@ module Discourse
   end
 
   def self.filters
-    @filters ||= %i[latest unread new unseen top read posted bookmarks]
+    @filters ||= %i[latest unread new unseen top read posted bookmarks hot]
   end
 
   def self.anonymous_filters
-    @anonymous_filters ||= %i[latest top categories]
+    @anonymous_filters ||= %i[latest top categories hot]
   end
 
   def self.top_menu_items
@@ -374,6 +375,13 @@ module Discourse
 
   def self.visible_plugins
     plugins.filter(&:visible?)
+  end
+
+  def self.plugins_sorted_by_name(enabled_only: true)
+    if enabled_only
+      return visible_plugins.filter(&:enabled?).sort_by { |plugin| plugin.humanized_name.downcase }
+    end
+    visible_plugins.sort_by { |plugin| plugin.humanized_name.downcase }
   end
 
   def self.plugin_themes
@@ -483,6 +491,10 @@ module Discourse
     Auth::AuthProvider.new(authenticator: Auth::GithubAuthenticator.new, icon: "fab-github"),
     Auth::AuthProvider.new(authenticator: Auth::TwitterAuthenticator.new, icon: "fab-twitter"),
     Auth::AuthProvider.new(authenticator: Auth::DiscordAuthenticator.new, icon: "fab-discord"),
+    Auth::AuthProvider.new(
+      authenticator: Auth::LinkedInOidcAuthenticator.new,
+      icon: "fab-linkedin-in",
+    ),
   ]
 
   def self.auth_providers
@@ -605,15 +617,18 @@ module Discourse
     if SiteSetting.tos_url.present?
       SiteSetting.tos_url
     else
-      urls_cache["tos"] ||= (
+      return urls_cache["tos"] if urls_cache["tos"].present?
+
+      tos_url =
         if SiteSetting.tos_topic_id > 0 && Topic.exists?(id: SiteSetting.tos_topic_id)
           "#{Discourse.base_path}/tos"
-        else
-          :nil
         end
-      )
 
-      urls_cache["tos"] != :nil ? urls_cache["tos"] : nil
+      if tos_url
+        urls_cache["tos"] = tos_url
+      else
+        urls_cache.delete("tos")
+      end
     end
   end
 
@@ -621,15 +636,18 @@ module Discourse
     if SiteSetting.privacy_policy_url.present?
       SiteSetting.privacy_policy_url
     else
-      urls_cache["privacy_policy"] ||= (
+      return urls_cache["privacy_policy"] if urls_cache["privacy_policy"].present?
+
+      privacy_policy_url =
         if SiteSetting.privacy_topic_id > 0 && Topic.exists?(id: SiteSetting.privacy_topic_id)
           "#{Discourse.base_path}/privacy"
-        else
-          :nil
         end
-      )
 
-      urls_cache["privacy_policy"] != :nil ? urls_cache["privacy_policy"] : nil
+      if privacy_policy_url
+        urls_cache["privacy_policy"] = privacy_policy_url
+      else
+        urls_cache.delete("privacy_policy")
+      end
     end
   end
 
@@ -925,7 +943,7 @@ module Discourse
       # Skip warmup in development mode - it makes boot take ~2s longer
       PrettyText.cook("warm up **pretty text**") if !Rails.env.development?
     rescue => e
-      Rails.logger.error("Failed to warm up pretty text: #{e}")
+      Rails.logger.error("Failed to warm up pretty text: #{e}\n#{e.backtrace.join("\n")}")
     end
 
     nil
@@ -1164,7 +1182,7 @@ module Discourse
   CDN_REQUEST_METHODS ||= %w[GET HEAD OPTIONS]
 
   def self.is_cdn_request?(env, request_method)
-    return unless CDN_REQUEST_METHODS.include?(request_method)
+    return if CDN_REQUEST_METHODS.exclude?(request_method)
 
     cdn_hostnames = GlobalSetting.cdn_hostnames
     return if cdn_hostnames.blank?

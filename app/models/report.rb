@@ -49,6 +49,7 @@ class Report
   include Reports::UserFlaggingRatio
   include Reports::TrustLevelGrowth
   include Reports::ConsolidatedPageViews
+  include Reports::ConsolidatedPageViewsBrowserDetection
   include Reports::ConsolidatedApiRequests
   include Reports::Visits
   include Reports::TimeToFirstResponse
@@ -76,8 +77,6 @@ class Report
                 :icon,
                 :modes,
                 :prev_data,
-                :prev_start_date,
-                :prev_end_date,
                 :dates_filtering,
                 :error,
                 :primary_color,
@@ -420,7 +419,13 @@ class Report
   end
 
   def colors
-    %w[#1EB8D1 #9BC53D #721D8D #E84A5F #8A6916]
+    {
+      turquoise: "#1EB8D1",
+      lime: "#9BC53D",
+      purple: "#721D8D",
+      magenta: "#E84A5F",
+      brown: "#8A6916",
+    }
   end
 
   private

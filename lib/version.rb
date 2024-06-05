@@ -7,7 +7,8 @@ module Discourse
   # work around reloader
   unless defined?(::Discourse::VERSION)
     module VERSION #:nodoc:
-      STRING = "3.2.0.beta1-dev"
+      # Use the `version_bump:*` rake tasks to update this value
+      STRING = "3.3.0.beta3-dev"
 
       PARTS = STRING.split(".")
       private_constant :PARTS
@@ -36,7 +37,7 @@ module Discourse
   #  2.4.4.beta6: some-other-branch-ref
   #  2.4.2.beta1: v1-tag
   def self.find_compatible_resource(version_list, target_version = ::Discourse::VERSION::STRING)
-    return unless version_list.present?
+    return if version_list.blank?
 
     begin
       version_list = YAML.safe_load(version_list)
@@ -69,7 +70,7 @@ module Discourse
                 "Invalid version specifier operator for '#{req_operator} #{req_version}'. Operator must be one of <= or <"
         end
 
-        resolved_requirement = Gem::Requirement.new("#{req_operator} #{req_version.to_s}")
+        resolved_requirement = Gem::Requirement.new("#{req_operator} #{req_version}")
         resolved_requirement.satisfied_by?(parsed_target_version)
       end
 
@@ -92,12 +93,37 @@ module Discourse
   # Find a compatible resource from a git repo
   def self.find_compatible_git_resource(path)
     return unless File.directory?("#{path}/.git")
-    compat_resource, std_error, s =
-      Open3.capture3(
-        "git -C '#{path}' show HEAD@{upstream}:#{Discourse::VERSION_COMPATIBILITY_FILENAME}",
+
+    tree_info =
+      Discourse::Utils.execute_command(
+        "git",
+        "-C",
+        path,
+        "ls-tree",
+        "-l",
+        "HEAD",
+        Discourse::VERSION_COMPATIBILITY_FILENAME,
       )
-    Discourse.find_compatible_resource(compat_resource) if s.success?
+    blob_size = tree_info.split[3].to_i
+
+    if blob_size > Discourse::MAX_METADATA_FILE_SIZE
+      $stderr.puts "#{Discourse::VERSION_COMPATIBILITY_FILENAME} file in #{path} too big"
+      return
+    end
+
+    compat_resource =
+      Discourse::Utils.execute_command(
+        "git",
+        "-C",
+        path,
+        "show",
+        "HEAD@{upstream}:#{Discourse::VERSION_COMPATIBILITY_FILENAME}",
+      )
+
+    Discourse.find_compatible_resource(compat_resource)
   rescue InvalidVersionListError => e
     $stderr.puts "Invalid version list in #{path}"
+  rescue Discourse::Utils::CommandError => e
+    nil
   end
 end
