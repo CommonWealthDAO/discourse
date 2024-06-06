@@ -1,9 +1,9 @@
 params:
-  reqs_per_second: 12
-  burst_per_second: 12
-  reqs_per_minute: 200
-  burst_per_minute: 100
-  conn_per_ip: 20
+  reqs_per_second: 100
+  burst_per_second: 100
+  reqs_per_minute: 2000
+  burst_per_minute: 1000
+  conn_per_ip: 2000
 
 run:
   - replace:
