@@ -1,0 +1,49 @@
+<div class="admin-backups">
+  <div class="admin-controls">
+    <nav>
+      <ul class="nav nav-pills">
+        <NavItem
+          @route="admin.backups.index"
+          @label="admin.backups.menu.backups"
+        />
+        <NavItem @route="admin.backups.logs" @label="admin.backups.menu.logs" />
+        <PluginOutlet @name="downloader" @connectorTagName="div" />
+        <div class="admin-actions">
+          {{#if this.model.canRollback}}
+            <DButton
+              @action={{route-action "rollback"}}
+              @label="admin.backups.operations.rollback.label"
+              @title="admin.backups.operations.rollback.title"
+              @icon="ambulance"
+              @disabled={{this.rollbackDisabled}}
+              class="btn-default btn-rollback"
+            />
+          {{/if}}
+          {{#if this.model.isOperationRunning}}
+            <DButton
+              @action={{route-action "cancelOperation"}}
+              @title="admin.backups.operations.cancel.title"
+              @label="admin.backups.operations.cancel.label"
+              @icon="times"
+              class="btn-danger"
+            />
+          {{else}}
+            <DButton
+              @action={{route-action "showStartBackupModal"}}
+              @title="admin.backups.operations.backup.title"
+              @label="admin.backups.operations.backup.label"
+              @icon="rocket"
+              class="btn-primary"
+            />
+          {{/if}}
+        </div>
+      </ul>
+    </nav>
+  </div>
+
+  <PluginOutlet @name="before-backup-list" @connectorTagName="div" />
+
+  <div class="admin-container">
+    {{outlet}}
+  </div>
+</div>

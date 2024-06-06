@@ -1,0 +1,31 @@
+<div class="content-list color-schemes">
+  <h3>{{i18n "admin.customize.colors.long_title"}}</h3>
+
+  <ul>
+    {{#each this.model as |scheme|}}
+      {{#unless scheme.is_base}}
+        <li>
+          <LinkTo
+            @route="adminCustomize.colors.show"
+            @model={{scheme}}
+            @replace={{true}}
+          >
+            {{d-icon "paint-brush"}}
+            {{scheme.description}}
+          </LinkTo>
+        </li>
+      {{/unless}}
+    {{/each}}
+  </ul>
+
+  <DButton
+    @action={{this.newColorScheme}}
+    @icon="plus"
+    @label="admin.customize.new"
+    class="btn-default"
+  />
+</div>
+
+{{outlet}}
+
+<div class="clearfix"></div>

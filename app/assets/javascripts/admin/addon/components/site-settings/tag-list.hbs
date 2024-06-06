@@ -1,0 +1,9 @@
+<TagChooser
+  @tags={{this.selectedTags}}
+  @onChange={{this.changeSelectedTags}}
+  @everyTag={{true}}
+  @unlimitedTagCount={{true}}
+  @options={{hash allowAny=false}}
+/>
+<SiteSettings::Description @description={{this.setting.description}} />
+<SettingValidationMessage @message={{this.validationMessage}} />

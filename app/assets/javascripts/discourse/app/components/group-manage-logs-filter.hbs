@@ -1,0 +1,8 @@
+{{#if this.value}}
+  <DButton
+    @action={{fn this.clearFilter this.type}}
+    @icon="times-circle"
+    @translatedLabel={{concat this.label ": " this.filterText}}
+    class="btn-default group-manage-logs-filter"
+  />
+{{/if}}

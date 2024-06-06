@@ -1,0 +1,37 @@
+.has-full-page-chat {
+  .global-notice,
+  .bootstrap-mode-notice {
+    display: none;
+  }
+}
+
+.admin-plugins {
+  [data-plugin-name="chat"] {
+    display: none;
+  }
+}
+
+.user-summary-page .details .controls ul {
+  display: flex;
+  flex-direction: column;
+
+  li:first-child {
+    order: -2;
+  }
+
+  li.user-profile-controls-outlet.chat-button {
+    order: -1;
+  }
+}
+
+// TODO (davidb): remove once consolidated chat notifications is complete
+.user-stream .large-notifications .item {
+  &:has(.chat-message) {
+    display: none;
+  }
+}
+
+// TODO (davidb): remove once consolidated chat notifications is complete
+.user-menu .quick-access-panel .chat-message {
+  display: none;
+}

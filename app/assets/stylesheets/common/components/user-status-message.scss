@@ -1,0 +1,22 @@
+[data-content][data-identifier="user-status-message-tooltip"] {
+  .emoji {
+    width: 1em;
+    height: 1em;
+  }
+
+  .user-status-message-description {
+    margin-left: 0.1rem;
+    color: var(--primary-800);
+  }
+
+  .user-status-tooltip-description {
+    font-weight: bold;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+  }
+
+  .user-status-tooltip-until {
+    color: var(--primary-medium);
+    padding-left: 0.25rem;
+  }
+}

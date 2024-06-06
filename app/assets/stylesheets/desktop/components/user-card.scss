@@ -1,0 +1,41 @@
+// shared styles for user and group cards
+.user-card,
+.group-card {
+  // avatar - names - controls
+  .first-row {
+    .names {
+      flex: 1 1 auto;
+    }
+    .usercard-controls {
+      max-width: 225px;
+      button {
+        min-width: 150px;
+      }
+    }
+  }
+  h1 {
+    .d-icon {
+      font-size: var(--font-down-1);
+    }
+  }
+  h2 {
+    font-size: var(--font-up-1);
+  }
+  h3 {
+    font-size: var(--font-0);
+  }
+}
+
+// styles for user cards only
+.user-card {
+  // badges
+  .badge-section {
+    .user-badge {
+      display: block;
+      max-width: 185px;
+    }
+    .more-user-badges {
+      max-width: 125px;
+    }
+  }
+}

@@ -1,0 +1,191 @@
+// Styles for /admin/plugins
+
+.admin-contents.admin-plugins {
+  .controls {
+    .settings-button {
+      margin-left: auto;
+    }
+  }
+
+  .admin-plugins-list {
+    @media screen and (min-width: 550px) {
+      .admin-plugins-list__row {
+        grid-template-columns: 0.25fr repeat(4, 1fr);
+      }
+    }
+
+    @include breakpoint(mobile-extra-large) {
+      .admin-plugins-list__row {
+        grid-template-columns: 0.25fr repeat(3, 1fr);
+      }
+
+      .admin-plugins-list {
+        &__name-details {
+          grid-column-start: 2;
+          grid-column-end: -1;
+        }
+
+        &__settings {
+          grid-row: 2;
+          grid-column-start: 4;
+          text-align: right;
+
+          button {
+            display: flex;
+          }
+        }
+
+        &__version {
+          grid-row: 2;
+          grid-column-start: 3;
+        }
+
+        &__enabled {
+          grid-row: 2;
+          grid-column-start: 2;
+        }
+      }
+    }
+
+    .admin-plugins-list__row-admin-search-filtered {
+      background-color: var(--primary-low);
+    }
+
+    &__author {
+      font-size: var(--font-down-2);
+      padding: 0 0 0.25em 0;
+    }
+
+    &__name-with-badges {
+      display: flex;
+    }
+
+    &__name {
+      font-weight: bold;
+      margin-right: 0.5em;
+    }
+
+    &__badge {
+      font-weight: 400;
+      font-size: var(--font-down-2);
+      background-color: var(--primary-low);
+      color: var(--primary-medium);
+      padding: 0.2em 0.8em;
+
+      .d-icon {
+        font-size: 0.8em;
+      }
+
+      & + .admin-plugins-list__badge {
+        margin-left: 0.5em;
+      }
+    }
+
+    &__version {
+      .commit-hash {
+        font-size: var(--font-down-1);
+      }
+    }
+  }
+}
+
+.admin-plugin-config-page {
+  &__main-area {
+    .admin-detail {
+      padding-top: 15px;
+    }
+
+    &.-without-inner-sidebar {
+      .admin-detail {
+        border-left: 0;
+        padding-left: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  &__metadata {
+    margin-bottom: var(--space-6);
+  }
+
+  .admin-nav-submenu {
+    background: transparent;
+    border-bottom: 1px solid var(--primary-low);
+
+    .horizontal-overflow-nav {
+      background: transparent;
+
+      &:before {
+        display: none;
+      }
+
+      &:after {
+        display: none;
+      }
+    }
+
+    .admin-plugin-config-page__top-nav {
+      --active-border-width: var(--space-1);
+
+      width: auto !important;
+      margin: 0;
+
+      a {
+        font-size: var(--font-down-0);
+        padding: var(--space-2) var(--space-3)
+          calc(0.5rem + var(--active-border-width));
+
+        &:hover {
+          color: var(--quaternary);
+          background-color: transparent;
+          border-color: transparent;
+        }
+
+        &.active {
+          color: var(--quaternary);
+          background-color: transparent;
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
+          border-width: 0;
+          border-bottom: var(--active-border-width) solid var(--quaternary);
+          padding-bottom: var(--space-2);
+        }
+      }
+
+      .has-sidebar-page & {
+        @include breakpoint(large) {
+          span {
+            display: none;
+          }
+        }
+      }
+    }
+  }
+}
+
+.admin-plugins .admin-container {
+  margin-top: 0;
+}
+
+.admin-plugin-filtered-site-settings {
+  &__filter {
+    width: 100%;
+  }
+}
+
+.admin-plugin-config-area {
+  &__settings {
+    .admin-site-settings-filter-controls {
+      margin-bottom: 1em;
+    }
+
+    .setting-label {
+      margin-left: 18px;
+    }
+  }
+
+  &__empty-list {
+    padding: 1em;
+    border: 1px solid var(--primary-low);
+  }
+}

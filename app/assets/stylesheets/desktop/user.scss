@@ -1,0 +1,224 @@
+// Desktop styles for "/user" section
+
+.user-profile-hidden {
+  font-size: 1.5em;
+  text-align: center;
+}
+
+.user-secondary-navigation {
+  min-width: 150px;
+
+  .combo-box {
+    width: 100%;
+    &:not(:last-of-type) {
+      margin-bottom: 0.875em;
+    }
+  }
+
+  .nav-stacked {
+    background-color: transparent;
+    margin: 0;
+
+    li {
+      border-bottom: none;
+      &:hover,
+      &.active {
+        background: var(--primary-very-low);
+      }
+      &.archive {
+        padding-left: 1.4em;
+      }
+    }
+
+    a {
+      color: var(--primary-medium);
+
+      &.active {
+        color: var(--primary);
+        font-weight: bold;
+        background-color: transparent;
+
+        &:after {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .select-kit + .messages-nav {
+    margin-top: 1em;
+  }
+
+  .inboxes-controls {
+    margin-bottom: 0.75em;
+  }
+
+  &.user-messages {
+    --left-padding: 0.8em;
+
+    .nav-stacked {
+      a {
+        padding-left: calc(
+          var(--left-padding) - 1px
+        ); // 1px accounts for border on select-kit elements above
+      }
+    }
+  }
+}
+
+.user-content {
+  padding: 0;
+  margin-top: 2em;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  background: var(--d-content-background, var(--secondary));
+  box-sizing: border-box;
+
+  .btn.right {
+    float: right;
+  }
+}
+
+.pref-avatar {
+  .avatar {
+    max-width: 90px;
+    max-height: 90px;
+  }
+}
+
+.invite-controls .btn {
+  margin-right: 0px;
+}
+
+table.user-invite-list {
+  width: 100%;
+  margin-top: 15px;
+
+  tr {
+    td {
+      padding: 0.667em;
+
+      &.invite-actions {
+        white-space: nowrap;
+        width: 100px;
+      }
+
+      .label {
+        display: none;
+      }
+    }
+  }
+}
+
+.user-invite-none {
+  padding: 15px 0;
+}
+
+.user-main {
+  margin-bottom: 50px;
+
+  .about {
+    &.group {
+      .details {
+        padding: 15px 0;
+        margin: 0;
+        color: var(--secondary);
+      }
+    }
+
+    .details {
+      img.avatar {
+        margin: 0 20px 10px 0;
+      }
+
+      .primary-textual {
+        padding: 0 0 0.5em;
+      }
+
+      .bio {
+        max-width: 750px;
+      }
+    }
+
+    &.has-background {
+      .user-profile-image {
+        height: 300px;
+      }
+      .details {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 15px 0 0 0;
+        bottom: 0;
+      }
+    }
+
+    .controls {
+      max-width: 13.5em;
+
+      li {
+        margin-bottom: 0.5em;
+      }
+
+      li > .select-kit-header, // select-kit
+      .btn {
+        min-width: 9.5em;
+        width: 100%;
+      }
+    }
+
+    &.collapsed-info {
+      .user-profile-image {
+        display: none;
+      }
+      .controls {
+        width: auto;
+        max-width: unset;
+
+        > ul {
+          display: inline-flex;
+          > li {
+            display: inline-flex;
+            margin-left: 0.75em;
+          }
+
+          a {
+            width: auto;
+          }
+        }
+      }
+
+      .details {
+        position: relative;
+        padding: 0;
+        margin-top: 0;
+        border-bottom: 1px solid var(--primary-low);
+      }
+    }
+  }
+
+  .user-field {
+    input[type="text"] {
+      width: 530px;
+    }
+
+    .controls {
+      .instructions {
+        display: block;
+      }
+    }
+  }
+
+  .public-user-fields {
+    overflow: hidden;
+  }
+}
+
+.user-messages-page {
+  .topic-list th {
+    padding-top: 0;
+  }
+
+  .show-mores {
+    position: absolute;
+  }
+}
