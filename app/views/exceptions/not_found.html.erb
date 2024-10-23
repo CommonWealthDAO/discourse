@@ -12,13 +12,7 @@
   <h1 class="title"><%= @title %></h1>
 
   <%- if !@current_user %>
-    <a href="<%= path "/login" %>" class='btn btn-primary'><%= SvgSprite.raw_svg('fa-user') %><%= I18n.t('log_in') %></a>
-  <%- end %>
-
-  <%- if @group&.allow_membership_requests %>
-    <a href="<%= group_path @group.name %>" class='btn btn-primary'><%= SvgSprite.raw_svg('user-plus') %> <%= I18n.t('not_in_group.request_membership') %></a>
-  <%- elsif @group&.public_admission %>
-    <a href="<%= group_path @group.name %>" class='btn btn-primary'><%= SvgSprite.raw_svg('user-plus') %> <%= I18n.t('not_in_group.join_group') %></a>
+    <button id="login-cta" type="button" class='btn btn-primary'><%= SvgSprite.raw_svg('fa-user') %><%= I18n.t('log_in') %></button>
   <%- end %>
 </div>
 
@@ -26,16 +20,19 @@
 
 <%= @topics_partial %>
 
-<%- unless @hide_search%>
-  <div class="row">
-    <div class="page-not-found-search">
-      <form action='<%= path "/search" %>' id='discourse-search'>
-        <label for="search-input"><%= t 'page_not_found.search_title' %></label>
-        <input type="text" id="search-input" name="q" value="<%= @slug %>">
-        <button class="btn btn-primary"><%= t 'page_not_found.search_button' %></button>
-      </form>
-    </div>
-  </div>
+<style>
+  .d-header {
+    display: none;
+  }
+</style>
 
-  <%= preload_script('onpopstate-handler') %>
-<%- end %>
+<script defer nonce="<%= csp_nonce_placeholder %>">
+  window.triggerAuth = function() {
+    window.parent.postMessage({ message: 'triggerAuth', params: { pathname: window.location.pathname } }, '*')
+  }
+
+  const notFoundLoginButton = document.getElementById('login-cta')
+  if (notFoundLoginButton) {
+    notFoundLoginButton.addEventListener('click', window.triggerAuth)
+  }
+</script>
