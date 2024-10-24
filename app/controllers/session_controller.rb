@@ -39,7 +39,7 @@ class SessionController < ApplicationController
 
     sso = DiscourseConnect.generate_sso(return_path, secure_session: secure_session)
     connect_verbose_warn { "Verbose SSO log: Started SSO process\n\n#{sso.diagnostics}" }
-    redirect_to "#{sso_url(sso)}&cw_access_token=#{commonwealth_access_token}}", allow_other_host: true
+    redirect_to "#{sso_url(sso)}&cw_access_token=#{commonwealth_access_token}", allow_other_host: true
   end
 
   def sso_provider(payload = nil, confirmed_2fa_during_login = false)
