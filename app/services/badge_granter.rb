@@ -102,7 +102,7 @@ class BadgeGranter
         user_id: user.id,
         badge_id: badge.id,
       )
-      notification = send_notification(user.id, user.username, user.locale, badge)
+      notification = send_notification(user.id, user.username, user.effective_locale, badge)
 
       DB.exec(<<~SQL, notification_id: notification.id, user_id: user.id, badge_id: badge.id)
         UPDATE user_badges
@@ -379,7 +379,7 @@ class BadgeGranter
     { errors: e.message }
   end
 
-  MAX_ITEMS_FOR_DELTA ||= 200
+  MAX_ITEMS_FOR_DELTA = 200
   def self.backfill(badge, opts = nil)
     return unless SiteSetting.enable_badges
     return unless badge.enabled

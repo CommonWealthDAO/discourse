@@ -42,4 +42,20 @@ RSpec.describe "Drawer - index", type: :system do
 
     expect(row).to be_non_existent
   end
+
+  it "can open browse" do
+    channel = Fabricate(:chat_channel)
+
+    drawer_page.visit_index
+    drawer_page.channels_index.open_browse
+
+    expect(drawer_page.browse).to have_channel(name: channel.name)
+  end
+
+  it "shows empty state when no dms" do
+    drawer_page.visit_index
+    drawer_page.click_direct_messages
+    expect(page).to have_css("#c-footer-direct-messages.--active")
+    expect(page).to have_selector(".channel-list-empty-message")
+  end
 end

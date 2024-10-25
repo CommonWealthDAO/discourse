@@ -1,9 +1,9 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { getOwner } from "@ember/application";
 import { Input } from "@ember/component";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
+import { getOwner } from "@ember/owner";
 import { service } from "@ember/service";
 import { htmlSafe } from "@ember/template";
 import { Promise } from "rsvp";
@@ -87,7 +87,9 @@ export default class BulkTopicActions extends Component {
     const options = {};
 
     if (this.isSilent) {
-      operation = { type: "silent_close" };
+      const newType =
+        operation.type === "close" ? "silent_close" : operation.type;
+      operation.type = newType;
     }
 
     if (this.isCloseAction && this.closeNote) {

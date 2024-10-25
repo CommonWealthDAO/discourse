@@ -10,7 +10,7 @@ module Jobs
     # note: contents provided entirely by user
     attr_accessor :extra
 
-    COMPONENTS ||= %w[
+    COMPONENTS = %w[
       user_archive
       preferences
       auth_tokens
@@ -25,7 +25,7 @@ module Jobs
       visits
     ]
 
-    HEADER_ATTRS_FOR ||=
+    HEADER_ATTRS_FOR =
       HashWithIndifferentAccess.new(
         user_archive: %w[
           topic_title
@@ -368,20 +368,24 @@ module Jobs
         end
     end
 
+    def post_action_type_view
+      @post_action_type_view ||= PostActionTypeView.new
+    end
+
     def flags_export
       return enum_for(:flags_export) unless block_given?
 
       PostAction
         .with_deleted
         .where(user_id: @current_user.id)
-        .where(post_action_type_id: PostActionType.flag_types.values)
+        .where(post_action_type_id: post_action_type_view.flag_types.values)
         .order(:created_at)
         .each do |pa|
           yield(
             [
               pa.id,
               pa.post_id,
-              PostActionType.flag_types[pa.post_action_type_id],
+              post_action_type_view.flag_types[pa.post_action_type_id],
               pa.created_at,
               pa.updated_at,
               pa.deleted_at,
@@ -400,7 +404,7 @@ module Jobs
       PostAction
         .with_deleted
         .where(user_id: @current_user.id)
-        .where(post_action_type_id: PostActionType.types[:like])
+        .where(post_action_type_id: post_action_type_view.types[:like])
         .order(:created_at)
         .each do |pa|
           post = Post.with_deleted.find_by(id: pa.post_id)
@@ -424,7 +428,8 @@ module Jobs
       PostAction
         .where(user_id: @current_user.id)
         .where.not(
-          post_action_type_id: PostActionType.flag_types.values + [PostActionType.types[:like]],
+          post_action_type_id:
+            post_action_type_view.flag_types.values + [post_action_type_view.types[:like]],
         )
         .exists?
     end
@@ -435,7 +440,8 @@ module Jobs
         .with_deleted
         .where(user_id: @current_user.id)
         .where.not(
-          post_action_type_id: PostActionType.flag_types.values + [PostActionType.types[:like]],
+          post_action_type_id:
+            post_action_type_view.flag_types.values + [post_action_type_view.types[:like]],
         )
         .order(:created_at)
         .each do |pa|
@@ -443,7 +449,7 @@ module Jobs
             [
               pa.id,
               pa.post_id,
-              PostActionType.types[pa.post_action_type] || pa.post_action_type,
+              post_action_type_view.types[pa.post_action_type] || pa.post_action_type,
               pa.created_at,
               pa.updated_at,
               pa.deleted_at,
@@ -533,7 +539,10 @@ module Jobs
     def get_user_archive_fields(user_archive)
       user_archive_array = []
       topic_data = user_archive.topic
-      user_archive = user_archive.as_json
+      user_archive =
+        user_archive.as_json(
+          only: %i[topic_id post_number raw cooked like_count reply_count created_at id],
+        )
       topic_data =
         Topic
           .with_deleted

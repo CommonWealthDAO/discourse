@@ -161,6 +161,20 @@ RSpec.describe Topic do
 
   it { is_expected.to rate_limit }
 
+  describe "#shared_draft?" do
+    fab!(:topic)
+
+    context "when topic does not have a shared draft record" do
+      it { expect(topic).not_to be_shared_draft }
+    end
+
+    context "when topic has a shared draft record" do
+      before { Fabricate(:shared_draft, topic: topic) }
+
+      it { expect(topic).to be_shared_draft }
+    end
+  end
+
   describe "#visible_post_types" do
     let(:types) { Post.types }
 
@@ -801,8 +815,6 @@ RSpec.describe Topic do
 
     context "with rate limits" do
       before { RateLimiter.enable }
-
-      use_redis_snapshotting
 
       context "when per day" do
         before { SiteSetting.max_topic_invitations_per_day = 1 }
@@ -2684,8 +2696,6 @@ RSpec.describe Topic do
       RateLimiter.enable
     end
 
-    use_redis_snapshotting
-
     it "limits new users to max_topics_in_first_day and max_posts_in_first_day" do
       start = Time.now.tomorrow.beginning_of_day
 
@@ -2736,8 +2746,6 @@ RSpec.describe Topic do
       SiteSetting.max_topics_in_first_day = 0
       RateLimiter.enable
     end
-
-    use_redis_snapshotting
 
     it "limits according to max_personal_messages_per_day" do
       create_post(

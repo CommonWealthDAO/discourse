@@ -3,19 +3,18 @@ import { concat, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
+import { next } from "@ember/runloop";
 import { service } from "@ember/service";
+import { modifier } from "ember-modifier";
 import { eq, gt } from "truth-helpers";
 import PluginOutlet from "discourse/components/plugin-outlet";
-import ActionList from "discourse/components/topic-list/action-list";
 import ActivityColumn from "discourse/components/topic-list/activity-column";
-import ParticipantGroups from "discourse/components/topic-list/participant-groups";
 import PostCountOrBadges from "discourse/components/topic-list/post-count-or-badges";
 import PostersColumn from "discourse/components/topic-list/posters-column";
 import PostsCountColumn from "discourse/components/topic-list/posts-count-column";
+import TopicCell from "discourse/components/topic-list/topic-cell";
 import TopicExcerpt from "discourse/components/topic-list/topic-excerpt";
 import TopicLink from "discourse/components/topic-list/topic-link";
-import UnreadIndicator from "discourse/components/topic-list/unread-indicator";
-import TopicPostBadges from "discourse/components/topic-post-badges";
 import TopicStatus from "discourse/components/topic-status";
 import { topicTitleDecorators } from "discourse/components/topic-title";
 import avatar from "discourse/helpers/avatar";
@@ -26,71 +25,34 @@ import formatDate from "discourse/helpers/format-date";
 import number from "discourse/helpers/number";
 import topicFeaturedLink from "discourse/helpers/topic-featured-link";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
-import DiscourseURL, { groupPath } from "discourse/lib/url";
+import DiscourseURL from "discourse/lib/url";
 import icon from "discourse-common/helpers/d-icon";
 import i18n from "discourse-common/helpers/i18n";
-import { bind } from "discourse-common/utils/decorators";
-import I18n from "discourse-i18n";
 
 export default class TopicListItem extends Component {
-  @service appEvents;
-  @service currentUser;
   @service historyStore;
-  @service messageBus;
-  @service router;
   @service site;
   @service siteSettings;
 
-  constructor() {
-    super(...arguments);
+  highlightIfNeeded = modifier((element) => {
+    if (this.args.topic.id === this.historyStore.get("lastTopicIdViewed")) {
+      element.dataset.isLastViewedTopic = true;
 
-    if (this.includeUnreadIndicator) {
-      this.messageBus.subscribe(this.unreadIndicatorChannel, this.onMessage);
+      this.highlightRow(element);
+      next(() => this.historyStore.delete("lastTopicIdViewed"));
+
+      if (this.shouldFocusLastVisited) {
+        element.querySelector(".main-link .title")?.focus();
+      }
+    } else if (this.args.topic.get("highlight")) {
+      // highlight new topics that have been loaded from the server or the one we just created
+      this.highlightRow(element);
+      next(() => this.args.topic.set("highlight", false));
     }
-  }
-
-  willDestroy() {
-    super.willDestroy(...arguments);
-
-    this.messageBus.unsubscribe(this.unreadIndicatorChannel, this.onMessage);
-  }
-
-  @bind
-  onMessage(data) {
-    const nodeClassList = document.querySelector(
-      `.indicator-topic-${data.topic_id}`
-    ).classList;
-
-    nodeClassList.toggle("read", !data.show_indicator);
-  }
-
-  get unreadIndicatorChannel() {
-    return `/private-messages/unread-indicator/${this.args.topic.id}`;
-  }
-
-  get includeUnreadIndicator() {
-    return typeof this.args.topic.unread_by_group_member !== "undefined";
-  }
+  });
 
   get isSelected() {
     return this.args.selected?.includes(this.args.topic);
-  }
-
-  get participantGroups() {
-    if (!this.args.topic.participant_groups) {
-      return [];
-    }
-
-    return this.args.topic.participant_groups.map((name) => ({
-      name,
-      url: groupPath(name),
-    }));
-  }
-
-  get newDotText() {
-    return this.currentUser?.trust_level > 0
-      ? ""
-      : I18n.t("filters.new.lower_title");
   }
 
   get tagClassNames() {
@@ -116,49 +78,19 @@ export default class TopicListItem extends Component {
     return this.site.desktopView && this.args.focusLastVisitedTopic;
   }
 
-  get unreadClass() {
-    return this.args.topic.unread_by_group_member ? "" : "read";
-  }
-
   navigateToTopic(topic, href) {
     this.historyStore.set("lastTopicIdViewed", topic.id);
     DiscourseURL.routeTo(href || topic.url);
   }
 
-  highlight(element, isLastViewedTopic) {
-    element.classList.add("highlighted");
-    element.setAttribute("data-islastviewedtopic", isLastViewedTopic);
+  highlightRow(element) {
     element.addEventListener(
       "animationend",
       () => element.classList.remove("highlighted"),
       { once: true }
     );
 
-    if (isLastViewedTopic && this.shouldFocusLastVisited) {
-      element.querySelector(".main-link .title")?.focus();
-    }
-  }
-
-  @action
-  highlightIfNeeded(element) {
-    if (this.args.topic.id === this.historyStore.get("lastTopicIdViewed")) {
-      this.historyStore.delete("lastTopicIdViewed");
-      this.highlight(element, true);
-    } else if (this.args.topic.highlight) {
-      // highlight new topics that have been loaded from the server or the one we just created
-      this.args.topic.set("highlight", false);
-      this.highlight(element, false);
-    }
-  }
-
-  @action
-  onTitleFocus(event) {
-    event.target.classList.add("selected");
-  }
-
-  @action
-  onTitleBlur(event) {
-    event.target.classList.remove("selected");
+    element.classList.add("highlighted");
   }
 
   @action
@@ -254,7 +186,7 @@ export default class TopicListItem extends Component {
     <tr
       {{! template-lint-disable no-invalid-interactive }}
       {{didInsert this.applyTitleDecorators}}
-      {{didInsert this.highlightIfNeeded}}
+      {{this.highlightIfNeeded}}
       {{on "keydown" this.keyDown}}
       {{on "click" this.click}}
       data-topic-id={{@topic.id}}
@@ -281,7 +213,7 @@ export default class TopicListItem extends Component {
         @outletArgs={{hash topic=@topic}}
       />
       {{#if this.site.desktopView}}
-        <PluginOutlet @name="topic-list-before-columns" />
+        {{! TODO: column DAG "topic-list-before-columns" }}
 
         {{#if @bulkSelectEnabled}}
           <td class="bulk-select topic-list-data">
@@ -297,72 +229,18 @@ export default class TopicListItem extends Component {
           </td>
         {{/if}}
 
-        <td class="main-link clearfix topic-list-data" colspan="1">
-          <PluginOutlet @name="topic-list-before-link" />
+        <TopicCell
+          @topic={{@topic}}
+          @showTopicPostBadges={{@showTopicPostBadges}}
+          @hideCategory={{@hideCategory}}
+          @tagsForUser={{@tagsForUser}}
+          @expandPinned={{this.expandPinned}}
+        />
 
-          <span class="link-top-line">
-            {{~! no whitespace ~}}
-            <PluginOutlet @name="topic-list-before-status" />
-            {{~! no whitespace ~}}
-            <TopicStatus @topic={{@topic}} />
-            {{~! no whitespace ~}}
-            <TopicLink
-              {{on "focus" this.onTitleFocus}}
-              {{on "blur" this.onTitleBlur}}
-              @topic={{@topic}}
-              class="raw-link raw-topic-link"
-            />
-            {{~#if @topic.featured_link~}}
-              &nbsp;
-              {{~topicFeaturedLink @topic}}
-            {{~/if~}}
-            <PluginOutlet @name="topic-list-after-title" />
-            {{~! no whitespace ~}}
-            <UnreadIndicator
-              @includeUnreadIndicator={{this.includeUnreadIndicator}}
-              @topicId={{@topic.id}}
-              class={{this.unreadClass}}
-            />
-            {{~#if @showTopicPostBadges~}}
-              <TopicPostBadges
-                @unreadPosts={{@topic.unread_posts}}
-                @unseen={{@topic.unseen}}
-                @newDotText={{this.newDotText}}
-                @url={{@topic.lastUnreadUrl}}
-              />
-            {{~/if~}}
-          </span>
-
-          <div class="link-bottom-line">
-            {{#unless @hideCategory}}
-              {{#unless @topic.isPinnedUncategorized}}
-                <PluginOutlet @name="topic-list-before-category" />
-                {{categoryLink @topic.category}}
-              {{/unless}}
-            {{/unless}}
-
-            {{discourseTags @topic mode="list" tagsForUser=@tagsForUser}}
-
-            {{#if this.participantGroups}}
-              <ParticipantGroups @groups={{this.participantGroups}} />
-            {{/if}}
-
-            <ActionList
-              @topic={{@topic}}
-              @postNumbers={{@topic.liked_post_numbers}}
-              @icon="heart"
-              class="likes"
-            />
-          </div>
-
-          {{#if this.expandPinned}}
-            <TopicExcerpt @topic={{@topic}} />
-          {{/if}}
-
-          <PluginOutlet @name="topic-list-main-link-bottom" />
-        </td>
-
-        <PluginOutlet @name="topic-list-after-main-link" />
+        <PluginOutlet
+          @name="topic-list-after-main-link"
+          @outletArgs={{hash topic=@topic}}
+        />
 
         {{#if @showPosters}}
           <PostersColumn @posters={{@topic.featuredUsers}} />
@@ -393,21 +271,26 @@ export default class TopicListItem extends Component {
         {{/if}}
 
         <td class={{concatClass "num views topic-list-data" @topic.viewsHeat}}>
-          <PluginOutlet @name="topic-list-before-view-count" />
+          <PluginOutlet
+            @name="topic-list-before-view-count"
+            @outletArgs={{hash topic=@topic}}
+          />
           {{number @topic.views numberKey="views_long"}}
         </td>
 
         <ActivityColumn @topic={{@topic}} class="num topic-list-data" />
 
-        <PluginOutlet @name="topic-list-after-columns" />
+        {{! TODO: column DAG "topic-list-after-columns" }}
       {{else}}
         <td class="topic-list-data">
-          <PluginOutlet @name="topic-list-before-columns" />
+          {{! TODO: column DAG "topic-list-before-columns" }}
 
           <div class="pull-left">
             {{#if @bulkSelectEnabled}}
               <label for="bulk-select-{{@topic.id}}">
                 <input
+                  {{on "click" this.onBulkSelectToggle}}
+                  checked={{this.isSelected}}
                   type="checkbox"
                   id="bulk-select-{{@topic.id}}"
                   class="bulk-select"
@@ -427,11 +310,17 @@ export default class TopicListItem extends Component {
 
           <div class="topic-item-metadata right">
             {{~! no whitespace ~}}
-            <PluginOutlet @name="topic-list-before-link" />
+            <PluginOutlet
+              @name="topic-list-before-link"
+              @outletArgs={{hash topic=@topic}}
+            />
 
             <div class="main-link">
               {{~! no whitespace ~}}
-              <PluginOutlet @name="topic-list-before-status" />
+              <PluginOutlet
+                @name="topic-list-before-status"
+                @outletArgs={{hash topic=@topic}}
+              />
               {{~! no whitespace ~}}
               <TopicStatus @topic={{@topic}} />
               {{~! no whitespace ~}}
@@ -442,9 +331,13 @@ export default class TopicListItem extends Component {
                 class="raw-link raw-topic-link"
               />
               {{~#if @topic.featured_link~}}
-                {{topicFeaturedLink @topic}}
+                &nbsp;
+                {{~topicFeaturedLink @topic}}
               {{~/if~}}
-              <PluginOutlet @name="topic-list-after-title" />
+              <PluginOutlet
+                @name="topic-list-after-title"
+                @outletArgs={{hash topic=@topic}}
+              />
               {{~#if @topic.unseen~}}
                 <span class="topic-post-badges">&nbsp;<span
                     class="badge-notification new-topic"
@@ -453,10 +346,16 @@ export default class TopicListItem extends Component {
               {{~#if this.expandPinned~}}
                 <TopicExcerpt @topic={{@topic}} />
               {{~/if~}}
-              <PluginOutlet @name="topic-list-main-link-bottom" />
+              <PluginOutlet
+                @name="topic-list-main-link-bottom"
+                @outletArgs={{hash topic=@topic}}
+              />
             </div>
             {{~! no whitespace ~}}
-            <PluginOutlet @name="topic-list-after-main-link" />
+            <PluginOutlet
+              @name="topic-list-after-main-link"
+              @outletArgs={{hash topic=@topic}}
+            />
 
             <div class="pull-right">
               <PostCountOrBadges
@@ -468,7 +367,10 @@ export default class TopicListItem extends Component {
             <div class="topic-item-stats clearfix">
               <span class="topic-item-stats__category-tags">
                 {{#unless @hideCategory}}
-                  <PluginOutlet @name="topic-list-before-category" />
+                  <PluginOutlet
+                    @name="topic-list-before-category"
+                    @outletArgs={{hash topic=@topic}}
+                  />
                   {{categoryLink @topic.category}}
                 {{/unless}}
 

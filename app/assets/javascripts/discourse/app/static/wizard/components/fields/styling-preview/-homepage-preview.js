@@ -1,24 +1,24 @@
 import { darkLightDiff, LOREM } from "../../../lib/preview";
 import PreviewBaseComponent from "./-preview-base";
 
-export default PreviewBaseComponent.extend({
-  width: 628,
-  height: 322,
-  logo: null,
-  avatar: null,
+export default class HomepagePreview extends PreviewBaseComponent {
+  width = 628;
+  height = 322;
+  logo = null;
+  avatar = null;
 
   didUpdateAttrs() {
-    this._super(...arguments);
+    super.didUpdateAttrs(...arguments);
 
     this.triggerRepaint();
-  },
+  }
 
   images() {
     return {
       logo: this.wizard.logoUrl,
       avatar: "/images/wizard/trout.png",
     };
-  },
+  }
 
   paint({ ctx, colors, font, width, height }) {
     this.drawFullHeader(colors, font, this.logo);
@@ -47,7 +47,7 @@ export default PreviewBaseComponent.extend({
       this.drawPills(colors, font, height * 0.15, { categories: true });
       this.renderCategoriesWithTopics(ctx, colors, font, width, height);
     }
-  },
+  }
 
   renderCategoriesBoxes(ctx, colors, font, width, height, opts) {
     opts = opts || {};
@@ -85,7 +85,11 @@ export default PreviewBaseComponent.extend({
       ctx.font = `Bold ${bodyFontSize * 1.3}em '${font}'`;
       ctx.fillStyle = colors.primary;
       ctx.textAlign = "center";
-      ctx.fillText(category.name, boxStartX + boxWidth / 2, boxStartY + 25);
+      ctx.fillText(
+        category.displayName,
+        boxStartX + boxWidth / 2,
+        boxStartY + 25
+      );
       ctx.textAlign = "left";
 
       if (opts.topics) {
@@ -118,7 +122,7 @@ export default PreviewBaseComponent.extend({
         ctx.textAlign = "left";
       }
     });
-  },
+  }
 
   renderCategories(ctx, colors, font, width, height) {
     const textColor = darkLightDiff(colors.primary, colors.secondary, 50, 50);
@@ -167,7 +171,7 @@ export default PreviewBaseComponent.extend({
       const textPos = y + categoryHeight * 0.35;
       ctx.font = `Bold ${bodyFontSize * 1.1}em '${font}'`;
       ctx.fillStyle = colors.primary;
-      ctx.fillText(category.name, cols[0], textPos);
+      ctx.fillText(category.displayName, cols[0], textPos);
 
       ctx.font = `${bodyFontSize * 0.8}em '${font}'`;
       ctx.fillStyle = textColor;
@@ -217,7 +221,7 @@ export default PreviewBaseComponent.extend({
         y += topicHeight;
       });
     }
-  },
+  }
 
   renderCategoriesWithTopics(ctx, colors, font, width, height) {
     const textColor = darkLightDiff(colors.primary, colors.secondary, 50, 50);
@@ -263,7 +267,7 @@ export default PreviewBaseComponent.extend({
       const textPos = y + categoryHeight * 0.35;
       ctx.font = `Bold ${bodyFontSize * 1.1}em '${font}'`;
       ctx.fillStyle = colors.primary;
-      ctx.fillText(category.name, cols[0], textPos);
+      ctx.fillText(category.displayName, cols[0], textPos);
 
       ctx.font = `${bodyFontSize * 0.8}em '${font}'`;
       ctx.fillStyle = textColor;
@@ -328,7 +332,7 @@ export default PreviewBaseComponent.extend({
 
       ctx.fillStyle = colors.primary;
       ctx.fillText(
-        category.name,
+        category.displayName,
         cols[3] + badgeSize * 3,
         y + topicHeight * 0.76
       );
@@ -336,21 +340,21 @@ export default PreviewBaseComponent.extend({
 
       drawLine(width / 2, y);
     });
-  },
+  }
 
   getHomepageStyle() {
     return this.step.valueFor("homepage_style");
-  },
+  }
 
   getTitles() {
     return LOREM.split(".")
       .slice(0, 8)
       .map((t) => t.substring(0, 40));
-  },
+  }
 
   getDescriptions() {
     return LOREM.split(".");
-  },
+  }
 
   renderLatest(ctx, colors, font, width, height) {
     const rowHeight = height / 6.6;
@@ -409,7 +413,7 @@ export default PreviewBaseComponent.extend({
 
       ctx.fillStyle = colors.primary;
       ctx.fillText(
-        category.name,
+        category.displayName,
         cols[0] + badgeSize * 2,
         y + rowHeight * 0.73
       );
@@ -433,7 +437,7 @@ export default PreviewBaseComponent.extend({
       drawLine(y + rowHeight * 1);
       y += rowHeight;
     });
-  },
+  }
 
   fillTextMultiLine(ctx, text, x, y, lineHeight, maxWidth) {
     const words = text.split(" ").filter((f) => f);
@@ -454,7 +458,7 @@ export default PreviewBaseComponent.extend({
     totalHeight += lineHeight;
 
     return totalHeight;
-  },
+  }
 
   // Edges expected in this order: NW to NE -> NE to SE -> SE to SW -> SW to NW
   drawSquare(ctx, from, to, edges = []) {
@@ -481,5 +485,5 @@ export default PreviewBaseComponent.extend({
       ctx.lineTo(path.to.x, path.to.y);
       ctx.stroke();
     });
-  },
-});
+  }
+}

@@ -20,6 +20,10 @@ export default class AdminBackupsRoute extends DiscourseRoute {
   @service messageBus;
   @service modal;
 
+  titleToken() {
+    return I18n.t("admin.backups.title");
+  }
+
   activate() {
     this.messageBus.subscribe(LOG_CHANNEL, this.onMessage);
   }
@@ -28,16 +32,16 @@ export default class AdminBackupsRoute extends DiscourseRoute {
     this.messageBus.unsubscribe(LOG_CHANNEL, this.onMessage);
   }
 
-  model() {
-    return PreloadStore.getAndRemove("operations_status", () =>
+  async model() {
+    const status = await PreloadStore.getAndRemove("operations_status", () =>
       ajax("/admin/backups/status.json")
-    ).then((status) =>
-      BackupStatus.create({
-        isOperationRunning: status.is_operation_running,
-        canRollback: status.can_rollback,
-        allowRestore: status.allow_restore,
-      })
     );
+
+    return BackupStatus.create({
+      isOperationRunning: status.is_operation_running,
+      canRollback: status.can_rollback,
+      allowRestore: status.allow_restore,
+    });
   }
 
   @bind

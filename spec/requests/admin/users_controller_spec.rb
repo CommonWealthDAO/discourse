@@ -5,6 +5,7 @@ require "rotp"
 
 RSpec.describe Admin::UsersController do
   fab!(:admin)
+  fab!(:another_admin) { Fabricate(:admin) }
   fab!(:moderator)
   fab!(:user)
   fab!(:coding_horror)
@@ -108,18 +109,16 @@ RSpec.describe Admin::UsersController do
         expect(response.parsed_body["id"]).to eq(user.id)
       end
 
-      it "returns similar users" do
+      it "includes count of similiar users" do
         Fabricate(:user, ip_address: "88.88.88.88")
+        Fabricate(:admin, ip_address: user.ip_address)
+        Fabricate(:moderator, ip_address: user.ip_address)
         similar_user = Fabricate(:user, ip_address: user.ip_address)
 
         get "/admin/users/#{user.id}.json"
 
         expect(response.status).to eq(200)
-        expect(response.parsed_body["id"]).to eq(user.id)
         expect(response.parsed_body["similar_users_count"]).to eq(1)
-        expect(response.parsed_body["similar_users"].map { |u| u["id"] }).to contain_exactly(
-          similar_user.id,
-        )
       end
     end
 
@@ -132,6 +131,22 @@ RSpec.describe Admin::UsersController do
         expect(response.status).to eq(404)
         expect(response.parsed_body["errors"]).to include(I18n.t("not_found"))
       end
+    end
+  end
+
+  describe "#similar_users" do
+    before { sign_in(admin) }
+
+    it "includes similar users who aren't admin or mods" do
+      Fabricate(:user, ip_address: "88.88.88.88")
+      Fabricate(:admin, ip_address: user.ip_address)
+      Fabricate(:moderator, ip_address: user.ip_address)
+      similar_user = Fabricate(:user, ip_address: user.ip_address)
+
+      get "/admin/users/#{user.id}/similar-users.json"
+
+      expect(response.status).to eq(200)
+      expect(response.parsed_body["users"].map { |u| u["id"] }).to contain_exactly(similar_user.id)
     end
   end
 
@@ -278,10 +293,37 @@ RSpec.describe Admin::UsersController do
       end
     end
 
+    shared_examples "suspension of staff users" do
+      it "doesn't allow suspending a staff user" do
+        put "/admin/users/#{another_admin.id}/suspend.json",
+            params: {
+              suspend_until: 5.hours.from_now,
+              reason: "naughty boy",
+            }
+
+        expect(response.status).to eq(403)
+        expect(another_admin.reload).not_to be_suspended
+      end
+
+      it "doesn't allow suspending a staff user via other_user_ids" do
+        put "/admin/users/#{user.id}/suspend.json",
+            params: {
+              suspend_until: 5.hours.from_now,
+              reason: "naughty boy",
+              other_user_ids: [another_admin.id],
+            }
+
+        expect(response.status).to eq(403)
+        expect(user.reload).not_to be_suspended
+        expect(another_admin.reload).not_to be_suspended
+      end
+    end
+
     context "when logged in as an admin" do
       before { sign_in(admin) }
 
       include_examples "suspension of active user possible"
+      include_examples "suspension of staff users"
 
       it "checks if user is suspended" do
         put "/admin/users/#{user.id}/suspend.json",
@@ -358,6 +400,27 @@ RSpec.describe Admin::UsersController do
         expect(response.status).to eq(400)
         user.reload
         expect(user).not_to be_suspended
+      end
+
+      it "fails the request if other_user_ids is too big" do
+        another_user = Fabricate(:user)
+        other_user_ids = [another_user.id]
+        other_user_ids.push(*(1..304).to_a)
+
+        put "/admin/users/#{user.id}/suspend.json",
+            params: {
+              reason: "because I said so",
+              suspend_until: 5.hours.from_now,
+              other_user_ids:,
+            }
+
+        expect(response.status).to eq(400)
+
+        user.reload
+        expect(user).not_to be_suspended
+
+        another_user.reload
+        expect(another_user).not_to be_suspended
       end
 
       context "with an associated post" do
@@ -505,6 +568,7 @@ RSpec.describe Admin::UsersController do
       before { sign_in(moderator) }
 
       include_examples "suspension of active user possible"
+      include_examples "suspension of staff users"
     end
 
     context "when logged in as a non-staff user" do
@@ -1517,8 +1581,34 @@ RSpec.describe Admin::UsersController do
         expect(response.status).to eq(404)
       end
 
+      it "doesn't allow silencing another admin" do
+        put "/admin/users/#{another_admin.id}/silence.json",
+            params: {
+              reason: "because reasons",
+              silenced_till: 6.hours.from_now,
+            }
+        expect(response.status).to eq(403)
+        expect(another_admin.reload).to_not be_silenced
+      end
+
+      it "doesn't allow silencing another admin via other_user_ids" do
+        put "/admin/users/#{reg_user.id}/silence.json",
+            params: {
+              other_user_ids: [another_admin.id],
+              reason: "because reasons",
+              silenced_till: 6.hours.from_now,
+            }
+        expect(response.status).to eq(403)
+        expect(another_admin.reload).to_not be_silenced
+        expect(reg_user.reload).to_not be_silenced
+      end
+
       it "punishes the user for spamming" do
-        put "/admin/users/#{reg_user.id}/silence.json"
+        put "/admin/users/#{reg_user.id}/silence.json",
+            params: {
+              reason: "because reasons",
+              silenced_till: 7.hours.from_now,
+            }
         expect(response.status).to eq(200)
         reg_user.reload
         expect(reg_user).to be_silenced
@@ -1530,6 +1620,8 @@ RSpec.describe Admin::UsersController do
 
         put "/admin/users/#{reg_user.id}/silence.json",
             params: {
+              reason: "because reasons",
+              silenced_till: 7.hours.from_now,
               post_id: silence_post.id,
               post_action: "edit",
               post_edit: "this is the new contents for the post",
@@ -1553,7 +1645,11 @@ RSpec.describe Admin::UsersController do
 
       it "will set a length of time if provided" do
         future_date = 1.month.from_now.to_date
-        put "/admin/users/#{reg_user.id}/silence.json", params: { silenced_till: future_date }
+        put "/admin/users/#{reg_user.id}/silence.json",
+            params: {
+              reason: "because reasons",
+              silenced_till: future_date,
+            }
 
         expect(response.status).to eq(200)
         reg_user.reload
@@ -1565,6 +1661,8 @@ RSpec.describe Admin::UsersController do
         expect do
           put "/admin/users/#{reg_user.id}/silence.json",
               params: {
+                reason: "none of your biz",
+                silenced_till: 666.hours.from_now,
                 message: "Email this to the user",
               }
         end.to change { Jobs::CriticalUserEmail.jobs.size }.by(1)
@@ -1603,7 +1701,12 @@ RSpec.describe Admin::UsersController do
       end
 
       it "can silence multiple users" do
-        put "/admin/users/#{reg_user.id}/silence.json", params: { other_user_ids: [other_user.id] }
+        put "/admin/users/#{reg_user.id}/silence.json",
+            params: {
+              reason: "because I want to",
+              silenced_till: 14.hours.from_now,
+              other_user_ids: [other_user.id],
+            }
         expect(response.status).to eq(200)
         expect(reg_user.reload).to be_silenced
         expect(other_user.reload).to be_silenced
@@ -1620,18 +1723,66 @@ RSpec.describe Admin::UsersController do
         user.reload
         expect(user).not_to be_suspended
       end
+
+      it "fails the request if other_user_ids is too big" do
+        another_user = Fabricate(:user)
+        other_user_ids = [another_user.id]
+        other_user_ids.push(*(1..304).to_a)
+
+        put "/admin/users/#{user.id}/silence.json",
+            params: {
+              reason: "because I said so",
+              silenced_till: 5.hours.from_now,
+              other_user_ids:,
+            }
+
+        expect(response.status).to eq(400)
+
+        user.reload
+        expect(user).not_to be_silenced
+
+        another_user.reload
+        expect(another_user).not_to be_silenced
+      end
     end
 
     context "when logged in as a moderator" do
       before { sign_in(moderator) }
 
       it "silences user" do
-        put "/admin/users/#{reg_user.id}/silence.json"
+        put "/admin/users/#{reg_user.id}/silence.json",
+            params: {
+              reason: "cuz I wanna",
+              silenced_till: 66.hours.from_now,
+            }
 
         expect(response.status).to eq(200)
         reg_user.reload
         expect(reg_user).to be_silenced
         expect(reg_user.silenced_record).to be_present
+      end
+
+      it "doesn't allow silencing another admin" do
+        put "/admin/users/#{another_admin.id}/silence.json",
+            params: {
+              reason: "because reasons",
+              silenced_till: 3.hours.from_now,
+            }
+        expect(response.status).to eq(403)
+        expect(another_admin.reload).to_not be_silenced
+      end
+
+      it "doesn't allow silencing another admin via other_user_ids" do
+        put "/admin/users/#{reg_user.id}/silence.json",
+            params: {
+              other_user_ids: [another_admin.id],
+              reason: "because reasons",
+              silenced_till: 3.hours.from_now,
+            }
+
+        expect(response.status).to eq(403)
+        expect(another_admin.reload).to_not be_silenced
+        expect(reg_user.reload).to_not be_silenced
       end
     end
 
@@ -2285,6 +2436,58 @@ RSpec.describe Admin::UsersController do
         expect(response.status).to eq(404)
         expect(response.parsed_body["errors"]).to include(I18n.t("not_found"))
         expect(user.single_sign_on_record).to be_present
+      end
+    end
+  end
+
+  describe "#delete_associated_accounts" do
+    fab!(:user_associated_accounts) do
+      UserAssociatedAccount.create!(
+        provider_name: "github",
+        provider_uid: "123456789",
+        user_id: user.id,
+        last_used: 1.seconds.ago,
+      )
+    end
+
+    context "when logged in as an admin" do
+      before { sign_in(admin) }
+
+      it "deletes the record and logs the deletion" do
+        put "/admin/users/#{user.id}/delete_associated_accounts.json"
+
+        expect(response.status).to eq(200)
+        expect(user.user_associated_accounts).to eq([])
+        expect(UserHistory.last).to have_attributes(
+          acting_user_id: admin.id,
+          target_user_id: user.id,
+          action: UserHistory.actions[:delete_associated_accounts],
+        )
+        expect(UserHistory.last.previous_value).to include(':uid=>"123456789"')
+      end
+    end
+
+    context "when logged in as a moderator" do
+      before { sign_in(moderator) }
+
+      it "prevents deletion of associated accounts with a 403 response" do
+        put "/admin/users/#{user.id}/delete_associated_accounts.json"
+
+        expect(response.status).to eq(403)
+        expect(response.parsed_body["errors"]).to include(I18n.t("invalid_access"))
+        expect(user.user_associated_accounts).to be_present
+      end
+    end
+
+    context "when logged in as a non-staff user" do
+      before { sign_in(user) }
+
+      it "prevents deletion of associated accounts with a 404 response" do
+        put "/admin/users/#{user.id}/delete_associated_accounts.json"
+
+        expect(response.status).to eq(404)
+        expect(response.parsed_body["errors"]).to include(I18n.t("not_found"))
+        expect(user.user_associated_accounts).to be_present
       end
     end
   end

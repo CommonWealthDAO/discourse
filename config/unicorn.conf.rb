@@ -1,14 +1,24 @@
 # frozen_string_literal: true
 
 # See http://unicorn.bogomips.org/Unicorn/Configurator.html
+discourse_path = File.expand_path(File.expand_path(File.dirname(__FILE__)) + "/../")
 
-if (ENV["LOGSTASH_UNICORN_URI"] || "").length > 0
+enable_logstash_logger = ENV["ENABLE_LOGSTASH_LOGGER"] == "1"
+unicorn_stderr_path = "#{discourse_path}/log/unicorn.stderr.log"
+unicorn_stdout_path = "#{discourse_path}/log/unicorn.stdout.log"
+
+if enable_logstash_logger
   require_relative "../lib/discourse_logstash_logger"
   require_relative "../lib/unicorn_logstash_patch"
-  logger DiscourseLogstashLogger.logger(uri: ENV["LOGSTASH_UNICORN_URI"], type: :unicorn)
+  FileUtils.touch(unicorn_stderr_path) if !File.exist?(unicorn_stderr_path)
+  logger DiscourseLogstashLogger.logger(
+           logdev: unicorn_stderr_path,
+           type: :unicorn,
+           customize_event: lambda { |event| event["@timestamp"] = ::Time.now.utc },
+         )
+else
+  logger Logger.new(STDOUT)
 end
-
-discourse_path = File.expand_path(File.expand_path(File.dirname(__FILE__)) + "/../")
 
 # tune down if not enough ram
 worker_processes (ENV["UNICORN_WORKERS"] || 3).to_i
@@ -25,18 +35,18 @@ FileUtils.mkdir_p("#{discourse_path}/tmp/pids") if !File.exist?("#{discourse_pat
 # feel free to point this anywhere accessible on the filesystem
 pid(ENV["UNICORN_PID_PATH"] || "#{discourse_path}/tmp/pids/unicorn.pid")
 
-if ENV["RAILS_ENV"] != "production"
-  logger Logger.new(STDOUT)
-  # we want a longer timeout in dev cause first request can be really slow
-  timeout(ENV["UNICORN_TIMEOUT"] && ENV["UNICORN_TIMEOUT"].to_i || 60)
-else
+if ENV["RAILS_ENV"] == "production"
   # By default, the Unicorn logger will write to stderr.
   # Additionally, some applications/frameworks log to stderr or stdout,
   # so prevent them from going to /dev/null when daemonized here:
-  stderr_path "#{discourse_path}/log/unicorn.stderr.log"
-  stdout_path "#{discourse_path}/log/unicorn.stdout.log"
+  stderr_path unicorn_stderr_path
+  stdout_path unicorn_stdout_path
+
   # nuke workers after 30 seconds instead of 60 seconds (the default)
   timeout 30
+else
+  # we want a longer timeout in dev cause first request can be really slow
+  timeout(ENV["UNICORN_TIMEOUT"] && ENV["UNICORN_TIMEOUT"].to_i || 60)
 end
 
 # important for Ruby 2.0
@@ -54,15 +64,7 @@ initialized = false
 before_fork do |server, worker|
   unless initialized
     Discourse.preload_rails!
-
-    # V8 does not support forking, make sure all contexts are disposed
-    ObjectSpace.each_object(MiniRacer::Context) { |c| c.dispose }
-
-    # get rid of rubbish so we don't share it
-    # longer term we will use compact! here
-    GC.start
-    GC.start
-    GC.start
+    Discourse.before_fork
 
     initialized = true
 
@@ -87,13 +89,22 @@ before_fork do |server, worker|
       Demon::Sidekiq.after_fork { DiscourseEvent.trigger(:sidekiq_fork_started) }
       Demon::Sidekiq.start(sidekiqs, logger: server.logger)
 
-      # Trap USR1, so we can re-issue to sidekiq workers
-      # but chain the default unicorn implementation as well
-      old_handler =
-        Signal.trap("USR1") do
-          Demon::Sidekiq.kill("USR1")
-          old_handler.call
-        end
+      if Discourse.enable_sidekiq_logging?
+        # Trap USR1, so we can re-issue to sidekiq workers
+        # but chain the default unicorn implementation as well
+        old_handler =
+          Signal.trap("USR1") do
+            old_handler.call
+
+            # We have seen Sidekiq processes getting stuck in production sporadically when log rotation happens.
+            # The cause is currently unknown but we suspect that it is related to the Unicorn master process and
+            # Sidekiq demon processes reopening logs at the same time as we noticed that Unicorn worker processes only
+            # reopen logs after the Unicorn master process is done. To workaround the problem, we are adding an arbitrary
+            # delay of 1 second to Sidekiq's log reopeing procedure. The 1 second delay should be
+            # more than enough for the Unicorn master process to finish reopening logs.
+            Demon::Sidekiq.kill("USR2")
+          end
+      end
     end
 
     if ENV["DISCOURSE_ENABLE_EMAIL_SYNC_DEMON"] == "true"

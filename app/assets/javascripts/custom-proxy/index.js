@@ -173,21 +173,6 @@ async function handleRequest(proxy, baseURL, req, res, outputPath) {
     res.set("location", newLocation);
   }
 
-  const csp = response.headers.get("content-security-policy");
-  if (csp && !csp.includes("'strict-dynamic'")) {
-    const emberCliAdditions = [
-      `http://${originalHost}${baseURL}assets/`,
-      `http://${originalHost}${baseURL}ember-cli-live-reload.js`,
-      `http://${originalHost}${baseURL}_lr/`,
-    ].join(" ");
-
-    const newCSP = csp
-      .replaceAll(proxy, `http://${originalHost}`)
-      .replaceAll("script-src ", `script-src ${emberCliAdditions} `);
-
-    res.set("content-security-policy", newCSP);
-  }
-
   const contentType = response.headers.get("content-type");
   const isHTML = contentType?.startsWith("text/html");
 
@@ -259,7 +244,7 @@ module.exports = {
 Discourse can't be run without a \`--proxy\` setting, because it needs a Rails application
 to serve API requests. For example:
 
-  yarn run ember serve --proxy "http://localhost:3000"\n`);
+  pnpm ember serve --proxy "http://localhost:3000"\n`);
       throw "--proxy argument is required";
     }
 

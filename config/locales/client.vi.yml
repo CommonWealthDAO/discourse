@@ -20,6 +20,7 @@ vi:
             kb: KB
             mb: MB
             tb: TB
+      percent: "%{count}%"
       short:
         thousands: "%{number}k"
         millions: "%{number}triệu"
@@ -34,8 +35,11 @@ vi:
       long_with_year: "D MMM YYYY HH:mm"
       long_with_year_no_time: "D MMM YYYY"
       full_with_year_no_time: "D MMMM YYYY"
+      long_date_with_year: "DD/MM/YYYY LT"
       long_date_without_year: "D MMM LT"
+      long_date_with_year_without_time: "DD/MM/YYYY"
       long_date_without_year_with_linebreak: "D MMM <br/>LT"
+      long_date_with_year_with_linebreak: "DD/MM/YYYY <br/>LT"
       wrap_ago: "%{date} trước"
       wrap_on: "lúc %{date}"
       tiny:
@@ -81,6 +85,7 @@ vi:
           other: "hơn %{count} năm"
         almost_x_years:
           other: "gần %{count} năm"
+        date_year: "DD/MM/YYYY"
       medium_with_ago:
         x_minutes:
           other: " %{count} phút trước"
@@ -108,12 +113,12 @@ vi:
       topic_html: 'Chủ đề:<span class="topic-title">%{topicTitle}</span>'
       post: "bài đăng #%{postNumber} bởi @%{username}"
       close: "đóng"
-      twitter: "Chia sẻ trên Twitter"
       facebook: "Chia sẻ trên Facebook"
       email: "Gửi qua email"
       url: "Sao chép và chia sẻ URL"
     word_connector:
       comma: ", "
+      last_item: "và"
     action_codes:
       public_topic: "Hiển thị chủ đề công khai lúc %{when}"
       open_topic: "Đã chuyển đổi chủ đề này thành một chủ đề %{when}"
@@ -152,6 +157,7 @@ vi:
     emails_are_disabled_non_staff: "Email gửi đi đã bị vô hiệu hóa đối với người dùng không phải là nhân viên."
     software_update_prompt:
       dismiss: "Hủy bỏ"
+    bootstrap_mode: "Bắt đầu"
     back_button: "Quay lại"
     themes:
       default_description: "Mặc định"
@@ -159,6 +165,8 @@ vi:
       error_caused_by: "Gây ra bởi '%{name}'. <a target='blank' href='%{path}'>Nhấp vào đây</a> để cập nhật, cấu hình lại hoặc tắt."
       only_admins: "(thông báo này chỉ được hiển thị cho quản trị viên trang web)"
     broken_decorator_alert: "Bài đăng có thể không hiển thị chính xác vì một trong những người trang trí nội dung bài đăng trên trang web của bạn đã mắc lỗi."
+    broken_plugin_alert: "Do plugin '%{name}' gây ra"
+    broken_transformer_alert: "Đã xảy ra lỗi. Trang web của bạn có thể không hoạt động bình thường."
     s3:
       regions:
         ap_northeast_1: "Châu Á (Tokyo)"
@@ -238,8 +246,10 @@ vi:
       pill: "Tin nhắn liên quan"
       see_all: 'Xem <a href="%{path}">toàn bộ thông điệp</a> từ %{username}…'
     suggested_topics:
+      pill: "Đề xuất"
       pm_title: "Tin nhắn gợi ý"
     about:
+      edit: "Sửa trang này"
       simple_title: "Giới thiệu"
       title: "Giới thiệu về %{title}"
       stats: "Thống kê trang"
@@ -254,8 +264,23 @@ vi:
       like_count: "Lượt thích"
       topic_count: "Các chủ đề"
       post_count: "Các bài viết"
+      user_count: "Đăng ký"
+      active_user_count: "Thành viên đang hoạt động"
       contact: "Liên lạc"
-      contact_info: "Trong trường hợp có bất kỳ sự cố nào ảnh hưởng tới trang này, xin vui lòng liên hệ với chúng tôi theo địa chỉ %{contact_info}."
+      site_activity: "Hoạt động trang web"
+      activities:
+        topics:
+          other: "%{formatted_number} chủ đề"
+        posts:
+          other: "%{formatted_number} bài đăng"
+        likes:
+          other: "%{formatted_number} lượt thích"
+        periods:
+          last_7_days: "trong 7 ngày gần đây"
+          today: "hôm nay"
+          all_time: "từ trước tới nay"
+      site_age:
+        less_than_one_month: "Được tạo < 1 tháng trước"
     bookmarked:
       title: "Dấu trang"
       edit_bookmark: "Chỉnh sửa Dấu trang"
@@ -565,7 +590,6 @@ vi:
       never: "Không bao giờ"
       last_custom: "Ngày giờ tùy chỉnh cuối cùng"
       custom: "Ngày giờ tùy chỉnh"
-      custom_short: "Tùy chỉnh..."
       select_timeframe: "Chọn khung thời gian"
     user_action:
       user_posted_topic: "<a href='%{userUrl}'>%{user}</a> đã đăng <a href='%{topicUrl}'>chủ đề</a>"
@@ -671,11 +695,12 @@ vi:
           imap_mailbox_not_selected: "Bạn phải chọn Hộp thư cho cấu hình IMAP này nếu không sẽ không có hộp thư nào được đồng bộ hóa!"
           prefill:
             title: "Điền sẵn các cài đặt cho:"
+          ssl_modes:
+            none: "Không có gì"
           credentials:
             title: "Thông tin đăng nhập"
             smtp_server: "Máy chủ SMTP"
             smtp_port: "Cổng SMTP"
-            smtp_ssl: "Sử dụng SSL cho SMTP"
             imap_server: "Máy chủ IMAP"
             imap_port: "Cổng IMAP"
             imap_ssl: "Sử dụng SSL cho IMAP"
@@ -918,6 +943,7 @@ vi:
     user_fields:
       none: "(chọn một tùy chọn)"
       required: 'Vui lòng nhập giá trị cho "%{name}"'
+      optional: (tùy chọn)
     user:
       said: "%{username}:"
       profile: "Tiểu sử"
@@ -961,7 +987,8 @@ vi:
       activity_stream: "Hoạt động"
       read: "Đã đọc"
       read_help: "Các chủ đề đã đọc gần đây"
-      preferences: "Tùy chỉnh"
+      preferences:
+        title: "Tùy chỉnh"
       feature_topic_on_profile:
         open_search: "Chọn chủ đề mới"
         title: "Chọn chủ đề"
@@ -1144,6 +1171,7 @@ vi:
         set_password: "Nhập Mật khẩu"
         choose_new: "Chọn một mật khẩu mới"
         choose: "Chọn một mật khẩu"
+        title: "Đặt lại mật khẩu"
       second_factor_backup:
         title: "Mã dự phòng đăng nhập hai yếu tố"
         regenerate: "Khởi tạo lại"
@@ -1254,7 +1282,6 @@ vi:
         add_email: "Thêm email thay thế"
         auth_override_instructions: "Email có thể được cập nhật từ nhà cung cấp xác thực."
         no_secondary: "Không có email thứ hai"
-        instructions: "Không hiển thị công cộng"
         admin_note: "Lưu ý: Quản trị viên thay đổi email của người không phải là quản trị viên tức là người dùng đã mất quyền truy cập vào tài khoản email ban đầu của họ, do đó, email đặt lại mật khẩu sẽ được gửi đến địa chỉ mới của họ. Email của người dùng sẽ không thay đổi cho đến khi họ hoàn tất quá trình đặt lại mật khẩu."
         ok: "Chúng tôi sẽ gửi thư điện tử xác nhận đến cho bạn"
         required: "Vui lòng nhập một địa chỉ email"
@@ -1275,10 +1302,17 @@ vi:
           disconnect: "Tài khoản %{provider} hiện tại của bạn '%{account_description}' sẽ bị ngắt kết nối."
           account_specific: "%{provider} tài khoản '%{account_description}' của bạn sẽ được sử dụng để xác thực."
           generic: "Tài khoản %{provider} của bạn sẽ được sử dụng để xác thực."
+      activate_account:
+        action: "Nhấn vào đây để kích hoạt tài khoản của bạn"
+        already_done: "Xin lỗi, liên kết để xác nhận tài khoản này không còn hợp lệ. Có thể tài khoản của bạn được kích hoạt?"
+        please_continue: "Tài khoản của bạn đã được xác nhận; bạn sẽ được chuyển đến trang chủ."
+        continue_button: "Tiếp tục đến %{site_name}"
+        welcome_to: "Chào mừng đến với %{site_name}!"
+        approval_required: "Một điều hành viên phải duyệt tài khoản của bạn trước khi bạn có thể đăng nhập diễn đàn này. Bạn sẽ nhận được email khi tài khoản của bạn được duyệt!"
       name:
         title: "Tên"
-        instructions: "Tên đầy đủ của bạn (tuỳ chọn)."
-        instructions_required: "Tên đầy đủ của bạn."
+        instructions: "Tên đầy đủ của bạn (tuỳ chọn)"
+        instructions_required: "Tên đầy đủ của bạn"
         required: "Vui lòng nhập tên"
         too_short: "Tên của bạn quá ngắn"
         ok: "Tên của bạn có vẻ ổn"
@@ -1440,10 +1474,7 @@ vi:
           success: "Link mời đã được tạo thành công !"
           error: "Đã xảy ra lỗi khi tạo liên kết Mời"
         invite:
-          new_title: "Tạo lời mời"
-          edit_title: "Chỉnh sửa lời mời"
           instructions: "Chia sẻ liên kết này để cấp quyền truy cập ngay lập tức vào trang web này:"
-          copy_link: "sao chép liên kết"
           expires_in_time: "Hết hạn trong %{time}"
           expired_at_time: "Đã hết hạn vào lúc %{time}"
           show_advanced: "Hiển thị các tùy chọn nâng cao"
@@ -1455,11 +1486,11 @@ vi:
           max_redemptions_allowed: "Sử dụng tối đa"
           add_to_groups: "Thêm vào nhóm"
           invite_to_topic: "Đến chủ đề"
-          expires_at: "Hết hạn sau"
-          custom_message: "Tin nhắn cá nhân tùy chọn"
+          expires_after: "Hết hạn sau"
           send_invite_email: "Lưu và Gửi Email"
           send_invite_email_instructions: "Hạn chế lời mời vào email để gửi một email mời"
-          save_invite: "Lưu lời mời"
+          save_invite: "Lưu lại"
+          cancel: "Huỷ"
           invite_saved: "Đã lưu lời mời."
         bulk_invite:
           none: "Không có lời mời để hiển thị trên trang này."
@@ -1473,13 +1504,12 @@ vi:
           error: "Xin lỗi, file phải ở định dạng CSV."
       password:
         title: "Mật khẩu"
-        too_short: "Mật khẩu của bạn quá ngắn."
         common: "Mật khẩu quá đơn giản, rất dễ bị đoán ra"
         same_as_username: "Mật khẩu của bạn trùng với tên đăng nhập."
         same_as_email: "Mật khẩu của bạn trùng với email của bạn."
         ok: "Mật khẩu của bạn có vẻ ổn."
         instructions:
-          other: "Ít nhất %{count} kí tự."
+          other: "Ít nhất %{count} kí tự"
         required: "Vui lòng nhập mật khẩu"
         confirm: "Xác nhận"
       summary:
@@ -1578,6 +1608,13 @@ vi:
     modal:
       close: "đóng"
       dismiss_error: "Loại bỏ lỗi"
+    form_kit:
+      reset: Cài lại
+      optional: tùy chọn
+      errors:
+        required: "Bắt buộc"
+        too_short:
+          other: "Phải ít nhất %{count} ký tự"
     close: "Đóng lại"
     logout: "Bạn đã đăng xuất"
     refresh: "Tải lại"
@@ -1586,15 +1623,6 @@ vi:
       enabled: "Website đang ở chế độ chỉ đọc, bạn có thể duyệt xem nhưng không thể trả lời, likes, hay thực hiện các hành động khác."
       login_disabled: "Chức năng Đăng nhập đã bị tắt khi website trong trạng thái chỉ đọc"
       logout_disabled: "Chức năng đăng xuất đã bị tắt khi website đang trong trạng thái chỉ đọc."
-    logs_error_rate_notice:
-      reached_hour_MF: |
-        <b>{relativeAge}</b> - <a href='{url}' target='_blank'>{rate, plural, other {# lỗi / giờ}}</a> trang web đạt đến giới hạn thiết lập của {limit, plural, other {# lỗi / giờ}}.
-      reached_minute_MF: |
-        <b>{relativeAge}</b> - <a href='{url}' target='_blank'>{rate, plural, other {# lỗi / phút}}</a> trang web đạt đến giới hạn thiết lập của {limit, plural, other {# lỗi / phút}}.
-      exceeded_hour_MF: |
-        <b>{relativeAge}</b> - <a href='{url}' target='_blank'>{rate, plural, other {# lỗi / giờ}}</a> vượt quá giới hạn thiết lập trang web của {limit, plural, other {# lỗi / giờ}}.
-      exceeded_minute_MF: |
-        <b>{relativeAge}</b> - <a href='{url}' target='_blank'>{rate, plural, other {# lỗi / phút}}</a> vượt quá giới hạn thiết lập trang web của {limit, plural, other {# lỗi / phút}}.
     learn_more: "Tìm hiểu thêm…"
     mute: Im lặng
     unmute: Bỏ im lặng
@@ -1617,7 +1645,11 @@ vi:
     summary:
       description:
         other: "Có <b>%{count}</b> trả lời."
+      buttons:
+        generate: "Tóm tắt"
+        regenerate: "Khởi tạo lại"
       disable: "HIển thị tất cả các bài viết"
+      show_all_label: "Hiển thị tất cả"
     deleted_filter:
       enabled_description: "Chủ để này có chứa các bài viết bị xoá, chúng đã bị ẩn đi"
       disabled_description: "Xoá các bài viết trong các chủ để được hiển thị"
@@ -1643,10 +1675,14 @@ vi:
       header_title: "Chào mừng!"
       subheader_title: "Hãy tạo tài khoản của bạn"
       disclaimer: "Bằng cách đăng ký, bạn đồng ý với <a href='%{privacy_link}' target='blank'>chính sách bảo mật</a> và <a href='%{tos_link}' target='blank'>điều khoản dịch vụ</a>."
-      title: "Tạo tài khoản của bạn"
+      title: "Đăng ký"
       failed: "Có gì đó không đúng, có thể email này đã được đăng ký, thử liên kết quên mật khẩu"
       associate: "Đã có tài khoản? <a href='%{associate_link}'>Đăng nhập</a> để liên kết tài khoản %{provider} của bạn."
       activation_title: "Kích hoạt tài khoản của bạn"
+      progress_bar:
+        signup: "Đăng ký"
+        approve: "Duyệt"
+        login: "Đăng nhập"
     forgot_password:
       title: "Đặt lại mật khẩu"
       action: "Tôi đã quên mật khẩu của tôi"
@@ -1712,6 +1748,7 @@ vi:
       admin_not_allowed_from_ip_address: "Bạn không thể đăng nhập với quyền quản trị từ địa chỉ IP đó."
       resend_activation_email: "Bấm đây để gửi lại email kích hoạt"
       omniauth_disallow_totp: "Tài khoản của bạn đã bật xác thực hai yếu tố. Vui lòng đăng nhập bằng mật khẩu của bạn."
+      activate_account: "Kích hoạt tài khoản"
       resend_title: "Gửi lại email kích hoạt"
       change_email: "Đổi địa chỉ email"
       provide_new_email: "Cung cấp địa chỉ mới của bạn và chúng tôi sẽ gửi lại email xác nhận."
@@ -1786,7 +1823,7 @@ vi:
       loading: Đang tải…
     category_row:
       subcategory_count:
-        other: "+ %{count} danh mục phụ"
+        other: "+%{count} danh mục phụ"
       topic_count:
         other: "%{count} chủ đề trong danh mục này"
     select_kit:
@@ -1935,7 +1972,6 @@ vi:
       show_toolbar: "hiển thị thanh công cụ của trình soạn nội dung"
       hide_toolbar: "ẩn thanh công cụ của trình soạn nội dung"
       modal_ok: "OK"
-      modal_cancel: "Hủy"
       cant_send_pm: "Xin lỗi, bạn không thể gởi tin nhắn đến %{username}."
       yourself_confirm:
         title: "Bạn có quên chưa thêm người nhận?"
@@ -3050,7 +3086,6 @@ vi:
         none: "không có danh mục phụ"
       colors_disabled: "Bạn không thể chọn màu vì bạn không có kiểu danh mục nào."
     flagging:
-      title: "Cám ơn bạn đã giúp phát triển cộng đồng!"
       action: "Đánh dấu Bài viết"
       take_action: "Thực hiện Tác vụ…"
       take_action_options:
@@ -3084,7 +3119,6 @@ vi:
         left:
           other: "%{count} còn lại"
     flagging_topic:
-      title: "Cám ơn bạn đã giúp phát triển cộng đồng!"
       action: "Gắn cờ Chủ đề"
       notify_action: "Tin nhắn"
     topic_map:
@@ -3094,6 +3128,9 @@ vi:
       links_shown: "hiện thêm liên kết…"
       clicks:
         other: "%{count} nhấp chuột"
+      views: "Lượt xem"
+      read: đọc
+      minutes: tối thiểu
     post_links:
       about: "mở rộng nhiều liên kết hơn cho bài đăng này"
       title:
@@ -3125,26 +3162,16 @@ vi:
     pending_posts:
       label: "Đang treo"
       label_with_count: "Đang xử lý (%{count})"
-    posts_likes_MF: |
-      Chủ đề này có {count, plural, one {# trả lời} other {# trả lời}} {ratio, select,
-        low {với tỷ lệ like trên post cao}
-        med {với tỷ lệ like trên post rất cao}
-        high {với tỷ lệ like trên post cực cao}
-        other {}}
+    posters: "Người gửi"
     original_post: "Bài viết gốc"
     views: "Lượt xem"
-    sr_views: "Sắp xếp theo lượt xem"
     views_lowercase:
       other: "lượt xem"
     replies: "Trả lời"
-    sr_replies: "Sắp xếp theo câu trả lời"
     views_long:
       other: "chủ đề này đã được xem %{number} lần"
     activity: "Hoạt động"
-    sr_activity: "Sắp xếp theo hoạt động"
     likes: "Lượt thích"
-    sr_likes: "Sắp xếp theo lượt thích"
-    sr_op_likes: "Sắp xếp theo lượt thích bài đăng ban đầu"
     likes_lowercase:
       other: "lượt thích"
     users: "Người dùng"
@@ -3378,7 +3405,6 @@ vi:
       all_tags: "Tất cả các thẻ"
       other_tags: "Các thẻ khác"
       selector_tags: "thẻ"
-      selector_all_tags: "tất cả thẻ"
       selector_no_tags: "không có thẻ"
       selector_remove_filter: "bỏ đièu kiện lọc"
       tags: "Thẻ"
@@ -3472,7 +3498,6 @@ vi:
         everyone_can_use: "Mọi người đều có thể sử dụng thẻ"
         usable_only_by_groups: "Tất cả mọi người đều có thể nhìn thấy thẻ, nhưng chỉ những nhóm sau mới có thể sử dụng chúng"
         visible_only_to_groups: "Thẻ chỉ hiển thị cho các nhóm sau"
-        cannot_save: "Không thể lưu nhóm thẻ. Đảm bảo rằng có ít nhất một thẻ hiện diện, tên nhóm thẻ không trống và một nhóm được chọn cho quyền đối với thẻ."
         tags_placeholder: "Tìm kiếm hoặc tạo thẻ"
         parent_tag_placeholder: "Tùy chọn"
         select_groups_placeholder: "Chọn nhóm…"
@@ -3537,8 +3562,8 @@ vi:
       no_read_topics_body: "Khi bạn bắt đầu đọc các cuộc thảo luận, bạn sẽ thấy một danh sách ở đây. Để bắt đầu đọc, hãy tìm các chủ đề mà bạn quan tâm trong <a href='%{topUrl}'>Top</a> hoặc <a href='%{categoriesUrl}'>Danh mục</a> hoặc tìm kiếm theo từ khóa %{searchIcon}"
     no_group_messages_title: "Không tìm thấy tin nhắn nhóm nào"
     topic_entrance:
-      sr_jump_top_button: "Chuyển đến bài viết đầu tiên"
-      sr_jump_bottom_button: "Chuyển đến bài viết cuối cùng"
+      jump_top_button_title: "Chuyển đến bài viết đầu tiên"
+      jump_bottom_button_title: "Chuyển đến bài viết cuối cùng"
     fullscreen_table:
       expand_btn: "Mở rộng bảng"
     second_factor_auth:
@@ -3602,6 +3627,8 @@ vi:
               title: "Tất cả các chủ đề"
             faq:
               content: "Câu hỏi thường gặp"
+            guidelines:
+              content: "Hướng dẫn"
             groups:
               content: "Nhóm"
             users:
@@ -3636,6 +3663,7 @@ vi:
         about: "Giới thiệu"
   admin_js:
     type_to_filter: "gõ vào bộ lọc…"
+    settings: "Cài đặt"
     admin:
       title: "Quản trị Diễn đàn"
       moderator: "Điều hành"
@@ -3663,6 +3691,7 @@ vi:
         installed_version: "Đã cài đặt"
         latest_version: "Mới nhất"
         problems_found: "Một số lời khuyên dựa trên cài đặt trang web hiện tại của bạn"
+        dismiss_notice: "Bỏ qua"
         new_features:
           learn_more: "Tìm hiểu thêm..."
         last_checked: "Kiểm tra lần cuối"
@@ -3980,6 +4009,8 @@ vi:
           timestamp: "Tạo bởi"
           completion: "Thời gian hoàn thành"
           actions: "Hành động"
+          filter_status:
+            failed: "Thất bại"
       home:
         title: "Trang chủ"
       account:
@@ -4024,11 +4055,36 @@ vi:
           screened_ips: "Screened IPs"
           screened_urls: "Screened URLs"
           search_logs: "Nhật ký tìm kiếm"
-          security: "Bảo mật"
-          spam: "Rác"
+      section_landing_pages:
+        account:
+          title: "Tài khoản"
+          backups:
+            title: "Bản sao lưu"
+      config_areas:
+        about:
+          contact_url_placeholder: "https://johnny-smith.com/contact"
+          optional: "(tùy chọn)"
+          update: "Cập nhật"
+          saved: "đã lưu"
+        flags:
+          description: "Mô tả"
+          enabled: "Kích hoạt"
+          edit: "Sửa"
+          delete: "Xóa"
+          delete_confirm: 'Bạn có chắc chắn muốn xóa "%{name}" không?'
+          flags_tab: "Dấu cờ - Flags"
+          form:
+            save: "Lưu lại"
+            name: "Tên"
+            description: "Mô tả"
+            invalid_applies_to: "Bắt buộc"
+            topic: "các chủ đề"
+            post: "bài viết"
+        look_and_feel:
+          themes:
+            title: "Themes"
       plugins:
         title: "Plugin"
-        installed: "Đã cài Plugin"
         name: "Tên"
         none_installed: "Bạn chưa cài plugin nào."
         version: "Phiên bản"
@@ -4060,7 +4116,7 @@ vi:
         menu:
           backups: "Bản sao lưu"
           logs: "Log"
-        none: "Chưa có bản sao lưu."
+        none: "Chưa có bản sao lưu"
         read_only:
           enable:
             title: "Bật chế độ chỉ đọc"
@@ -4095,12 +4151,11 @@ vi:
           download:
             label: "Tải xuống"
             title: "Gửi email với liên kết tải xuống"
-            alert: "Một liên kết để tải xuống bản sao lưu này đã được gửi qua email cho bạn."
+            alert: "Một liên kết để tải xuống bản sao lưu này đã được gửi qua email cho bạn"
           destroy:
             title: "Xóa bản sao lưu này"
             confirm: "Bạn muốn hủy bản sao lưu này?"
           restore:
-            is_disabled: "Khôi phục đã bị cấm sử dụng trong cấu hình trang."
             label: "Khôi phục"
             title: "Khôi phục lại sao lưu này"
             confirm: "Bạn có chắc chắn muón phục hồi bản sao lưu này?"
@@ -4109,7 +4164,6 @@ vi:
             title: "Đưa csdl về trạng thái làm việc trước"
             confirm: "Bạn có chắc chắn muốn phục hồi csdl về trạng thái làm việc trước?"
         location:
-          local: "Lưu trữ cục bộ"
           s3: "S3"
         backup_storage_error: "Không thể truy cập bộ nhớ sao lưu: %{error_message}"
       export_csv:
@@ -4357,7 +4411,6 @@ vi:
             description: "Liên kết, một và nút, thông báo, và màu nhấn."
           quaternary:
             name: "chia bốn"
-            description: "Liên kết điều hướng."
           header_background:
             name: "nền header"
             description: "Màu nền header của trang."
@@ -5067,6 +5120,7 @@ vi:
         file_types_list:
           add_image_types: "Hình ảnh"
       badges:
+        status: Trạng thái
         title: Huy hiệu
         new_badge: Thêm huy hiệu
         new: Mới
@@ -5074,8 +5128,6 @@ vi:
         badge: Huy hiệu
         display_name: Tên Hiển thị
         description: Mô tả
-        long_description: Mô Tả Dài
-        badge_type: Kiểu huy hiệu
         badge_grouping: Nhóm
         badge_groupings:
           modal_title: Nhóm huy hiệu
@@ -5104,9 +5156,8 @@ vi:
         image: Hình ảnh
         graphic: Đồ họa
         icon_help: "Nhập tên biểu tượng Font Awesome (sử dụng tiền tố 'far-' cho các biểu tượng thông thường và 'fab-' cho các biểu tượng thương hiệu)"
-        image_help: "Tải lên hình ảnh sẽ ghi đè trường biểu tượng nếu cả hai đều được đặt."
         select_an_icon: "Chọn một biểu tượng"
-        upload_an_image: "Tải lên hình ảnh"
+        upload_an_image: "Tải lên một hình ảnh"
         read_only_setting_help: "Tùy chỉnh văn bản"
         query: Truy vấn huy hiệu (SQL)
         target_posts: Truy vấn bài viết mục tiêu
@@ -5137,10 +5188,6 @@ vi:
             with_post: <span class="username">%{username}</span> for post in %{link}
             with_post_time: <span class="username">%{username}</span> viết bài trong %{link} lúc <span class="time">%{time}</span>
             with_time: <span class="username">%{username}</span> lúc <span class="time">%{time}</span>
-        badge_intro:
-          title: "Chọn một huy hiệu hiện có hoặc tạo một huy hiệu mới để bắt đầu"
-          what_are_badges_title: "Huy hiệu là gì?"
-          badge_query_examples_title: "Ví dụ về truy vấn huy hiệu"
         mass_award:
           title: Giải thưởng hàng loạt
           description: Trao cùng một huy hiệu cho nhiều người dùng cùng một lúc.

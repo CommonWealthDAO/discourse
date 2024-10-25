@@ -35,6 +35,16 @@
     justify-content: space-between;
     align-items: end;
 
+    .c-drawer-routes.--browse & {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-start;
+
+      .filter-input {
+        width: 100%;
+      }
+    }
+
     @include breakpoint(tablet) {
       flex-direction: column;
 
@@ -60,7 +70,6 @@
 
   &__filter {
     display: inline;
-    margin-right: 1em;
 
     &:last-of-type {
       margin-right: 0;
@@ -74,7 +83,7 @@
   &__filter-link,
   &__filter-link:visited {
     color: var(--primary);
-    font-size: var(--font-up-2);
+    font-size: var(--font-up-1);
     padding: 0 0.25rem;
 
     @include breakpoint(tablet) {

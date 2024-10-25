@@ -78,6 +78,7 @@
 
   .body {
     display: flex;
+    flex-direction: row;
   }
 
   .main {
@@ -232,7 +233,6 @@
     margin: 1.5%;
     border: 1px solid var(--primary-low);
     flex: 1 1 28%;
-    transition: box-shadow 0.25s;
     min-width: 225px;
     max-width: 550px;
     a {

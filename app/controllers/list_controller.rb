@@ -49,6 +49,10 @@ class ListController < ApplicationController
                   :filter,
                 ].flatten
 
+  rescue_from ActionController::Redirecting::UnsafeRedirectError do
+    rescue_discourse_actions(:not_found, 404)
+  end
+
   # Create our filters
   Discourse.filters.each do |filter|
     define_method(filter) do |options = nil|
@@ -417,7 +421,7 @@ class ListController < ApplicationController
     end
     real_slug = @category.full_slug("/")
     if CGI.unescape(current_slug) != CGI.unescape(real_slug)
-      url = request.fullpath.gsub(current_slug, real_slug)
+      url = CGI.unescape(request.fullpath).gsub(current_slug, real_slug)
       if ActionController::Base.config.relative_url_root
         url = url.sub(ActionController::Base.config.relative_url_root, "")
       end

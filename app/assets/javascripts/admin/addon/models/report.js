@@ -141,7 +141,10 @@ export default class Report extends EmberObject {
         .locale("en")
         .format("YYYY-MM-DD");
 
-      if (report.modes[0] === "stacked_chart") {
+      if (
+        report.modes[0] === "stacked_chart" ||
+        report.modes[0] === "stacked_line_chart"
+      ) {
         report[filledField] = report[dataField].map((rep) => {
           return {
             req: rep.req,
@@ -689,9 +692,9 @@ export default class Report extends EmberObject {
       case "trending-down":
         return higherIsBetter ? "angle-down" : "angle-up";
       case "high-trending-up":
-        return higherIsBetter ? "angle-double-up" : "angle-double-down";
+        return higherIsBetter ? "angles-up" : "angles-down";
       case "high-trending-down":
-        return higherIsBetter ? "angle-double-down" : "angle-double-up";
+        return higherIsBetter ? "angles-down" : "angles-up";
       default:
         return "minus";
     }

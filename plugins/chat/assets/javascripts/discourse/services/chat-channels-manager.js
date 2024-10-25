@@ -15,11 +15,13 @@ const DIRECT_MESSAGE_CHANNELS_LIMIT = 20;
 */
 
 export default class ChatChannelsManager extends Service {
-  @service chatSubscriptionsManager;
   @service chatApi;
+  @service chatSubscriptionsManager;
+  @service chatStateManager;
   @service currentUser;
   @service router;
   @service site;
+  @service siteSettings;
   @tracked _cached = new TrackedObject();
 
   async find(id, options = { fetchIfNotFound: true }) {
@@ -97,6 +99,9 @@ export default class ChatChannelsManager extends Service {
   }
 
   remove(model) {
+    if (!model) {
+      return;
+    }
     this.chatSubscriptionsManager.stopChannelSubscription(model);
     delete this._cached[model.id];
   }
@@ -120,16 +125,16 @@ export default class ChatChannelsManager extends Service {
 
   @cached
   get publicMessageChannels() {
-    const channels = this.channels.filter(
-      (channel) =>
-        channel.isCategoryChannel && channel.currentUserMembership.following
-    );
+    return this.channels
+      .filter(
+        (channel) =>
+          channel.isCategoryChannel && channel.currentUserMembership.following
+      )
+      .sort((a, b) => a?.slug?.localeCompare?.(b?.slug));
+  }
 
-    if (this.site.mobileView) {
-      return this.#sortChannelsByActivity(channels);
-    } else {
-      return channels.sort((a, b) => a?.slug?.localeCompare?.(b?.slug));
-    }
+  get publicMessageChannelsByActivity() {
+    return this.#sortChannelsByActivity(this.publicMessageChannels);
   }
 
   @cached
@@ -153,6 +158,32 @@ export default class ChatChannelsManager extends Service {
     } catch (error) {
       popupAjaxError(error);
     }
+  }
+
+  get publicMessageChannelsEmpty() {
+    return (
+      this.publicMessageChannels?.length === 0 &&
+      this.chatStateManager.hasPreloadedChannels
+    );
+  }
+
+  get displayPublicChannels() {
+    if (!this.siteSettings.enable_public_channels) {
+      return false;
+    }
+
+    if (!this.chatStateManager.hasPreloadedChannels) {
+      return false;
+    }
+
+    if (this.publicMessageChannelsEmpty) {
+      return (
+        this.currentUser?.staff ||
+        this.currentUser?.has_joinable_public_channels
+      );
+    }
+
+    return true;
   }
 
   #cache(channel) {

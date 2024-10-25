@@ -5,6 +5,11 @@ import { action } from "@ember/object";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import { service } from "@ember/service";
 import { isEmpty } from "@ember/utils";
+import concatClass from "discourse/helpers/concat-class";
+import {
+  getCollapsedSidebarSectionKey,
+  getSidebarSectionContentId,
+} from "discourse/lib/sidebar/helpers";
 import icon from "discourse-common/helpers/d-icon";
 import i18n from "discourse-common/helpers/i18n";
 import { bind } from "discourse-common/utils/decorators";
@@ -14,13 +19,25 @@ import SectionHeader from "./section-header";
 
 export default class SidebarSection extends Component {
   @service keyValueStore;
+  @service router;
   @service sidebarState;
 
-  sidebarSectionContentID = `sidebar-section-content-${this.args.sectionName}`;
-  collapsedSidebarSectionKey = `sidebar-section-${this.args.sectionName}-collapsed`;
+  sidebarSectionContentId = getSidebarSectionContentId(this.args.sectionName);
+  collapsedSidebarSectionKey = getCollapsedSidebarSectionKey(
+    this.args.sectionName
+  );
+
+  constructor() {
+    super(...arguments);
+
+    this.router.on("routeDidChange", this, this.expandIfActive);
+  }
 
   willDestroy() {
     super.willDestroy(...arguments);
+
+    this.router.off("routeDidChange", this, this.expandIfActive);
+
     this.args.willDestroy?.();
   }
 
@@ -40,21 +57,54 @@ export default class SidebarSection extends Component {
     );
   }
 
+  get isActive() {
+    return !!this.args.activeLink;
+  }
+
+  get activeExpanded() {
+    return this.sidebarState.activeExpandedSections.has(this.args.sectionName);
+  }
+
+  set activeExpanded(value) {
+    if (value) {
+      this.sidebarState.activeExpandedSections.add(this.args.sectionName);
+    } else {
+      this.sidebarState.activeExpandedSections.delete(this.args.sectionName);
+    }
+  }
+
   @bind
   setExpandedState() {
     if (!isEmpty(this.sidebarState.filter)) {
       return;
     }
 
+    // initialize the collapsed/expanded state of the section
     if (this.isCollapsed) {
       this.sidebarState.collapseSection(this.args.sectionName);
     } else {
       this.sidebarState.expandSection(this.args.sectionName);
     }
+
+    // override the expanded state if the section is active
+    this.expandIfActive();
+  }
+
+  @bind
+  expandIfActive(transition) {
+    if (transition?.isAborted) {
+      return;
+    }
+
+    this.activeExpanded = this.args.expandWhenActive && this.isActive;
   }
 
   get displaySectionContent() {
-    if (!isEmpty(this.sidebarState.filter)) {
+    if (this.args.hideSectionHeader || !isEmpty(this.sidebarState.filter)) {
+      return true;
+    }
+
+    if (this.activeExpanded) {
       return true;
     }
 
@@ -64,7 +114,9 @@ export default class SidebarSection extends Component {
   }
 
   @action
-  toggleSectionDisplay() {
+  toggleSectionDisplay(_, event) {
+    this.activeExpanded = false;
+
     if (this.displaySectionContent) {
       this.sidebarState.collapseSection(this.args.sectionName);
     } else {
@@ -109,16 +161,25 @@ export default class SidebarSection extends Component {
       <div
         {{didInsert this.setExpandedState}}
         data-section-name={{@sectionName}}
-        class="sidebar-section-wrapper sidebar-section"
+        class={{concatClass
+          "sidebar-section"
+          "sidebar-section-wrapper"
+          (if
+            this.displaySectionContent
+            "sidebar-section--expanded"
+            "sidebar-section--collapsed"
+          )
+        }}
         ...attributes
       >
         {{#unless @hideSectionHeader}}
           <div class="sidebar-section-header-wrapper sidebar-row">
             <SectionHeader
               @collapsable={{@collapsable}}
-              @sidebarSectionContentID={{this.sidebarSectionContentID}}
+              @sidebarSectionContentId={{this.sidebarSectionContentId}}
               @toggleSectionDisplay={{this.toggleSectionDisplay}}
               @isExpanded={{this.displaySectionContent}}
+              @isActive={{this.isActive}}
             >
               {{#if @collapsable}}
                 <span class="sidebar-section-header-caret">
@@ -138,7 +199,7 @@ export default class SidebarSection extends Component {
                   <span
                     class="sidebar-section-header-global-indicator__content"
                   >
-                    {{icon "shield-alt"}}
+                    {{icon "shield-halved"}}
                     {{i18n "sidebar.sections.global_section"}}
                   </span>
                 </DTooltip>
@@ -174,7 +235,7 @@ export default class SidebarSection extends Component {
 
         {{#if this.displaySectionContent}}
           <ul
-            id={{this.sidebarSectionContentID}}
+            id={{this.sidebarSectionContentId}}
             class="sidebar-section-content"
           >
             {{yield}}

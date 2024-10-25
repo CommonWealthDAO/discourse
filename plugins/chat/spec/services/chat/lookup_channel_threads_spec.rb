@@ -11,7 +11,7 @@ RSpec.describe ::Chat::LookupChannelThreads::Contract, type: :model do
 end
 
 RSpec.describe ::Chat::LookupChannelThreads do
-  subject(:result) { described_class.call(params) }
+  subject(:result) { described_class.call(params:, **dependencies) }
 
   fab!(:current_user) { Fabricate(:user) }
 
@@ -19,7 +19,8 @@ RSpec.describe ::Chat::LookupChannelThreads do
   let(:channel_id) { nil }
   let(:limit) { 10 }
   let(:offset) { 0 }
-  let(:params) { { guardian: guardian, channel_id: channel_id, limit: limit, offset: offset } }
+  let(:params) { { channel_id:, limit:, offset: } }
+  let(:dependencies) { { guardian: } }
 
   describe "step - set_limit" do
     fab!(:channel_1) { Fabricate(:chat_channel) }
@@ -125,7 +126,7 @@ RSpec.describe ::Chat::LookupChannelThreads do
     describe "model - threads" do
       before { channel_1.add(current_user) }
 
-      it { is_expected.to be_a_success }
+      it { is_expected.to run_successfully }
 
       it "orders threads by the last reply created_at timestamp" do
         [

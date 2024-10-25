@@ -21,14 +21,15 @@ module DiscourseAutomation
     end
 
     def create
-      automation_params = params.require(:automation).permit(:name, :script, :trigger)
+      automation_params = params.require(:automation).permit(:script, :trigger)
 
       automation =
         DiscourseAutomation::Automation.new(
           automation_params.merge(last_updated_by_id: current_user.id),
         )
-      if automation.scriptable.forced_triggerable
-        automation.trigger = scriptable.forced_triggerable[:triggerable].to_s
+
+      if automation.scriptable&.forced_triggerable
+        automation.trigger = automation.scriptable.forced_triggerable[:triggerable].to_s
       end
 
       automation.save!

@@ -39,6 +39,10 @@ de:
       chat_messages_count: "Chat-Nachrichten"
       chat_channels_count: "Chat-Kanäle"
       chat_users_count: "Chat-Benutzer"
+      activities:
+        chat_messages:
+          one: "%{formatted_number} Chat-Nachricht"
+          other: "%{formatted_number} Chat-Nachrichten"
     chat:
       text_copied: Text in die Zwischenablage kopiert
       link_copied: Link in die Zwischenablage kopiert
@@ -46,7 +50,6 @@ de:
       deleted_chat_username: gelöscht
       dates:
         yesterday: "Gestern"
-        time_tiny: "h:mm"
       all_loaded: "Alle Nachrichten werden angezeigt"
       already_enabled: "Der Chat ist für dieses Thema bereits aktiviert. Bitte aktualisieren."
       disabled_for_topic: "Der Chat ist für dieses Thema deaktiviert."
@@ -56,7 +59,7 @@ de:
       cancel_reply: "Antwort verwerfen"
       chat_channels: "Kanäle"
       browse_all_channels: "Alle Kanäle durchsuchen"
-      see_in: "Siehe in"
+      see_in: "Ansehen in"
       move_to_channel:
         title: "Nachrichten in Kanal verschieben"
         instructions:
@@ -130,7 +133,7 @@ de:
       header_indicator_preference:
         title: "Aktivitätsindikator in der Kopfzeile anzeigen"
         all_new: "bei allen neuen Nachrichten"
-        dm_and_mentions: "bei Direktnachrichten und Erwähnungen"
+        dm_and_mentions: "Direktnachrichten, Erwähnungen und beobachtete Threads"
         only_mentions: "Nur Erwähnungen"
         never: "niemals"
       separate_sidebar_mode:
@@ -145,13 +148,6 @@ de:
       heading: "Chat"
       join: "Beitreten"
       last_visit: "letzter Besuch"
-      summarization:
-        title: "Nachrichten zusammenfassen"
-        description: "Wähle unten eine Option aus, um die im gewünschten Zeitraum gesendete Konversation zusammenzufassen."
-        summarize: "Zusammenfassen"
-        since:
-          one: "Letzte Stunde"
-          other: "Letzte %{count} Stunden"
       mention_warning:
         invitations_sent:
           one: "Einladung gesendet"
@@ -231,7 +227,7 @@ de:
         header: "Chat-Kopfzeile"
         composer: "Chat-Composer"
         channels_list: "Liste der Chat-Kanäle"
-      no_direct_message_channels: "Du bist noch keiner Direktnachricht beigetreten!"
+      no_direct_message_channels: "Du bist noch keiner Unterhaltung per Direktnachricht beigetreten!"
       no_direct_message_channels_cta: "Eine Unterhaltung starten"
       no_public_channels: "Du bist noch keinem Kanal beigetreten!"
       no_public_channels_cta: "Kanäle durchsuchen"
@@ -253,6 +249,7 @@ de:
       placeholder_channel: "Chat in %{channelName}"
       placeholder_thread: "Chat im Thread"
       placeholder_users: "Chat mit %{commaSeparatedNames}"
+      placeholder_group: "In der Gruppe chatten"
       placeholder_new_message_disallowed:
         archived: "Der Kanal ist archiviert, du kannst im Moment keine neuen Nachrichten senden."
         closed: "Der Kanal ist geschlossen, du kannst im Moment keine neuen Nachrichten senden."
@@ -265,6 +262,7 @@ de:
       copy_link: "Link kopieren"
       copy_text: "Text kopieren"
       rebake_message: "HTML neu erstellen"
+      message_too_long: "Nachricht ist zu lang. Nachrichten dürfen maximal %{count} Zeichen lang sein."
       retry_staged_message:
         title: "Netzwerkfehler"
         action: "Erneut senden?"
@@ -462,10 +460,9 @@ de:
         auto_join_users_info: "Stündlich prüfen, welche Benutzer in den letzten 3 Monaten aktiv waren. Diese Benutzer zu diesem Kanal hinzufügen, wenn sie Zugang zur Kategorie %{category} haben."
         auto_join_users_info_no_category: "Stündlich prüfen, welche Benutzer in den letzten 3 Monaten aktiv waren. Diese Benutzer zu diesem Kanal hinzufügen, wenn sie Zugang zur ausgewählten Kategorie haben."
         auto_join_users_warning: "Jeder Benutzer, der kein Mitglied dieses Kanals ist und Zugriff auf die Kategorie %{category} hat, wird beitreten. Bist du dir sicher?"
-        desktop_notification_level: "Desktop-Benachrichtigungen"
+        notification_level: "Push-Benachrichtigungen senden"
         follow: "Beitreten"
         followed: "Beigetreten"
-        mobile_notification_level: "Mobile Push-Benachrichtigungen"
         mute: "Kanal stummschalten"
         threading_enabled: "Aktiviert"
         threading_disabled: "Deaktiviert"
@@ -488,12 +485,13 @@ de:
           title: "Chat-Nachrichten exportieren"
           description: "Dadurch werden alle Nachrichten aus allen Kanälen exportiert."
           create_export: "Export erstellen"
+          confirm_export: "Dies exportiert alle Nachrichten aus allen Kanälen und schickt dir das Ergebnis in einer persönlichen Nachricht. Bist du sicher, dass du exportieren willst?"
           export_has_started: "Der Export hat begonnen. Du erhältst eine PN, wenn er abgeschlossen ist."
       my_threads:
         title: Meine Threads
         aria_label: "Zu meiner Thread-Liste wechseln"
       direct_messages:
-        title: "DMs"
+        title: "DN"
         aria_label: "Zu Direktnachrichten wechseln"
         new: "Persönlichen Chat erstellen"
         create: "Los"
@@ -506,6 +504,7 @@ de:
       incoming_webhooks:
         back: "Zurück"
         channel_placeholder: "Kanal auswählen"
+        channel: "Kanal"
         confirm_destroy: "Bist du sicher, dass du diesen eingehenden Webhook löschen willst? Dies kann nicht rückgängig gemacht werden."
         current_emoji: "Aktuelles Emoji"
         description: "Beschreibung"
@@ -529,11 +528,13 @@ de:
         username: "Benutzername"
         username_instructions: "Benutzername des Bots, der etwas im Kanal veröffentlicht. Standardmäßig „System“, wenn das Feld leer gelassen wird."
         instructions: "Eingehende Webhooks können von externen Systemen verwendet werden, um Nachrichten als Bot-Benutzer über den Endpunkt <code>/hooks/:key</code> in einem bestimmten Chat-Kanal zu posten. Die Payload besteht aus einem einzigen <code>text</code>-Parameter, der auf 2000 Zeichen begrenzt ist.<br><br>Wir unterstützen auch in begrenztem Umfang Slack-formatierte <code>text</code>-Parameter und extrahieren Links und Erwähnungen basierend auf dem Format unter <a href=\"https://api.slack.com/reference/surfaces/formatting\">https://api.slack.com/reference/surfaces/formatting</a>, aber dazu muss der Endpunkt <code>/hooks/:key/slack</code> verwendet werden."
+        saved: "Webhook-Änderungen gespeichert"
+        created: "Webhook erstellt"
       selection:
         cancel: "Abbrechen"
         quote_selection: "In Thema zitieren"
         copy: "Kopieren"
-        delete: "Lösche (%{selectionCount}/%{totalCount})"
+        delete: "Löschen (%{selectionCount}/%{totalCount})"
         move_selection_to_channel: "In Kanal verschieben"
         error: "Beim Verschieben der Chat-Nachrichten ist ein Fehler aufgetreten"
         title: "Chat in Thema verschieben"
@@ -572,7 +573,7 @@ de:
       flags:
         off_topic: "Diese Nachricht ist für die aktuelle Diskussion im Sinne des Kanaltitels nicht relevant und sollte wahrscheinlich an eine andere Stelle verschoben werden."
         inappropriate: "Diese Nachricht enthält Inhalte, die eine vernünftige Person als anstößig, beleidigend oder als Verstoß gegen <a href=\"%{basePath}/guidelines\">unsere Community-Richtlinien</a> ansehen würde."
-        illegal: "Dieser Beitrag erfordert die Aufmerksamkeit des Teams, da er meiner Meinung nach illegale Inhalte enthält."
+        illegal: "Dieser Beitrag erfordert die Aufmerksamkeit des Teams, da er meiner Meinung nach rechtswidrige Inhalte enthält."
         spam: "Diese Nachricht ist Werbung oder Vandalismus. Sie ist nicht nützlich oder relevant für den aktuellen Kanal."
         notify_user: "Ich möchte mit dieser Person direkt und persönlich über ihre Nachricht sprechen."
         notify_moderators: "Diese Nachricht erfordert die Aufmerksamkeit des Teams aus einem anderen, oben nicht aufgeführten Grund."
@@ -606,10 +607,13 @@ de:
         notifications:
           regular:
             title: "Normal"
-            description: "Du wirst benachrichtigt, wenn jemand deinen Namen mit @ in diesem Thread erwähnt."
+            description: "Werde benachrichtigt, wenn dich jemand in diesem Thread erwähnt."
           tracking:
             title: "Verfolgen"
-            description: "Die Anzahl der neuen Antworten auf diesen Thread wird in der Thread-Liste und im Kanal angezeigt. Du wirst benachrichtigt, wenn jemand deinen Namen mit @ in diesem Thread erwähnt."
+            description: "Lass dich benachrichtigen, wenn dich jemand in diesem Thema erwähnt und sieh dir die Anzahl der neuen Antworten in der Threadliste an."
+          watching:
+            title: "Beobachten"
+            description: "Lass dich über alle Antworten in diesem Thema benachrichtigen und sieh dir die Anzahl der neuen Antworten in der Threadliste an."
         participants_other_count:
           one: "+%{count}"
           other: "+%{count}"
@@ -620,9 +624,9 @@ de:
         primary_action: "Titel festlegen"
       thread_title_modal:
         title: "Thread-Titel festlegen"
-        input_placeholder: "Sag anderen, worum es in dieser Unterhaltung geht..."
+        input_placeholder: "Sag anderen, worum es in dieser Unterhaltung geht …"
         discourse_ai:
-          title: "Generiere Thread-Titel automatisch"
+          title: "Thread-Titel automatisch generieren"
           description: "Unter %{url} erfährst du mehr über diese und andere Verbesserungen für dein Discourse-Erlebnis."
       threads:
         open: "Thread öffnen"
@@ -635,6 +639,9 @@ de:
       chat_invitation: "hat dich eingeladen, einem Chat-Kanal beizutreten"
       chat_invitation_html: "<span>%{username}</span> <span>hat dich eingeladen, einem Chat-Kanal beizutreten</span>"
       chat_quoted: "<span>%{username}</span> %{description}"
+      chat_watched_thread_label:
+        one: "%{username} und %{username2}"
+        other: "%{username} und %{count} andere"
       popup:
         chat_mention:
           direct: 'hat dich in „%{channel}“ erwähnt'
@@ -652,6 +659,7 @@ de:
         chat_mention: "Chat-Erwähnung"
         chat_invitation: "Chat-Einladung"
         chat_quoted: "Chat zitiert"
+        chat_watched_thread: "Im Chat beobachteter Thread"
     action_codes:
       chat:
         enabled: '%{who} hat <button class="btn-link open-chat">Chat</button> aktiviert %{when}'
@@ -673,9 +681,9 @@ de:
         view: "Transkript früherer Nachrichten anzeigen"
       types:
         chat_reviewable_message:
-          title: "Markierte Chat-Nachricht"
+          title: "Gemeldete Chat-Nachricht"
         reviewable_chat_message:
-          title: "Markierte Chat-Nachricht"
+          title: "Gemeldete Chat-Nachricht"
           noun: "Chat-Nachricht"
     keyboard_shortcuts_help:
       chat:

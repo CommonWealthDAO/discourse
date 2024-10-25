@@ -19,15 +19,14 @@ module("Integration | Component | uppy-image-uploader", function (hooks) {
     );
 
     assert.strictEqual(
-      count(".d-icon-far-trash-alt"),
+      count(".d-icon-trash-can"),
       1,
       "it displays the trash icon"
     );
 
-    assert.ok(
-      !exists(".placeholder-overlay"),
-      "it does not display the placeholder image"
-    );
+    assert
+      .dom(".placeholder-overlay")
+      .doesNotExist("it does not display the placeholder image");
 
     await click(".image-uploader-lightbox-btn");
 
@@ -47,15 +46,11 @@ module("Integration | Component | uppy-image-uploader", function (hooks) {
       "it displays the upload icon"
     );
 
-    assert.ok(
-      !exists(".d-icon-far-trash-alt"),
-      "it does not display trash icon"
-    );
+    assert.ok(!exists(".d-icon-trash-can"), "it does not display trash icon");
 
-    assert.ok(
-      !exists(".image-uploader-lightbox-btn"),
-      "it does not display the button to open image lightbox"
-    );
+    assert
+      .dom(".image-uploader-lightbox-btn")
+      .doesNotExist("it does not display the button to open image lightbox");
   });
 
   test("with placeholder", async function (assert) {
@@ -69,15 +64,11 @@ module("Integration | Component | uppy-image-uploader", function (hooks) {
       "it displays the upload icon"
     );
 
-    assert.ok(
-      !exists(".d-icon-far-trash-alt"),
-      "it does not display trash icon"
-    );
+    assert.ok(!exists(".d-icon-trash-can"), "it does not display trash icon");
 
-    assert.ok(
-      !exists(".image-uploader-lightbox-btn"),
-      "it does not display the button to open image lightbox"
-    );
+    assert
+      .dom(".image-uploader-lightbox-btn")
+      .doesNotExist("it does not display the button to open image lightbox");
 
     assert.strictEqual(
       count(".placeholder-overlay"),

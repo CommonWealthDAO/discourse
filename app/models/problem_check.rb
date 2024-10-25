@@ -13,7 +13,7 @@ class ProblemCheck
     end
 
     def run_all
-      each(&:run)
+      select(&:enabled?).each(&:run)
     end
 
     private
@@ -23,6 +23,7 @@ class ProblemCheck
 
   include ActiveSupport::Configurable
 
+  config_accessor :enabled, default: true, instance_writer: false
   config_accessor :priority, default: "low", instance_writer: false
 
   # Determines if the check should be performed at a regular interval, and if
@@ -47,6 +48,13 @@ class ProblemCheck
   # retries is counted as one "blip".
   #
   config_accessor :max_blips, default: 0, instance_writer: false
+
+  # Indicates that the problem check is an "inline" check. This provides a
+  # low level construct for registering problems ad-hoc within application
+  # code, without having to extract the checking logic into a dedicated
+  # problem check.
+  #
+  config_accessor :inline, default: false, instance_writer: false
 
   # Problem check classes need to be registered here in order to be enabled.
   #
@@ -82,6 +90,10 @@ class ProblemCheck
     ProblemCheck::WatchedWords,
   ].freeze
 
+  # To enforce the unique constraint in Postgres <15 we need a dummy
+  # value, since the index considers NULLs to be distinct.
+  NO_TARGET = "__NULL__"
+
   def self.[](key)
     key = key.to_sym
 
@@ -105,15 +117,25 @@ class ProblemCheck
   end
   delegate :identifier, to: :class
 
+  def self.enabled?
+    enabled
+  end
+  delegate :enabled?, to: :class
+
   def self.scheduled?
     perform_every.present?
   end
   delegate :scheduled?, to: :class
 
   def self.realtime?
-    !scheduled?
+    !scheduled? && !inline?
   end
   delegate :realtime?, to: :class
+
+  def self.inline?
+    inline
+  end
+  delegate :inline?, to: :class
 
   def self.call(data = {})
     new(data).call
@@ -158,23 +180,22 @@ class ProblemCheck
 
   private
 
-  def tracker(target = nil)
+  def tracker(target = NO_TARGET)
     ProblemCheckTracker[identifier, target]
   end
 
   def targets
-    [nil]
+    [NO_TARGET]
   end
 
   def problem(override_key: nil, override_data: {})
     [
       Problem.new(
-        message ||
-          I18n.t(
-            override_key || translation_key,
-            base_path: Discourse.base_path,
-            **override_data.merge(translation_data).symbolize_keys,
-          ),
+        I18n.t(
+          override_key || translation_key,
+          base_path: Discourse.base_path,
+          **override_data.merge(translation_data).symbolize_keys,
+        ),
         priority: self.config.priority,
         identifier:,
       ),
@@ -183,10 +204,6 @@ class ProblemCheck
 
   def no_problem
     []
-  end
-
-  def message
-    nil
   end
 
   def translation_key

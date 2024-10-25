@@ -1,10 +1,10 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { click, render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import pretender, { response } from "discourse/tests/helpers/create-pretender";
-import { exists, query } from "discourse/tests/helpers/qunit-helpers";
+import { query } from "discourse/tests/helpers/qunit-helpers";
 import selectKit from "discourse/tests/helpers/select-kit-helper";
 
 module("Integration | Component | invite-panel", function (hooks) {
@@ -31,7 +31,7 @@ module("Integration | Component | invite-panel", function (hooks) {
     await input.expand();
     await input.fillInFilter("eviltrout@example.com");
     await input.selectRowByValue("eviltrout@example.com");
-    assert.ok(!exists(".send-invite:disabled"));
+    assert.dom(".send-invite:disabled").doesNotExist();
 
     await click(".generate-invite-link");
     assert.strictEqual(

@@ -2,7 +2,7 @@ import Component from "@glimmer/component";
 import { LinkTo } from "@ember/routing";
 import { service } from "@ember/service";
 import icon from "discourse-common/helpers/d-icon";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 
 export default class ChatNavbarBrowseChannelsButton extends Component {
   @service router;
@@ -20,7 +20,7 @@ export default class ChatNavbarBrowseChannelsButton extends Component {
         class="btn no-text btn-flat c-navbar__browse-button"
         title={{this.browseChannelsLabel}}
       >
-        {{icon "pencil-alt"}}
+        {{icon "pencil"}}
       </LinkTo>
     {{/if}}
   </template>

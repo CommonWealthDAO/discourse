@@ -358,8 +358,7 @@ export default class ChatApi extends Service {
    * @param {number} channelId - The ID of the channel.
    * @param {object} data - The settings to modify.
    * @param {boolean} [data.muted] - Mutes the channel.
-   * @param {string} [data.desktop_notification_level] - Notifications level on desktop: never, mention or always.
-   * @param {string} [data.mobile_notification_level] - Notifications level on mobile: never, mention or always.
+   * @param {string} [data.notification_level] - Notifications level: never, mention or always.
    * @returns {Promise}
    */
   updateCurrentUserChannelNotificationsSettings(channelId, data = {}) {
@@ -576,17 +575,6 @@ export default class ChatApi extends Service {
       user_ids: userIds,
       message_id: options.messageId,
     });
-  }
-
-  /**
-   * Summarize a channel.
-   *
-   * @param {number} channelId - The ID of the channel to summarize.
-   * @param {object} options
-   * @param {number} options.since - Number of hours ago the summary should start (1, 3, 6, 12, 24, 72, 168).
-   */
-  summarize(channelId, options = {}) {
-    return this.#getRequest(`/channels/${channelId}/summarize`, options);
   }
 
   /**

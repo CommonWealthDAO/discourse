@@ -33,69 +33,55 @@ acceptance("Admin Sidebar - Sections", function (needs) {
   test("default sections are loaded", async function (assert) {
     await visit("/admin");
 
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-root']"),
-      "root section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-account']"),
-      "account section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-reports']"),
-      "reports section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-community']"),
-      "community section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-appearance']"),
-      "appearance section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-email_settings']"),
-      "email settings section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-email_logs']"),
-      "email logs settings section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-security']"),
-      "security settings section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-plugins']"),
-      "plugins section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-advanced']"),
-      "advanced section is displayed"
-    );
+    assert
+      .dom(".sidebar-section[data-section-name='admin-root']")
+      .exists("root section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-account']")
+      .exists("account section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-reports']")
+      .exists("reports section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-community']")
+      .exists("community section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-appearance']")
+      .exists("appearance section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-email_settings']")
+      .exists("email settings section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-email_logs']")
+      .exists("email logs settings section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-security']")
+      .exists("security settings section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-plugins']")
+      .exists("plugins section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-advanced']")
+      .exists("advanced section is displayed");
   });
 
   test("filter sections and clear filter with ESC", async function (assert) {
     await visit("/admin");
     await fillIn(".sidebar-filter__input", "advanced");
-    assert.notOk(
-      exists(".sidebar-section[data-section-name='admin-plugins']"),
-      "plugins section is hidden"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-advanced']"),
-      "advanced section is displayed"
-    );
+    assert
+      .dom(".sidebar-section[data-section-name='admin-plugins']")
+      .doesNotExist("plugins section is hidden");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-advanced']")
+      .exists("advanced section is displayed");
 
     await triggerKeyEvent(".sidebar-filter__input", "keydown", "Escape");
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-plugins']"),
-      "plugins section is displayed"
-    );
-    assert.ok(
-      exists(".sidebar-section[data-section-name='admin-advanced']"),
-      "advanced section is displayed"
-    );
+    assert
+      .dom(".sidebar-section[data-section-name='admin-plugins']")
+      .exists("plugins section is displayed");
+    assert
+      .dom(".sidebar-section[data-section-name='admin-advanced']")
+      .exists("advanced section is displayed");
   });
 
   test("enabled plugin admin routes have links added", async function (assert) {
@@ -155,27 +141,47 @@ acceptance("Admin Sidebar - Sections - Plugin API", function (needs) {
         name: "test_section_link",
         label: "admin.plugins.title",
         route: "adminPlugins.index",
-        icon: "cog",
+        icon: "gear",
       });
 
       api.addAdminSidebarSectionLink("root", {
         name: "test_section_link_no_route_or_href",
         label: "admin.plugins.title",
-        icon: "cog",
+        icon: "gear",
       });
 
       api.addAdminSidebarSectionLink("root", {
         name: "test_section_link_no_label_or_text",
         route: "adminPlugins.index",
-        icon: "cog",
+        icon: "gear",
       });
 
       api.addAdminSidebarSectionLink("root", {
         name: "test_section_link_invalid_label",
         label: "blahblah.i18n",
         route: "adminPlugins.index",
-        icon: "cog",
+        icon: "gear",
       });
+
+      api.addCommunitySectionLink(
+        {
+          name: "primary",
+          route: "discovery.unread",
+          title: "Link in primary",
+          text: "Link in primary",
+        },
+        false
+      );
+
+      api.addCommunitySectionLink(
+        {
+          name: "secondary",
+          route: "discovery.unread",
+          title: "Link in secondary",
+          text: "Link in secondary",
+        },
+        true
+      );
     });
   });
 
@@ -210,6 +216,35 @@ acceptance("Admin Sidebar - Sections - Plugin API", function (needs) {
       "invalid link with an invalid I18n key is not appended to the root section"
     );
   });
+
+  test("community section links are added to primary and secondary sections with the plugin API", async function (assert) {
+    await visit("/");
+
+    assert.ok(
+      exists(
+        "#sidebar-section-content-community .sidebar-section-link[data-link-name='primary']"
+      )
+    );
+    assert.notOk(
+      exists(
+        "#sidebar-section-content-community .sidebar-section-link[data-link-name='secondary']"
+      )
+    );
+
+    await click(".sidebar-more-section-links-details-summary");
+
+    assert.notOk(
+      exists(
+        ".sidebar-more-section-links-details-content .sidebar-section-link[data-link-name='primary']"
+      )
+    );
+    assert.ok(
+      exists(
+        ".sidebar-more-section-links-details-content .sidebar-section-link[data-link-name='secondary']"
+      )
+    );
+    assert.ok(true);
+  });
 });
 
 let _locale;
@@ -231,7 +266,7 @@ acceptance(
           name: "test_section_link",
           label: "admin.plugins.title",
           route: "adminPlugins.index",
-          icon: "cog",
+          icon: "gear",
         });
       });
     });

@@ -2,29 +2,29 @@ import Component from "@ember/component";
 import EmberObject, { action } from "@ember/object";
 import { service } from "@ember/service";
 import { htmlSafe } from "@ember/template";
-import { TrackedArray } from "@ember-compat/tracked-built-ins";
 import { tagName } from "@ember-decorators/component";
 import cookie, { removeCookie } from "discourse/lib/cookie";
+import { DeferredTrackedSet } from "discourse/lib/tracked-tools";
 import { bind } from "discourse-common/utils/decorators";
 import I18n from "discourse-i18n";
 
-const _pluginNotices = new TrackedArray();
+const _pluginNotices = new DeferredTrackedSet();
 
 export function addGlobalNotice(text, id, options = {}) {
-  _pluginNotices.push(Notice.create({ text, id, options }));
+  _pluginNotices.add(Notice.create({ text, id, options }));
 }
 
 const GLOBAL_NOTICE_DISMISSED_PROMPT_KEY = "dismissed-global-notice-v2";
 
-const Notice = EmberObject.extend({
-  logsNoticeService: service("logsNotice"),
+class Notice extends EmberObject {
+  @service("logsNotice") logsNoticeService;
 
-  text: null,
-  id: null,
-  options: null,
+  text = null;
+  id = null;
+  options = null;
 
   init() {
-    this._super(...arguments);
+    super.init(...arguments);
 
     const defaults = {
       // can this banner be hidden
@@ -47,8 +47,8 @@ const Notice = EmberObject.extend({
       "options",
       Object.assign(defaults, this.options || {})
     );
-  },
-});
+  }
+}
 
 @tagName("")
 export default class GlobalNotice extends Component {
@@ -153,7 +153,7 @@ export default class GlobalNotice extends Component {
       notices.push(this.get("logNotice"));
     }
 
-    return notices.concat(_pluginNotices).filter((notice) => {
+    return notices.concat(Array.from(_pluginNotices)).filter((notice) => {
       if (notice.options.visibility) {
         return notice.options.visibility(notice);
       }

@@ -11,17 +11,17 @@ register_asset "stylesheets/common/poll-ui-builder.scss"
 register_asset "stylesheets/desktop/poll-ui-builder.scss", :desktop
 register_asset "stylesheets/common/poll-breakdown.scss"
 
-register_svg_icon "far fa-check-square"
+register_svg_icon "far fa-square-check"
 
 enabled_site_setting :poll_enabled
 hide_plugin
 
 after_initialize do
   module ::DiscoursePoll
-    PLUGIN_NAME ||= "poll"
-    DATA_PREFIX ||= "data-poll-"
-    HAS_POLLS ||= "has_polls"
-    DEFAULT_POLL_NAME ||= "poll"
+    PLUGIN_NAME = "poll"
+    DATA_PREFIX = "data-poll-"
+    HAS_POLLS = "has_polls"
+    DEFAULT_POLL_NAME = "poll"
 
     class Engine < ::Rails::Engine
       engine_name PLUGIN_NAME
@@ -40,6 +40,7 @@ after_initialize do
   require_relative "app/serializers/poll_serializer"
   require_relative "jobs/regular/close_poll"
   require_relative "lib/poll"
+  require_relative "lib/ranked_choice"
   require_relative "lib/polls_updater"
   require_relative "lib/polls_validator"
   require_relative "lib/post_validator"
@@ -181,12 +182,13 @@ after_initialize do
           end
 
         if post_with_polls.present?
-          Poll
-            .where(post_id: post_with_polls)
-            .each do |p|
-              polls[p.post_id] ||= []
-              polls[p.post_id] << p
-            end
+          all_polls = Poll.includes(:poll_options).where(post_id: post_with_polls)
+          Poll.preload!(all_polls, user_id: @user&.id)
+          DiscoursePoll::Poll.preload_serialized_voters!(all_polls)
+          all_polls.each do |p|
+            polls[p.post_id] ||= []
+            polls[p.post_id] << p
+          end
         end
 
         polls
@@ -220,13 +222,22 @@ after_initialize do
   ) do
     preloaded_polls
       .map do |poll|
-        user_poll_votes =
-          poll
-            .poll_votes
-            .where(user_id: scope.user.id)
-            .joins(:poll_option)
-            .pluck("poll_options.digest")
-
+        if poll.ranked_choice?
+          user_poll_votes =
+            poll
+              .poll_votes
+              .where(user_id: scope.user.id)
+              .joins(:poll_option)
+              .pluck("poll_options.digest", "poll_votes.rank")
+              .map { |digest, rank| { digest: digest, rank: rank } }
+        else
+          user_poll_votes =
+            poll
+              .poll_votes
+              .where(user_id: scope.user.id)
+              .joins(:poll_option)
+              .pluck("poll_options.digest")
+        end
         [poll.name, user_poll_votes]
       end
       .to_h

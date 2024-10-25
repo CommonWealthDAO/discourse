@@ -129,27 +129,6 @@ RSpec.describe User do
         ) { user.update(name: "Batman") }
       end
     end
-
-    describe "#refresh_user_directory" do
-      context "when bootstrap mode is enabled" do
-        before { SiteSetting.bootstrap_mode_enabled = true }
-
-        it "creates directory items for a new user for all periods" do
-          expect do user = Fabricate(:user) end.to change { DirectoryItem.count }.by(
-            DirectoryItem.period_types.count,
-          )
-          expect(DirectoryItem.where(user_id: user.id)).to exist
-        end
-      end
-
-      context "when bootstrap mode is disabled" do
-        before { SiteSetting.bootstrap_mode_enabled = false }
-
-        it "doesn't create directory items for a new user" do
-          expect do Fabricate(:user) end.not_to change { DirectoryItem.count }
-        end
-      end
-    end
   end
 
   describe "Validations" do
@@ -678,7 +657,7 @@ RSpec.describe User do
           quoted_post = create_post(user: user, topic: topic, post_number: 1, raw: "quoted post")
           post = create_post(raw: <<~RAW)
             Lorem ipsum
-  
+
             [quote="#{user.username}, post:1, topic:#{quoted_post.topic.id}"]
             quoted post
             [/quote]
@@ -1096,6 +1075,12 @@ RSpec.describe User do
       expect(User.reserved_username?("Lo\u0308we")).to eq(true) # NFD
       expect(User.reserved_username?("löwe")).to eq(true) # NFC
       expect(User.reserved_username?("käfer")).to eq(true) # NFC
+    end
+
+    it "does not error out when there are no reserved usernames" do
+      SiteSetting.stubs(:reserved_usernames).returns(nil)
+
+      expect { User.username_available?("Foo") }.not_to raise_error
     end
   end
 
@@ -1930,7 +1915,7 @@ RSpec.describe User do
   describe "hash_passwords" do
     let(:too_long) { "x" * (User.max_password_length + 1) }
 
-    def hash(password, salt, algorithm = User::TARGET_PASSWORD_ALGORITHM)
+    def hash(password, salt, algorithm = UserPassword::TARGET_PASSWORD_ALGORITHM)
       User.new.send(:hash_password, password, salt, algorithm)
     end
 
@@ -1951,17 +1936,17 @@ RSpec.describe User do
     end
 
     it "uses the target algorithm for new users" do
-      expect(user.password_algorithm).to eq(User::TARGET_PASSWORD_ALGORITHM)
+      expect(user.password_algorithm).to eq(UserPassword::TARGET_PASSWORD_ALGORITHM)
     end
 
     it "can use an older algorithm to verify existing passwords, then upgrade" do
       old_algorithm = "$pbkdf2-sha256$i=5,l=32$"
-      expect(old_algorithm).not_to eq(User::TARGET_PASSWORD_ALGORITHM)
+      expect(old_algorithm).not_to eq(UserPassword::TARGET_PASSWORD_ALGORITHM)
 
       password = "poutine"
       old_hash = hash(password, user.salt, old_algorithm)
 
-      user.update!(password_algorithm: old_algorithm, password_hash: old_hash)
+      user.user_password.update_columns(password_algorithm: old_algorithm, password_hash: old_hash)
 
       expect(user.password_algorithm).to eq(old_algorithm)
       expect(user.password_hash).to eq(old_hash)
@@ -1975,13 +1960,13 @@ RSpec.describe User do
       expect(user.confirm_password?(password)).to eq(true)
 
       # Auto-upgrades to new algorithm
-      expected_new_hash = hash(password, user.salt, User::TARGET_PASSWORD_ALGORITHM)
-      expect(user.password_algorithm).to eq(User::TARGET_PASSWORD_ALGORITHM)
+      expected_new_hash = hash(password, user.salt, UserPassword::TARGET_PASSWORD_ALGORITHM)
+      expect(user.password_algorithm).to eq(UserPassword::TARGET_PASSWORD_ALGORITHM)
       expect(user.password_hash).to eq(expected_new_hash)
 
       # And persists to the db
       user.reload
-      expect(user.password_algorithm).to eq(User::TARGET_PASSWORD_ALGORITHM)
+      expect(user.password_algorithm).to eq(UserPassword::TARGET_PASSWORD_ALGORITHM)
       expect(user.password_hash).to eq(expected_new_hash)
 
       # And can still log in
@@ -3165,12 +3150,30 @@ RSpec.describe User do
   end
 
   describe "#update_ip_address!" do
+    let!(:plugin) { Plugin::Instance.new }
+    let!(:modifier) { :user_can_update_ip_address }
+    let!(:deny_block) { Proc.new { false } }
+    let!(:allow_block) { Proc.new { true } }
+
     it "updates ip_address correctly" do
       expect do user.update_ip_address!("127.0.0.1") end.to change {
         user.reload.ip_address.to_s
       }.to("127.0.0.1")
 
       expect do user.update_ip_address!("127.0.0.1") end.to_not change { user.reload.ip_address }
+    end
+
+    it "allows plugins to control updating ip_address" do
+      DiscoursePluginRegistry.register_modifier(plugin, modifier, &deny_block)
+      expect do user.update_ip_address!("127.0.0.1") end.to_not change { user.reload.ip_address }
+
+      DiscoursePluginRegistry.register_modifier(plugin, modifier, &allow_block)
+      expect do user.update_ip_address!("127.0.0.1") end.to change {
+        user.reload.ip_address.to_s
+      }.to("127.0.0.1")
+    ensure
+      DiscoursePluginRegistry.unregister_modifier(plugin, modifier, &deny_block)
+      DiscoursePluginRegistry.unregister_modifier(plugin, modifier, &allow_block)
     end
 
     describe "keeping old ip address" do
@@ -3235,10 +3238,25 @@ RSpec.describe User do
   describe "#invited_by" do
     it "returns even if invites was trashed" do
       invite = Fabricate(:invite, invited_by: Fabricate(:user))
-      Fabricate(:invited_user, invite: invite, user: user)
+      Fabricate(:invited_user, invite: invite, user: user, redeemed_at: Time.now)
       invite.trash!
 
       expect(user.invited_by).to eq(invite.invited_by)
+    end
+
+    it "does not return invites that are not redeemed yet" do
+      invite = Fabricate(:invite, invited_by: Fabricate(:user))
+      Fabricate(:invited_user, invite: invite, user: user, redeemed_at: nil)
+      invite.trash!
+
+      expect(user.invited_by).to eq(nil)
+    end
+
+    it "excludes invites redeemed after user creation" do
+      invite = Fabricate(:invite, invited_by: Fabricate(:user))
+      Fabricate(:invited_user, invite: invite, user: user, redeemed_at: user.created_at + 6.second)
+
+      expect(user.invited_by).to eq(nil)
     end
   end
 
@@ -3395,8 +3413,9 @@ RSpec.describe User do
       user.update!(groups: [group])
       SiteSetting.enable_category_group_moderation = true
 
-      group_reviewable =
-        Fabricate(:reviewable, reviewable_by_moderator: false, reviewable_by_group: group)
+      category = Fabricate(:category)
+      Fabricate(:category_moderation_group, category:, group:)
+      group_reviewable = Fabricate(:reviewable, reviewable_by_moderator: false, category:)
       mod_reviewable = Fabricate(:reviewable, reviewable_by_moderator: true)
       admin_reviewable = Fabricate(:reviewable, reviewable_by_moderator: false)
 
@@ -3550,6 +3569,50 @@ RSpec.describe User do
 
       user.update!(seen_notification_id: last_seen_id)
       expect(user.new_personal_messages_notifications_count).to eq(1)
+    end
+  end
+
+  describe "#populated_required_fields?" do
+    let!(:required_field) do
+      Fabricate(:user_field, name: "hairstyle", requirement: "for_all_users")
+    end
+    let!(:signup_field) { Fabricate(:user_field, name: "haircolor", requirement: "on_signup") }
+    let!(:optional_field) { Fabricate(:user_field, name: "haircolor", requirement: "optional") }
+
+    context "when all required fields are populated" do
+      before { user.set_user_field(required_field.id, "bald") }
+
+      it { expect(user.populated_required_custom_fields?).to eq(true) }
+    end
+
+    context "when some required fields are missing values" do
+      it { expect(user.populated_required_custom_fields?).to eq(false) }
+    end
+  end
+
+  describe "#needs_required_fields_check?" do
+    let!(:version) { UserRequiredFieldsVersion.create! }
+
+    context "when version number is up to date" do
+      before { user.update(required_fields_version: version.id) }
+
+      it { expect(user.needs_required_fields_check?).to eq(false) }
+    end
+
+    context "when version number is out of date" do
+      before { user.update(required_fields_version: version.id - 1) }
+
+      it { expect(user.needs_required_fields_check?).to eq(true) }
+    end
+  end
+
+  describe "#bump_required_fields_version" do
+    let!(:version) { UserRequiredFieldsVersion.create! }
+
+    it do
+      expect { user.bump_required_fields_version }.to change { user.required_fields_version }.to(
+        version.id,
+      )
     end
   end
 end

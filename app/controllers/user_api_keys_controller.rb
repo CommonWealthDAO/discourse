@@ -4,10 +4,12 @@ class UserApiKeysController < ApplicationController
   layout "no_ember"
 
   requires_login only: %i[create create_otp revoke undo_revoke]
-  skip_before_action :redirect_to_login_if_required, only: %i[new otp]
+  skip_before_action :redirect_to_login_if_required,
+                     :redirect_to_profile_if_required,
+                     only: %i[new otp]
   skip_before_action :check_xhr, :preload_json
 
-  AUTH_API_VERSION ||= 4
+  AUTH_API_VERSION = 4
 
   def new
     if request.head?
@@ -59,8 +61,7 @@ class UserApiKeysController < ApplicationController
     @application_name = params[:application_name]
     scopes = params[:scopes].split(",")
 
-    # destroy any old keys we had
-    UserApiKey.where(user_id: current_user.id, client_id: params[:client_id]).destroy_all
+    UserApiKey.where(client_id: params[:client_id]).destroy_all
 
     key =
       UserApiKey.create!(

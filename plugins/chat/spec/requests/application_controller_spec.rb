@@ -25,7 +25,8 @@ RSpec.describe ApplicationController do
           "admin_route" => {
             "label" => "chat.admin.title",
             "location" => "chat",
-            "use_new_show_route" => false,
+            "full_location" => "adminPlugins.show",
+            "use_new_show_route" => true,
           },
           "enabled" => true,
         },

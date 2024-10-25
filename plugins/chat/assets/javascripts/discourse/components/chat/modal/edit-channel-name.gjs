@@ -54,10 +54,7 @@ export default class ChatModalEditChannelName extends Component {
       this.channel.title = result.channel.title;
       this.channel.slug = result.channel.slug;
       await this.args.closeModal();
-      await this.router.replaceWith(
-        "chat.channel",
-        ...this.channel.routeModels
-      );
+      this.router.replaceWith("chat.channel", ...this.channel.routeModels);
     } catch (error) {
       this.flash = extractError(error);
     }
@@ -133,7 +130,7 @@ export default class ChatModalEditChannelName extends Component {
           <label for="channel-slug" class="edit-channel-label">
             {{i18n "chat.channel_edit_name_slug_modal.slug"}}&nbsp;
             <DTooltip
-              @icon="info-circle"
+              @icon="circle-info"
               @content={{i18n
                 "chat.channel_edit_name_slug_modal.slug_description"
               }}

@@ -30,8 +30,6 @@ id:
       text_copied: Teks disalin ke papan klip
       link_copied: Tautan disalin ke papan klip
       deleted_chat_username: dihapus
-      dates:
-        time_tiny: "h:mm"
       all_loaded: "Menampilkan semua pesan"
       already_enabled: "Obrolan sudah diaktifkan pada topik ini. Segarkan."
       disabled_for_topic: "Obrolan dinonaktifkan pada topik ini."
@@ -55,6 +53,8 @@ id:
         open_channel: "Buka kanal"
         join: "Gabung"
         leave: "Keluar"
+      channels_list_popup:
+        browse: "Jelajahi kanal"
       close: "Tutup"
       remove: "Hapus"
       delete: "Hapus"
@@ -66,14 +66,9 @@ id:
       header_indicator_preference:
         all_new: "Semua Pesan Baru"
         never: "Tidak pernah"
+      enable: "Aktifkan obrolan"
       heading: "Obrolan"
       join: "Gabung"
-      summarization:
-        title: "Meringkas pesan"
-        description: "Pilih opsi di bawah untuk meringkas percakapan yang dikirim selama jangka waktu yang diinginkan."
-        summarize: "Meringkas"
-        since:
-          other: "%{count} jam terakhir"
       mention_warning:
         invitations_sent:
           other: "Undangan terkirim"
@@ -91,6 +86,7 @@ id:
       reply: "Balas"
       edit: "Ubah"
       copy_text: "Salin teks"
+      message_too_long: "Pesan terlalu panjang, pesan harus maksimal %{count} karakter."
       bookmark_message: "Penandaan"
       bookmark_message_edit: "Edit Bookmark"
       save: "Simpan"
@@ -205,10 +201,10 @@ id:
         notifications:
           regular:
             title: "Normal"
-            description: "Anda akan diberi tahu jika seseorang menyebut @nama Anda di utas ini."
           tracking:
             title: "Pelacakan"
-            description: "Jumlah balasan baru untuk utas ini akan ditampilkan di daftar utas dan kanal. Anda akan diberi tahu jika seseorang menyebut @nama Anda di utas ini."
+          watching:
+            title: "Melihat"
         participants_other_count:
           other: "+%{count}"
       threads:
@@ -216,6 +212,9 @@ id:
       draft_channel_screen:
         header: "Pesan Baru"
         cancel: "Batal"
+    notifications:
+      chat_watched_thread_label:
+        other: "%{username} dan %{count} lainnya"
     discourse_automation:
       scriptables:
         send_chat_message:

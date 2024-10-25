@@ -25,38 +25,18 @@ export default class ChannelsListPublic extends Component {
     return this.args.inSidebar ?? false;
   }
 
-  get publicMessageChannelsEmpty() {
-    return (
-      this.chatChannelsManager.publicMessageChannels?.length === 0 &&
-      this.chatStateManager.hasPreloadedChannels
-    );
-  }
-
-  get displayPublicChannels() {
-    if (!this.siteSettings.enable_public_channels) {
-      return false;
-    }
-
-    if (!this.chatStateManager.hasPreloadedChannels) {
-      return false;
-    }
-
-    if (this.publicMessageChannelsEmpty) {
-      return (
-        this.currentUser?.staff ||
-        this.currentUser?.has_joinable_public_channels
-      );
-    }
-
-    return true;
-  }
-
   get hasUnreadThreads() {
     return this.chatTrackingStateManager.hasUnreadThreads;
   }
 
   get hasThreadedChannels() {
     return this.chatChannelsManager.hasThreadedChannels;
+  }
+
+  get channelList() {
+    return this.args.sortByActivity === true
+      ? this.chatChannelsManager.publicMessageChannelsByActivity
+      : this.chatChannelsManager.publicMessageChannels;
   }
 
   @action
@@ -84,7 +64,9 @@ export default class ChannelsListPublic extends Component {
       </LinkTo>
     {{/if}}
 
-    {{#if (and this.displayPublicChannels this.site.desktopView)}}
+    {{#if
+      (and this.chatChannelsManager.displayPublicChannels this.site.desktopView)
+    }}
       <div class="chat-channel-divider public-channels-section">
         {{#if this.inSidebar}}
           <span
@@ -106,7 +88,7 @@ export default class ChannelsListPublic extends Component {
           class="btn no-text btn-flat open-browse-page-btn title-action"
           title={{i18n "chat.channels_list_popup.browse"}}
         >
-          {{dIcon "pencil-alt"}}
+          {{dIcon "pencil"}}
         </LinkTo>
       </div>
     {{/if}}
@@ -119,15 +101,15 @@ export default class ChannelsListPublic extends Component {
         (if this.inSidebar "collapsible-sidebar-section")
       }}
     >
-      {{#if this.publicMessageChannelsEmpty}}
+      {{#if this.chatChannelsManager.publicMessageChannelsEmpty}}
         <EmptyChannelsList
           @title={{i18n "chat.no_public_channels"}}
           @ctaTitle={{i18n "chat.no_public_channels_cta"}}
           @ctaAction={{this.openBrowseChannels}}
-          @showCTA={{this.displayPublicChannels}}
+          @showCTA={{this.chatChannelsManager.displayPublicChannels}}
         />
       {{else}}
-        {{#each this.chatChannelsManager.publicMessageChannels as |channel|}}
+        {{#each this.channelList as |channel|}}
           <ChatChannelRow
             @channel={{channel}}
             @options={{hash settingsButton=true}}

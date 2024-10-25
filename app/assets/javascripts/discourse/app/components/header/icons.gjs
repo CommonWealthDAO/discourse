@@ -37,6 +37,10 @@ export default class Icons extends Component {
     // NOTE: In this scenario, we are forcing the sidebar on admin users,
     // so we need to still show the hamburger menu to be able to
     // access the legacy hamburger forum menu.
+    if (this.header.headerButtonsHidden.includes("menu")) {
+      return false;
+    }
+
     if (
       this.args.sidebarEnabled &&
       this.sidebarState.adminSidebarAllowedWithLegacyNavigationMenu
@@ -67,7 +71,7 @@ export default class Icons extends Component {
           {{#unless this.hideSearchButton}}
             <Dropdown
               @title="search.title"
-              @icon="search"
+              @icon="magnifying-glass"
               @iconId={{@searchButtonId}}
               @onClick={{@toggleSearchMenu}}
               @active={{this.search.visible}}

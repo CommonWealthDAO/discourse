@@ -108,7 +108,6 @@ th:
       topic_html: 'กระทู้: <span class="topic-title">%{topicTitle}</span>'
       post: "โพสต์ #%{postNumber} โดย @%{username}"
       close: "ปิด"
-      twitter: "แชร์บนทวิตเตอร์"
       facebook: "แชร์บนเฟสบุ๊ค"
       email: "ส่งทางอีเมล"
       url: "คัดลอกและแชร์ URL"
@@ -240,7 +239,14 @@ th:
       like_count: "ถูกใจ"
       topic_count: "กระทู้"
       post_count: "โพสต์"
-      contact_info: "ในกรณีที่เกิดเหตุฉุกเฉินหรือประเด็นสำคัญที่ส่งผลต่อเว็บไซต์นี้ กรุณาติดต่อเราที่ %{contact_info}"
+      activities:
+        topics:
+          other: "%{formatted_number} กระทู้"
+        posts:
+          other: "%{formatted_number} โพส"
+        periods:
+          last_7_days: "ใน 7 วันที่ผ่านมา"
+          today: "วันนี้"
     bookmarked:
       title: "บุ๊กมาร์ก"
       edit_bookmark: "แก้ไขบุ๊กมาร์ก"
@@ -517,6 +523,8 @@ th:
         email:
           title: "อีเมล"
           last_updated_by: "โดย"
+          ssl_modes:
+            none: "ไม่มี"
           credentials:
             username: "ชื่อผู้ใช้"
             password: "รหัสผ่าน"
@@ -696,6 +704,7 @@ th:
       copied: "คัดลอกแล้ว"
     user_fields:
       none: "(เลือกตัวเลือก)"
+      optional: (ทางเลือก)
     user:
       said: "%{username}:"
       profile: "โปรไฟล์"
@@ -726,7 +735,8 @@ th:
         to: "ถึง"
       activity_stream: "กิจกรรม"
       read: "อ่าน"
-      preferences: "การตั้งค่า"
+      preferences:
+        title: "การตั้งค่า"
       feature_topic_on_profile:
         open_search: "เลือกกระทู้ใหม่"
         title: "เลือกกระทู้"
@@ -853,6 +863,7 @@ th:
         set_password: "ตั้งรหัสผ่าน"
         choose_new: "เลือกรหัสผ่านใหม่"
         choose: "เลือกรหัสผ่าน"
+        title: "รีเซ็ตรหัสผ่าน"
       second_factor_backup:
         disable: "ปิดใช้งาน"
       second_factor:
@@ -911,7 +922,6 @@ th:
         destroy: "ลบอีเมล"
         add_email: "เพิ่มอีเมลสำรอง"
         no_secondary: "ไม่มีอีเมลสำรอง"
-        instructions: "ไม่แสดงเป็นสาธารณะ"
         ok: "เราจะส่งอีเมลไปหาคุณเพื่อยืนยัน"
         required: "กรุณากรอกที่อยู่อีเมล"
         invalid: "กรุณาใส่อีเมลที่ถูกต้อง"
@@ -924,10 +934,13 @@ th:
         cancel: "ยกเลิก"
         not_connected: "(ไม่เชื่อมต่อ)"
         confirm_modal_title: "เชื่อมต่อ%{provider}บัญชี"
+      activate_account:
+        continue_button: "ดำเนินการต่อไปยัง %{site_name}"
+        welcome_to: "ยินดีต้อนรับสู่ %{site_name}!"
       name:
         title: "ชื่อ"
-        instructions: "ชื่อเต็มของคุณ (ไม่บังคับ)."
-        instructions_required: "ชื่อเต็มของคุณ."
+        instructions: "ชื่อเต็มของคุณ (ไม่บังคับ)"
+        instructions_required: "ชื่อเต็มของคุณ"
         required: "กรุณากรอกชื่อ"
         too_short: "ชื่อของคุณสั้นไป"
         ok: "ชื่อของคุณเหมาะสม"
@@ -1062,15 +1075,17 @@ th:
           title: "ลิงก์คำเชิญ"
           success: "สร้างลิงก์คำเชิญสำเร็จแล้ว!"
           error: "มีข้อผิดพลาดในการสร้างลิงก์คำเชิญ"
+        invite:
+          save_invite: "บันทึก"
+          cancel: "ยกเลิก"
       password:
         title: "รหัสผ่าน"
-        too_short: "รหัสผ่านสั้นเกินไป"
         common: "รหัสผ่านง่ายเกินไป"
         same_as_username: "รหัสผ่านเหมือนกับชื่อผู้ใช้ของคุณ"
         same_as_email: "รหัสผ่านเหมือนกับอีเมลของคุณ"
         ok: "รหัสผ่านของคุณเหมาะสม"
         instructions:
-          other: "อย่างน้อย %{count} ตัวอักษร."
+          other: "อย่างน้อย %{count} ตัวอักษร"
         required: "กรุณากรอกรหัสผ่าน"
       summary:
         title: "สรุปภาพรวม"
@@ -1157,6 +1172,10 @@ th:
     modal:
       close: "ปิด"
       dismiss_error: "ละทิ้งข้อผิดพลาด"
+    form_kit:
+      optional: ทางเลือก
+      errors:
+        required: "ต้องการ"
     close: "ปิด"
     logout: "คุณได้ออกจากระบบ"
     refresh: "รีเฟรช"
@@ -1204,7 +1223,12 @@ th:
     search_hint: "ชื่อผู้ใช้ อีเมล หรือที่อยู่ไอพี"
     create_account:
       disclaimer: "เมื่อลงทะเบียน คุณได้ยอมรับ <a href='%{privacy_link}' target='blank'>นโยบายความเป็นส่วนตัว</a> และ <a href='%{tos_link}' target='blank'> เงื่อนไขการบริการ</a>"
+      title: "สมัคร"
       failed: "มีบางอย่างผิดพลาด อีเมลนี้อาจถูกลงทะเบียนไว้แล้ว กดลิงก์หากลืมรหัสผ่าน"
+      progress_bar:
+        signup: "สมัคร"
+        approve: "อนุมัติ"
+        login: "เข้าสู่ระบบ"
     forgot_password:
       title: "รีเซ็ตรหัสผ่าน"
       action: "ฉันลืมรหัสผ่าน"
@@ -1224,6 +1248,7 @@ th:
       logging_in_as: กำลังเข้าสู่ระบบด้วย %{email}
       confirm_button: เสร็จสิ้นการเข้าสู่ระบบ
     login:
+      title: "เข้าสู่ระบบ"
       username: "ชื่อผู้ใช้"
       password: "รหัสผ่าน"
       show_password: "แสดง"
@@ -1400,7 +1425,6 @@ th:
       enter_fullscreen: "ขยายหน้าเขียนกระทู้เต็มจอ"
       exit_fullscreen: "ออกจากหน้าเขียนกระทู้เต็มจอ"
       modal_ok: "ตกลง"
-      modal_cancel: "ยกเลิก"
       cant_send_pm: "ขออภัย คุณไม่สามารถส่งข้อความหา %{username} ได้"
       yourself_confirm:
         title: "คุณลืมเพิ่มผู้รับหรือไม่"
@@ -2129,6 +2153,8 @@ th:
       links_title: "ลิงก์ยอดนิยม"
       clicks:
         other: "%{count} คลิก"
+      views: "ดู"
+      read: อ่าน
     post_links:
       title:
         other: "อีก %{count}"
@@ -2156,6 +2182,7 @@ th:
     pending_posts:
       label: "อยู่ระหว่างการพิจารณา"
       label_with_count: "กำลังรอ (%{count})"
+    posters: "ผู้โพสต์"
     original_post: "โพสต์ต้นฉบับ"
     views: "ดู"
     views_lowercase:
@@ -2343,7 +2370,6 @@ th:
     tagging:
       other_tags: "แท็กอื่น"
       selector_tags: "ป้าย"
-      selector_all_tags: "แท็กทั้งหมด"
       selector_no_tags: "ไม่มีแท็ก"
       selector_remove_filter: "เอาตัวกรองออก"
       tags: "แท็ก"
@@ -2460,6 +2486,8 @@ th:
               content: "หัวข้อ"
             faq:
               content: "คำถามที่พบบ่อย"
+            guidelines:
+              content: "คู่มือ"
             groups:
               content: "กลุ่ม"
             users:
@@ -2492,6 +2520,7 @@ th:
         show: "แสดง"
         about: "เกี่ยวกับ"
   admin_js:
+    settings: "การตั้งค่า"
     admin:
       title: "ผู้ดูแลระบบดิสคอส"
       moderator: "ผู้ดูแล"
@@ -2510,6 +2539,7 @@ th:
         updates_available: "มีการอัปเดต"
         installed_version: "ติดตั้งแล้ว"
         latest_version: "ล่าสุด"
+        dismiss_notice: "ซ่อน"
         new_features:
           learn_more: "เรียนรู้เพิ่มเติม..."
         last_checked: "ตรวจล่าสุด"
@@ -2634,6 +2664,8 @@ th:
           request: "ร้องขอ"
           timestamp: "สร้าง"
           actions: "การกระทำ"
+          filter_status:
+            failed: "ล้มเหลว"
       home:
         title: "หน้าแรก"
       account:
@@ -2663,12 +2695,35 @@ th:
           rejected: "ถูกปฏิเสธ"
       security:
         title: "ความปลอดภัย"
-        sidebar_link:
-          security: "ความปลอดภัย"
-          spam: "ขยะ"
+      section_landing_pages:
+        account:
+          title: "บัญชี"
+          backups:
+            title: "สำรอง"
+      config_areas:
+        about:
+          optional: "(ทางเลือก)"
+          update: "อัปเดต"
+          saved: "บันทึกแล้ว!"
+        flags:
+          description: "รายละเอียด"
+          enabled: "เปิดใช้"
+          edit: "แก้ไข"
+          delete: "ลบ"
+          delete_confirm: 'คุณแน่ใจหรือว่าต้องการลบ "%{name}"'
+          flags_tab: "ธง"
+          form:
+            save: "บันทึก"
+            name: "ชื่อ"
+            description: "รายละเอียด"
+            invalid_applies_to: "ต้องการ"
+            topic: "หัวข้อ"
+            post: "โพสต์"
+        look_and_feel:
+          themes:
+            title: "ธีม"
       plugins:
         title: "ปลั้กอิน"
-        installed: "ปลั้กอินที่ติดตั้งแล้ว"
         name: "ชื่อ"
         none_installed: "คุณยังไม่มีปลั้กอินใดๆติดตั้ง"
         version: "เวอร์ชัน"
@@ -3188,6 +3243,7 @@ th:
         file_types_list:
           add_image_types: "รูปภาพ"
       badges:
+        status: สถานะ
         title: เหรียญ
         new_badge: เหรียญใหม่
         new: ใหม่
@@ -3195,8 +3251,6 @@ th:
         badge: เหรียญ
         display_name: ชื่อที่ใช้แสดง
         description: รายละเอียด
-        long_description: รายละเอียดแบบยาว
-        badge_type: ประเภทเหรียญ
         badge_grouping: กลุ่ม
         badge_groupings:
           modal_title: การจัดกลุ่มเหรียญ
@@ -3212,6 +3266,8 @@ th:
         disabled: ปิดใช้งานแล้ว
         icon: ไอคอน
         image: ภาพ
+        select_an_icon: "เลือกไอคอน"
+        upload_an_image: "อัปโหลดรูปภาพ"
         trigger_type:
           none: "อัปเดตรายวัน"
           post_revision: "เมื่อผู้ใช้แก้ไขหรือสร้างโพสต์"
@@ -3226,8 +3282,6 @@ th:
             with_post: <span class="username">%{username}</span> สำหรับโพสต์ใน %{link}
             with_post_time: <span class="username">%{username}</span> สำหรับโพสต์ใน %{link} เมื่อ <span class="time">%{time}</span>
             with_time: <span class="username">%{username}</span> เมื่อ <span class="time">%{time}</span>
-        badge_intro:
-          what_are_badges_title: "เหรียญคืออะไร"
         mass_award:
           replace_owners: ลบเหรียญจากผู้ใช้ก่อนหน้านี้
       emoji:

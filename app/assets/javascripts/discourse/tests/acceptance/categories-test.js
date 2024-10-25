@@ -15,10 +15,9 @@ acceptance("Categories - 'categories_only'", function (needs) {
   });
   test("basic functionality", async function (assert) {
     await visit("/categories");
-    assert.ok(
-      exists("table.category-list tr[data-category-id=1]"),
-      "shows the topic list"
-    );
+    assert
+      .dom("table.category-list tr[data-category-id='1']")
+      .exists("shows the topic list");
   });
 });
 
@@ -28,14 +27,12 @@ acceptance("Categories - 'categories_and_latest_topics'", function (needs) {
   });
   test("basic functionality", async function (assert) {
     await visit("/categories");
-    assert.ok(
-      exists("table.category-list tr[data-category-id=1]"),
-      "shows a category"
-    );
-    assert.ok(
-      exists("div.latest-topic-list div[data-topic-id=8]"),
-      "shows the topic list"
-    );
+    assert
+      .dom("table.category-list tr[data-category-id='1']")
+      .exists("shows a category");
+    assert
+      .dom("div.latest-topic-list div[data-topic-id='8']")
+      .exists("shows the topic list");
     assert.notOk(
       query(".more-topics a").href.endsWith("?order=created"),
       "the load more button doesn't include the order=created param"
@@ -66,19 +63,17 @@ acceptance("Categories - 'categories_with_featured_topics'", function (needs) {
   });
   test("basic functionality", async function (assert) {
     await visit("/categories");
-    assert.ok(
-      exists("table.category-list.with-topics tr[data-category-id=1]"),
-      "shows a category"
-    );
-    assert.ok(
-      exists("table.category-list.with-topics div[data-topic-id=11994]"),
-      "shows a featured topic"
-    );
+    assert
+      .dom("table.category-list.with-topics tr[data-category-id='1']")
+      .exists("shows a category");
+    assert
+      .dom("table.category-list.with-topics div[data-topic-id='11994']")
+      .exists("shows a featured topic");
   });
 });
 
 acceptance(
-  "Categories - 'subcategories_with_featured_topics'",
+  "Categories - 'subcategories_with_featured_topics' (desktop)",
   function (needs) {
     needs.settings({
       desktop_category_page_style: "subcategories_with_featured_topics",
@@ -91,12 +86,39 @@ acceptance(
       );
       assert.ok(
         exists(
-          "table.subcategory-list.with-topics tr[data-category-id=26] h3 .category-name"
+          "table.subcategory-list.with-topics tr[data-category-id='26'] h3 .category-name"
         ),
         "shows table row for subcategories"
       );
       assert.ok(
-        exists("table.category-list.with-topics div[data-topic-id=11994]"),
+        exists("table.category-list.with-topics div[data-topic-id='11994']"),
+        "shows a featured topic"
+      );
+    });
+  }
+);
+
+acceptance(
+  "Categories - 'subcategories_with_featured_topics' (mobile)",
+  function (needs) {
+    needs.mobileView();
+    needs.settings({
+      desktop_category_page_style: "subcategories_with_featured_topics",
+    });
+    test("basic functionality", async function (assert) {
+      await visit("/categories");
+      assert.ok(
+        exists("div.subcategory-list.with-topics h3 .category-name"),
+        "shows heading for top-level category"
+      );
+      assert.ok(
+        exists(
+          "div.subcategory-list.with-topics div[data-category-id='26'] h3 .category-name"
+        ),
+        "shows element for subcategories"
+      );
+      assert.ok(
+        exists("div.category-list.with-topics a[data-topic-id='11994']"),
         "shows a featured topic"
       );
     });

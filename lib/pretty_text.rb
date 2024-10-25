@@ -66,12 +66,12 @@ module PrettyText
     end
 
     root_path = "#{Rails.root}/app/assets/javascripts"
-    node_modules = "#{Rails.root}/node_modules"
+    d_node_modules = "#{Rails.root}/app/assets/javascripts/discourse/node_modules"
     md_node_modules = "#{Rails.root}/app/assets/javascripts/discourse-markdown-it/node_modules"
-    ctx.load("#{node_modules}/loader.js/dist/loader/loader.js")
+    ctx.load("#{d_node_modules}/loader.js/dist/loader/loader.js")
     ctx.load("#{md_node_modules}/markdown-it/dist/markdown-it.js")
     ctx.load("#{root_path}/handlebars-shim.js")
-    ctx.load("#{node_modules}/xss/dist/xss.js")
+    ctx.load("#{md_node_modules}/xss/dist/xss.js")
     ctx.load("#{Rails.root}/lib/pretty_text/vendor-shims.js")
 
     ctx_load_directory(
@@ -86,12 +86,13 @@ module PrettyText
     )
 
     %w[
+      discourse-common/addon/deprecation-workflow
       discourse-common/addon/lib/get-url
       discourse-common/addon/lib/object
       discourse-common/addon/lib/deprecated
       discourse-common/addon/lib/escape
       discourse-common/addon/lib/avatar-utils
-      discourse-common/addon/utils/watched-words
+      discourse-common/addon/lib/case-converter
       discourse/app/lib/to-markdown
       discourse/app/static/markdown-it/features
     ].each do |f|
@@ -159,6 +160,7 @@ module PrettyText
   #  markdown_it_rules - An array of markdown rule names which will be applied to the markdown-it engine. Currently used by plugins to customize what markdown-it rules should be
   #                      enabled when rendering markdown.
   #  topic_id          - Topic id for the post being cooked.
+  #  post_id           - Post id for the post being cooked.
   #  user_id           - User id for the post being cooked.
   #  force_quote_link  - Always create the link to the quoted topic for [quote] bbcode. Normally this only happens
   #                      if the topic_id provided is different from the [quote topic:X].
@@ -208,6 +210,7 @@ module PrettyText
       JS
 
       buffer << "__optInput.topicId = #{opts[:topic_id].to_i};\n" if opts[:topic_id]
+      buffer << "__optInput.postId = #{opts[:post_id].to_i};\n" if opts[:post_id]
 
       if opts[:force_quote_link]
         buffer << "__optInput.forceQuoteLink = #{opts[:force_quote_link]};\n"
@@ -404,7 +407,7 @@ module PrettyText
     doc.css("aside.quote a, aside.onebox a, .elided a").remove
 
     # remove hotlinked images
-    doc.css("a.onebox > img").each { |img| img.parent.remove }
+    doc.css("a.lightbox > img, a.onebox > img").each { |img| img.parent.remove }
 
     # extract all links
     doc
@@ -450,6 +453,7 @@ module PrettyText
       .css(".video-placeholder-container")
       .each do |video|
         video_src = video["data-video-src"]
+        next if video_src == "/404" || video_src.nil?
         video_sha1 = File.basename(video_src, File.extname(video_src))
         thumbnail = Upload.where("original_filename LIKE ?", "#{video_sha1}.%").last
         if thumbnail

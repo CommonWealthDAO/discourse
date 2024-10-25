@@ -1,4 +1,4 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { click, currentURL, visit } from "@ember/test-helpers";
 import { test } from "qunit";
 import sinon from "sinon";
@@ -10,7 +10,6 @@ import DiscourseURL from "discourse/lib/url";
 import {
   acceptance,
   publishToMessageBus,
-  query,
 } from "discourse/tests/helpers/qunit-helpers";
 import I18n from "discourse-i18n";
 import selectKit from "../helpers/select-kit-helper";
@@ -21,10 +20,9 @@ acceptance("Personal Message", function (needs) {
   test("suggested messages", async function (assert) {
     await visit("/t/pm-for-testing/12");
 
-    assert.strictEqual(
-      query("#suggested-topics-title").innerText.trim(),
-      I18n.t("suggested_topics.pm_title")
-    );
+    assert
+      .dom("#suggested-topics-title")
+      .hasText(I18n.t("suggested_topics.pm_title"));
   });
 
   test("redirects to inbox after topic is archived and clears topicList cache", async function (assert) {
@@ -91,7 +89,9 @@ acceptance("Personal Message - invite", function (needs) {
   test("can open invite modal", async function (assert) {
     await visit("/t/pm-for-testing/12");
     await click(".add-remove-participant-btn");
-    await click(".private-message-map .controls .add-participant-btn");
+    await click(
+      ".topic-map__private-message-map .controls .add-participant-btn"
+    );
 
     assert
       .dom(".d-modal.add-pm-participants .invite-user-control")
@@ -101,7 +101,9 @@ acceptance("Personal Message - invite", function (needs) {
   test("shows errors correctly", async function (assert) {
     await visit("/t/pm-for-testing/12");
     await click(".add-remove-participant-btn");
-    await click(".private-message-map .controls .add-participant-btn");
+    await click(
+      ".topic-map__private-message-map .controls .add-participant-btn"
+    );
 
     assert
       .dom(".d-modal.add-pm-participants .invite-user-control")

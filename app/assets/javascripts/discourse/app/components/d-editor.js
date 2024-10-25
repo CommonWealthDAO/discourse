@@ -1,8 +1,11 @@
 import Component from "@ember/component";
 import { action, computed } from "@ember/object";
+import { getOwner } from "@ember/owner";
 import { schedule, scheduleOnce } from "@ember/runloop";
 import { service } from "@ember/service";
 import ItsATrap from "@discourse/itsatrap";
+import { classNames } from "@ember-decorators/component";
+import { observes, on } from "@ember-decorators/object";
 import $ from "jquery";
 import { emojiSearch, isSkinTonableEmoji } from "pretty-text/emoji";
 import { translations } from "pretty-text/emoji/data";
@@ -19,24 +22,20 @@ import { linkSeenMentions } from "discourse/lib/link-mentions";
 import { loadOneboxes } from "discourse/lib/load-oneboxes";
 import { emojiUrlFor, generateCookFunction } from "discourse/lib/text";
 import { siteDir } from "discourse/lib/text-direction";
+import TextareaTextManipulation, {
+  getHead,
+} from "discourse/lib/textarea-text-manipulation";
 import {
   caretPosition,
   inCodeBlock,
   translateModKey,
 } from "discourse/lib/utilities";
-import TextareaTextManipulation, {
-  getHead,
-} from "discourse/mixins/textarea-text-manipulation";
 import { isTesting } from "discourse-common/config/environment";
 import discourseDebounce from "discourse-common/lib/debounce";
 import deprecated from "discourse-common/lib/deprecated";
 import { getRegister } from "discourse-common/lib/get-owner";
 import { findRawTemplate } from "discourse-common/lib/raw-templates";
-import discourseComputed, {
-  bind,
-  observes,
-  on,
-} from "discourse-common/utils/decorators";
+import discourseComputed, { bind } from "discourse-common/utils/decorators";
 import I18n from "discourse-i18n";
 
 function getButtonLabel(labelKey, defaultLabel) {
@@ -53,6 +52,7 @@ class Toolbar {
     const { siteSettings, capabilities } = opts;
     this.shortcuts = {};
     this.context = null;
+    this.handleSmartListAutocomplete = false;
 
     this.groups = [
       { group: "fontStyles", buttons: [] },
@@ -151,7 +151,7 @@ class Toolbar {
       this.addButton({
         id: "toggle-direction",
         group: "extras",
-        icon: "exchange-alt",
+        icon: "right-left",
         shortcut: "Shift+6",
         title: "composer.toggle_direction",
         preventFocus: true,
@@ -188,6 +188,7 @@ class Toolbar {
       popupMenu: buttonAttrs.popupMenu || false,
       preventFocus: buttonAttrs.preventFocus || false,
       condition: buttonAttrs.condition || (() => true),
+      shortcutAction: buttonAttrs.shortcutAction, // (optional) custom shortcut action
     };
 
     if (buttonAttrs.sendAction) {
@@ -232,49 +233,52 @@ export function onToolbarCreate(func) {
   addToolbarCallback(func);
 }
 
-export default Component.extend(TextareaTextManipulation, {
-  emojiStore: service("emoji-store"),
-  modal: service(),
+@classNames("d-editor")
+export default class DEditor extends Component {
+  @service("emoji-store") emojiStore;
+  @service modal;
 
-  classNames: ["d-editor"],
-  ready: false,
-  lastSel: null,
-  _itsatrap: null,
-  showLink: true,
-  emojiPickerIsActive: false,
-  emojiFilter: "",
-  isEditorFocused: false,
-  processPreview: true,
-  composerFocusSelector: "#reply-control .d-editor-input",
+  textManipulation;
 
-  selectedFormTemplateId: computed("formTemplateIds", {
-    get() {
-      if (this._selectedFormTemplateId) {
-        return this._selectedFormTemplateId;
-      }
-
-      return this.formTemplateId || this.formTemplateIds?.[0];
+  ready = false;
+  lastSel = null;
+  showLink = true;
+  emojiPickerIsActive = false;
+  emojiFilter = "";
+  isEditorFocused = false;
+  processPreview = true;
+  morphingOptions = {
+    beforeAttributeUpdated: (element, attributeName) => {
+      // Don't morph the open attribute of <details> elements
+      return !(element.tagName === "DETAILS" && attributeName === "open");
     },
+  };
 
-    set(key, value) {
-      return (this._selectedFormTemplateId = value);
-    },
-  }),
+  _itsatrap = null;
+
+  @computed("formTemplateIds")
+  get selectedFormTemplateId() {
+    if (this._selectedFormTemplateId) {
+      return this._selectedFormTemplateId;
+    }
+
+    return this.formTemplateId || this.formTemplateIds?.[0];
+  }
+
+  set selectedFormTemplateId(value) {
+    this._selectedFormTemplateId = value;
+  }
 
   @action
   updateSelectedFormTemplateId(formTemplateId) {
     this.selectedFormTemplateId = formTemplateId;
-  },
+  }
 
   @discourseComputed("formTemplateIds", "replyingToTopic", "editingPost")
   showFormTemplateForm(formTemplateIds, replyingToTopic, editingPost) {
     // TODO(@keegan): Remove !editingPost once we add edit/draft support for form templates
-    if (formTemplateIds?.length > 0 && !replyingToTopic && !editingPost) {
-      return true;
-    }
-
-    return false;
-  },
+    return formTemplateIds?.length > 0 && !replyingToTopic && !editingPost;
+  }
 
   @discourseComputed("placeholder")
   placeholderTranslated(placeholder) {
@@ -282,7 +286,7 @@ export default Component.extend(TextareaTextManipulation, {
       return I18n.t(placeholder);
     }
     return null;
-  },
+  }
 
   _readyNow() {
     this.set("ready", true);
@@ -290,21 +294,30 @@ export default Component.extend(TextareaTextManipulation, {
     if (this.autofocus) {
       this._textarea.focus();
     }
-  },
+  }
 
   init() {
-    this._super(...arguments);
+    super.init(...arguments);
 
     this.register = getRegister(this);
-  },
+  }
 
   didInsertElement() {
-    this._super(...arguments);
+    super.didInsertElement(...arguments);
 
     this._previewMutationObserver = this._disablePreviewTabIndex();
 
     this._textarea = this.element.querySelector("textarea.d-editor-input");
     this._$textarea = $(this._textarea);
+
+    this.set(
+      "textManipulation",
+      new TextareaTextManipulation(getOwner(this), {
+        markdownOptions: this.markdownOptions,
+        textarea: this._textarea,
+      })
+    );
+
     this._applyEmojiAutocomplete(this._$textarea);
     this._applyHashtagAutocomplete(this._$textarea);
 
@@ -316,16 +329,59 @@ export default Component.extend(TextareaTextManipulation, {
     Object.keys(shortcuts).forEach((sc) => {
       const button = shortcuts[sc];
       this._itsatrap.bind(sc, () => {
-        button.action(button);
+        const customAction = shortcuts[sc].shortcutAction;
+
+        if (customAction) {
+          const toolbarEvent = this.newToolbarEvent();
+          customAction(toolbarEvent);
+        } else {
+          button.action(button);
+        }
         return false;
       });
     });
 
-    this._itsatrap.bind("tab", () => this.indentSelection("right"));
-    this._itsatrap.bind("shift+tab", () => this.indentSelection("left"));
+    if (this.popupMenuOptions && this.onPopupMenuAction) {
+      this.popupMenuOptions.forEach((popupButton) => {
+        if (popupButton.shortcut && popupButton.condition) {
+          const shortcut =
+            `${PLATFORM_KEY_MODIFIER}+${popupButton.shortcut}`.toLowerCase();
+          this._itsatrap.bind(shortcut, () => {
+            this.onPopupMenuAction(popupButton, this.newToolbarEvent());
+            return false;
+          });
+        }
+      });
+    }
+
+    this._itsatrap.bind("tab", () =>
+      this.textManipulation.indentSelection("right")
+    );
+    this._itsatrap.bind("shift+tab", () =>
+      this.textManipulation.indentSelection("left")
+    );
     this._itsatrap.bind(`${PLATFORM_KEY_MODIFIER}+shift+.`, () =>
       this.send("insertCurrentTime")
     );
+
+    // These must be bound manually because itsatrap does not support
+    // beforeinput or input events.
+    //
+    // beforeinput is better used to detect line breaks because it is
+    // fired before the actual value of the textarea is changed,
+    // and sometimes in the input event no `insertLineBreak` event type
+    // is fired.
+    //
+    // c.f. https://developer.mozilla.org/en-US/docs/Web/API/Element/beforeinput_event
+    if (this._textarea) {
+      this._textarea.addEventListener(
+        "beforeinput",
+        this.onBeforeInputSmartList
+      );
+      this._textarea.addEventListener("input", this.onInputSmartList);
+
+      this.element.addEventListener("paste", this.textManipulation.paste);
+    }
 
     // disable clicking on links in the preview
     this.element
@@ -333,17 +389,44 @@ export default Component.extend(TextareaTextManipulation, {
       .addEventListener("click", this._handlePreviewLinkClick);
 
     if (this.composerEvents) {
-      this.appEvents.on("composer:insert-block", this, "insertBlock");
-      this.appEvents.on("composer:insert-text", this, "insertText");
-      this.appEvents.on("composer:replace-text", this, "replaceText");
+      this.appEvents.on(
+        "composer:insert-block",
+        this.textManipulation,
+        "insertBlock"
+      );
+      this.appEvents.on(
+        "composer:insert-text",
+        this.textManipulation,
+        "insertText"
+      );
+      this.appEvents.on(
+        "composer:replace-text",
+        this.textManipulation,
+        "replaceText"
+      );
       this.appEvents.on("composer:apply-surround", this, "_applySurround");
       this.appEvents.on(
         "composer:indent-selected-text",
-        this,
+        this.textManipulation,
         "indentSelection"
       );
     }
-  },
+  }
+
+  @bind
+  onBeforeInputSmartList(event) {
+    // This inputType is much more consistently fired in `beforeinput`
+    // rather than `input`.
+    this.handleSmartListAutocomplete = event.inputType === "insertLineBreak";
+  }
+
+  @bind
+  onInputSmartList() {
+    if (this.handleSmartListAutocomplete) {
+      this.textManipulation.maybeContinueList();
+    }
+    this.handleSmartListAutocomplete = false;
+  }
 
   @bind
   _handlePreviewLinkClick(event) {
@@ -354,35 +437,57 @@ export default Component.extend(TextareaTextManipulation, {
     if (event.target.tagName === "A") {
       if (event.target.classList.contains("mention")) {
         this.appEvents.trigger(
-          "click.discourse-preview-user-card-mention",
-          $(event.target)
+          "d-editor:preview-click-user-card",
+          event.target,
+          event
         );
       }
 
       if (event.target.classList.contains("mention-group")) {
         this.appEvents.trigger(
-          "click.discourse-preview-group-card-mention-group",
-          $(event.target)
+          "d-editor:preview-click-group-card",
+          event.target,
+          event
         );
       }
 
       event.preventDefault();
       return false;
     }
-  },
+  }
 
   @on("willDestroyElement")
   _shutDown() {
     if (this.composerEvents) {
-      this.appEvents.off("composer:insert-block", this, "insertBlock");
-      this.appEvents.off("composer:insert-text", this, "insertText");
-      this.appEvents.off("composer:replace-text", this, "replaceText");
+      this.appEvents.off(
+        "composer:insert-block",
+        this.textManipulation,
+        "insertBlock"
+      );
+      this.appEvents.off(
+        "composer:insert-text",
+        this.textManipulation,
+        "insertText"
+      );
+      this.appEvents.off(
+        "composer:replace-text",
+        this.textManipulation,
+        "replaceText"
+      );
       this.appEvents.off("composer:apply-surround", this, "_applySurround");
       this.appEvents.off(
         "composer:indent-selected-text",
-        this,
+        this.textManipulation,
         "indentSelection"
       );
+    }
+
+    if (this._textarea) {
+      this._textarea.removeEventListener(
+        "beforeinput",
+        this.onBeforeInputSmartList
+      );
+      this._textarea.removeEventListener("input", this.onInputSmartList);
     }
 
     this._itsatrap?.destroy();
@@ -394,12 +499,10 @@ export default Component.extend(TextareaTextManipulation, {
 
     this._previewMutationObserver?.disconnect();
 
-    if (isTesting()) {
-      this.element.removeEventListener("paste", this.paste);
-    }
+    this.element.removeEventListener("paste", this.textManipulation.paste);
 
     this._cachedCookFunction = null;
-  },
+  }
 
   @discourseComputed()
   toolbar() {
@@ -420,12 +523,12 @@ export default Component.extend(TextareaTextManipulation, {
     }
 
     return toolbar;
-  },
+  }
 
   async cachedCookAsync(text, options) {
     this._cachedCookFunction ||= await generateCookFunction(options || {});
     return await this._cachedCookFunction(text);
-  },
+  }
 
   async _updatePreview() {
     if (
@@ -500,14 +603,7 @@ export default Component.extend(TextareaTextManipulation, {
         this.previewUpdated(previewElement, unseenMentions, unseenHashtags);
       }
     });
-  },
-
-  morphingOptions: {
-    beforeAttributeUpdated: (element, attributeName) => {
-      // Don't morph the open attribute of <details> elements
-      return !(element.tagName === "DETAILS" && attributeName === "open");
-    },
-  },
+  }
 
   @observes("ready", "value", "processPreview")
   async _watchForChanges() {
@@ -521,7 +617,7 @@ export default Component.extend(TextareaTextManipulation, {
     } else {
       discourseDebounce(this, this._updatePreview, 30);
     }
-  },
+  }
 
   _applyHashtagAutocomplete() {
     setupHashtagAutocomplete(
@@ -531,11 +627,15 @@ export default Component.extend(TextareaTextManipulation, {
       {
         afterComplete: (value) => {
           this.set("value", value);
-          schedule("afterRender", this, this.focusTextArea);
+          schedule(
+            "afterRender",
+            this.textManipulation,
+            this.textManipulation.blurAndFocus
+          );
         },
       }
     );
-  },
+  }
 
   _applyEmojiAutocomplete($textarea) {
     if (!this.siteSettings.enable_emoji) {
@@ -547,7 +647,11 @@ export default Component.extend(TextareaTextManipulation, {
       key: ":",
       afterComplete: (text) => {
         this.set("value", text);
-        schedule("afterRender", this, this.focusTextArea);
+        schedule(
+          "afterRender",
+          this.textManipulation,
+          this.textManipulation.blurAndFocus
+        );
       },
 
       onKeyUp: (text, cp) => {
@@ -657,11 +761,11 @@ export default Component.extend(TextareaTextManipulation, {
       triggerRule: async (textarea) =>
         !(await inCodeBlock(textarea.value, caretPosition(textarea))),
     });
-  },
+  }
 
   _applyList(sel, head, exampleKey, opts) {
     if (sel.value.includes("\n")) {
-      this.applySurround(sel, head, "", exampleKey, opts);
+      this.textManipulation.applySurround(sel, head, "", exampleKey, opts);
     } else {
       const [hval, hlen] = getHead(head);
       if (sel.start === sel.end) {
@@ -678,14 +782,14 @@ export default Component.extend(TextareaTextManipulation, {
       const post = trimmedPost.length ? `\n\n${trimmedPost}` : trimmedPost;
 
       this.set("value", `${preLines}${number}${post}`);
-      this.selectText(preLines.length, number.length);
+      this.textManipulation.selectText(preLines.length, number.length);
     }
-  },
+  }
 
   _applySurround(head, tail, exampleKey, opts) {
-    const selected = this.getSelected();
-    this.applySurround(selected, head, tail, exampleKey, opts);
-  },
+    const selected = this.textManipulation.getSelected();
+    this.textManipulation.applySurround(selected, head, tail, exampleKey, opts);
+  }
 
   _toggleDirection() {
     let currentDir = this._$textarea.attr("dir")
@@ -694,7 +798,7 @@ export default Component.extend(TextareaTextManipulation, {
       newDir = currentDir === "ltr" ? "rtl" : "ltr";
 
     this._$textarea.attr("dir", newDir).focus();
-  },
+  }
 
   @action
   rovingButtonBar(event) {
@@ -733,126 +837,158 @@ export default Component.extend(TextareaTextManipulation, {
     }
 
     return true;
-  },
+  }
 
   @action
   onEmojiPickerClose() {
     if (!(this.isDestroyed || this.isDestroying)) {
       this.set("emojiPickerIsActive", false);
     }
-  },
+  }
 
-  actions: {
-    emoji() {
-      if (this.disabled) {
-        return;
-      }
+  newToolbarEvent(trimLeading) {
+    const selected = this.textManipulation.getSelected(trimLeading);
+    return {
+      selected,
+      selectText: (from, length) =>
+        this.textManipulation.selectText(from, length, { scroll: false }),
+      applySurround: (head, tail, exampleKey, opts) =>
+        this.textManipulation.applySurround(
+          selected,
+          head,
+          tail,
+          exampleKey,
+          opts
+        ),
+      applyList: (head, exampleKey, opts) =>
+        this._applyList(selected, head, exampleKey, opts),
+      formatCode: (...args) => this.send("formatCode", args),
+      addText: (text) => this.textManipulation.addText(selected, text),
+      getText: () => this.value,
+      toggleDirection: () => this._toggleDirection(),
+      replaceText: (oldVal, newVal, opts) =>
+        this.textManipulation.replaceText(oldVal, newVal, opts),
+    };
+  }
 
-      this.set("emojiPickerIsActive", !this.emojiPickerIsActive);
-    },
+  @action
+  emoji() {
+    if (this.disabled) {
+      return;
+    }
 
-    toolbarButton(button) {
-      if (this.disabled) {
-        return;
-      }
+    this.set("emojiPickerIsActive", !this.emojiPickerIsActive);
+  }
 
-      const selected = this.getSelected(button.trimLeading);
-      const toolbarEvent = {
-        selected,
-        selectText: (from, length) =>
-          this.selectText(from, length, { scroll: false }),
-        applySurround: (head, tail, exampleKey, opts) =>
-          this.applySurround(selected, head, tail, exampleKey, opts),
-        applyList: (head, exampleKey, opts) =>
-          this._applyList(selected, head, exampleKey, opts),
-        formatCode: (...args) => this.send("formatCode", args),
-        addText: (text) => this.addText(selected, text),
-        getText: () => this.value,
-        toggleDirection: () => this._toggleDirection(),
-      };
+  @action
+  toolbarButton(button) {
+    if (this.disabled) {
+      return;
+    }
 
-      if (button.sendAction) {
-        return button.sendAction(toolbarEvent);
-      } else {
-        button.perform(toolbarEvent);
-      }
-    },
+    const toolbarEvent = this.newToolbarEvent(button.trimLeading);
+    if (button.sendAction) {
+      return button.sendAction(toolbarEvent);
+    } else {
+      button.perform(toolbarEvent);
+    }
+  }
 
-    showLinkModal(toolbarEvent) {
-      if (this.disabled) {
-        return;
-      }
+  @action
+  showLinkModal(toolbarEvent) {
+    if (this.disabled) {
+      return;
+    }
 
-      let linkText = "";
-      this._lastSel = toolbarEvent.selected;
+    let linkText = "";
+    this._lastSel = toolbarEvent.selected;
 
-      if (this._lastSel) {
-        linkText = this._lastSel.value;
-      }
+    if (this._lastSel) {
+      linkText = this._lastSel.value;
+    }
 
-      this.modal.show(InsertHyperlink, {
-        model: {
-          linkText,
-          toolbarEvent,
-        },
-      });
-    },
+    this.modal.show(InsertHyperlink, {
+      model: {
+        linkText,
+        toolbarEvent,
+      },
+    });
+  }
 
-    formatCode() {
-      if (this.disabled) {
-        return;
-      }
+  @action
+  formatCode() {
+    if (this.disabled) {
+      return;
+    }
 
-      const sel = this.getSelected("", { lineVal: true });
-      const selValue = sel.value;
-      const hasNewLine = selValue.includes("\n");
-      const isBlankLine = sel.lineVal.trim().length === 0;
-      const isFourSpacesIndent =
-        this.siteSettings.code_formatting_style === FOUR_SPACES_INDENT;
+    const sel = this.textManipulation.getSelected("", { lineVal: true });
+    const selValue = sel.value;
+    const hasNewLine = selValue.includes("\n");
+    const isBlankLine = sel.lineVal.trim().length === 0;
+    const isFourSpacesIndent =
+      this.siteSettings.code_formatting_style === FOUR_SPACES_INDENT;
 
-      if (!hasNewLine) {
-        if (selValue.length === 0 && isBlankLine) {
-          if (isFourSpacesIndent) {
-            const example = I18n.t(`composer.code_text`);
-            this.set("value", `${sel.pre}    ${example}${sel.post}`);
-            return this.selectText(sel.pre.length + 4, example.length);
-          } else {
-            return this.applySurround(sel, "```\n", "\n```", "paste_code_text");
-          }
-        } else {
-          return this.applySurround(sel, "`", "`", "code_title");
-        }
-      } else {
+    if (!hasNewLine) {
+      if (selValue.length === 0 && isBlankLine) {
         if (isFourSpacesIndent) {
-          return this.applySurround(sel, "    ", "", "code_text");
+          const example = I18n.t(`composer.code_text`);
+          this.set("value", `${sel.pre}    ${example}${sel.post}`);
+          return this.textManipulation.selectText(
+            sel.pre.length + 4,
+            example.length
+          );
         } else {
-          const preNewline = sel.pre[-1] !== "\n" && sel.pre !== "" ? "\n" : "";
-          const postNewline = sel.post[0] !== "\n" ? "\n" : "";
-          return this.addText(
+          return this.textManipulation.applySurround(
             sel,
-            `${preNewline}\`\`\`\n${sel.value}\n\`\`\`${postNewline}`
+            "```\n",
+            "\n```",
+            "paste_code_text"
           );
         }
+      } else {
+        return this.textManipulation.applySurround(sel, "`", "`", "code_title");
       }
-    },
+    } else {
+      if (isFourSpacesIndent) {
+        return this.textManipulation.applySurround(
+          sel,
+          "    ",
+          "",
+          "code_text"
+        );
+      } else {
+        const preNewline = sel.pre[-1] !== "\n" && sel.pre !== "" ? "\n" : "";
+        const postNewline = sel.post[0] !== "\n" ? "\n" : "";
+        return this.textManipulation.addText(
+          sel,
+          `${preNewline}\`\`\`\n${sel.value}\n\`\`\`${postNewline}`
+        );
+      }
+    }
+  }
 
-    insertCurrentTime() {
-      const sel = this.getSelected("", { lineVal: true });
-      const timezone = this.currentUser.user_option.timezone;
-      const time = moment().format("HH:mm:ss");
-      const date = moment().format("YYYY-MM-DD");
+  @action
+  insertCurrentTime() {
+    const sel = this.textManipulation.getSelected("", { lineVal: true });
+    const timezone = this.currentUser.user_option.timezone;
+    const time = moment().format("HH:mm:ss");
+    const date = moment().format("YYYY-MM-DD");
 
-      this.addText(sel, `[date=${date} time=${time} timezone="${timezone}"]`);
-    },
+    this.textManipulation.addText(
+      sel,
+      `[date=${date} time=${time} timezone="${timezone}"]`
+    );
+  }
 
-    focusIn() {
-      this.set("isEditorFocused", true);
-    },
+  @action
+  handleFocusIn() {
+    this.set("isEditorFocused", true);
+  }
 
-    focusOut() {
-      this.set("isEditorFocused", false);
-    },
-  },
+  @action
+  handleFocusOut() {
+    this.set("isEditorFocused", false);
+  }
 
   _disablePreviewTabIndex() {
     const observer = new MutationObserver(function () {
@@ -869,5 +1005,5 @@ export default Component.extend(TextareaTextManipulation, {
     });
 
     return observer;
-  },
-});
+  }
+}

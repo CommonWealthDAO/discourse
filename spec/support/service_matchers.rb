@@ -10,8 +10,24 @@ module ServiceMatchers
     end
 
     def failure_message
-      inspector = StepsInspector.new(result)
-      "Expected to run the service sucessfully but failed:\n\n#{inspector.inspect}\n\n#{inspector.error}"
+      message = "Expected the service to succeed but it failed."
+      error_message_with_inspection(message)
+    end
+
+    def failure_message_when_negated
+      message = "Expected the service to fail but it succeeded."
+      error_message_with_inspection(message)
+    end
+
+    def description
+      "run the service successfully"
+    end
+
+    private
+
+    def error_message_with_inspection(message)
+      inspector = Service::StepsInspector.new(result)
+      "#{message}\n\n#{inspector.inspect}\n\n#{inspector.error}"
     end
   end
 
@@ -73,7 +89,7 @@ module ServiceMatchers
     end
 
     def error_message_with_inspection(message)
-      inspector = StepsInspector.new(result)
+      inspector = Service::StepsInspector.new(result)
       "#{message}\n\n#{inspector.inspect}\n\n#{inspector.error}"
     end
 
@@ -99,7 +115,7 @@ module ServiceMatchers
     end
 
     def step_failed?
-      super && result[name].blank?
+      super && result[step].not_found
     end
   end
 
@@ -137,12 +153,12 @@ module ServiceMatchers
     FailStep.new(name)
   end
 
-  def run_service_successfully
+  def run_successfully
     RunServiceSuccessfully.new
   end
 
   def inspect_steps(result)
-    inspector = StepsInspector.new(result)
+    inspector = Service::StepsInspector.new(result)
     puts "Steps:"
     puts inspector.inspect
     puts "\nFirst error:"

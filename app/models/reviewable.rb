@@ -7,6 +7,8 @@ class Reviewable < ActiveRecord::Base
     ReviewableUser: BasicReviewableUserSerializer,
   }
 
+  self.ignored_columns = [:reviewable_by_group_id]
+
   class UpdateConflict < StandardError
   end
 
@@ -17,13 +19,11 @@ class Reviewable < ActiveRecord::Base
     end
   end
 
-  before_save :apply_review_group
   attr_accessor :created_new
   validates_presence_of :type, :status, :created_by_id
   belongs_to :target, polymorphic: true
   belongs_to :created_by, class_name: "User"
   belongs_to :target_created_by, class_name: "User"
-  belongs_to :reviewable_by_group, class_name: "Group"
 
   # Optional, for filtering
   belongs_to :topic
@@ -33,10 +33,14 @@ class Reviewable < ActiveRecord::Base
   has_many :reviewable_scores, -> { order(created_at: :desc) }, dependent: :destroy
 
   enum :status, { pending: 0, approved: 1, rejected: 2, ignored: 3, deleted: 4 }
-  enum :priority, { low: 0, medium: 5, high: 10 }, scopes: false, suffix: true
+
+  attribute :sensitivity, :integer
   enum :sensitivity, { disabled: 0, low: 9, medium: 6, high: 3 }, scopes: false, suffix: true
 
-  validates :reject_reason, length: { maximum: 500 }
+  attribute :priority, :integer
+  enum :priority, { low: 0, medium: 5, high: 10 }, scopes: false, suffix: true
+
+  validates :reject_reason, length: { maximum: 2000 }
 
   after_create { log_history(:created, created_by) }
 
@@ -62,14 +66,11 @@ class Reviewable < ActiveRecord::Base
   end
 
   def self.valid_type?(type)
-    return false if Reviewable.types.exclude?(type)
-    type.constantize <= Reviewable
-  rescue NameError
-    false
+    type.to_s.safe_constantize.in?(types)
   end
 
   def self.types
-    %w[ReviewableFlaggedPost ReviewableQueuedPost ReviewableUser ReviewablePost]
+    [ReviewableFlaggedPost, ReviewableQueuedPost, ReviewableUser, ReviewablePost]
   end
 
   def self.custom_filters
@@ -196,6 +197,11 @@ class Reviewable < ActiveRecord::Base
     update(score: self.score + rs.score, latest_score: rs.created_at, force_review: force_review)
     topic.update(reviewable_score: topic.reviewable_score + rs.score) if topic
 
+    # Flags are cached for performance reasons.
+    # However, when the reviewable item is created, we need to clear the cache to mark flag as used.
+    # Used flags cannot be deleted or update by admins, only disabled.
+    Flag.reset_flag_settings! if PostActionType.notify_flag_type_ids.include?(reviewable_score_type)
+
     DiscourseEvent.trigger(:reviewable_score_updated, self)
 
     rs
@@ -256,15 +262,6 @@ class Reviewable < ActiveRecord::Base
       created_by: performed_by,
       edited: edited,
     )
-  end
-
-  def apply_review_group
-    unless SiteSetting.enable_category_group_moderation? && category.present? &&
-             category.reviewable_by_group_id
-      return
-    end
-
-    self.reviewable_by_group_id = category.reviewable_by_group_id
   end
 
   def actions_for(guardian, args = nil)
@@ -402,14 +399,17 @@ class Reviewable < ActiveRecord::Base
     group_ids =
       SiteSetting.enable_category_group_moderation? ? user.group_users.pluck(:group_id) : []
 
-    result.where(
-      "(reviewables.reviewable_by_moderator AND :staff) OR (reviewables.reviewable_by_group_id IN (:group_ids))",
-      staff: user.staff?,
-      group_ids: group_ids,
-    ).where(
-      "reviewables.category_id IS NULL OR reviewables.category_id IN (?)",
-      Guardian.new(user).allowed_category_ids,
-    )
+    result
+      .left_joins(category: :category_moderation_groups)
+      .where(
+        "(reviewables.reviewable_by_moderator AND :moderator) OR (category_moderation_groups.group_id IN (:group_ids))",
+        moderator: user.moderator?,
+        group_ids: group_ids,
+      )
+      .where(
+        "reviewables.category_id IS NULL OR reviewables.category_id IN (?)",
+        Guardian.new(user).allowed_category_ids,
+      )
   end
 
   def self.pending_count(user)
@@ -664,12 +664,12 @@ class Reviewable < ActiveRecord::Base
     bundle ||=
       actions.add_bundle(
         "reject_user",
-        icon: "user-times",
+        icon: "user-xmark",
         label: "reviewables.actions.reject_user.title",
       )
 
     actions.add(:delete_user, bundle: bundle) do |a|
-      a.icon = "user-times"
+      a.icon = "user-xmark"
       a.label = "reviewables.actions.reject_user.delete.title"
       a.require_reject_reason = require_reject_reason
     end
@@ -762,7 +762,6 @@ end
 #  status                  :integer          default("pending"), not null
 #  created_by_id           :integer          not null
 #  reviewable_by_moderator :boolean          default(FALSE), not null
-#  reviewable_by_group_id  :integer
 #  category_id             :integer
 #  topic_id                :integer
 #  score                   :float            default(0.0), not null

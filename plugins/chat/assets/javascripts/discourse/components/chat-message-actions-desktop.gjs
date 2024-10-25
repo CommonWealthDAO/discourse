@@ -1,9 +1,9 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { getOwner } from "@ember/application";
 import { concat, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
+import { getOwner } from "@ember/owner";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
 import didUpdate from "@ember/render-modifiers/modifiers/did-update";
 import willDestroy from "@ember/render-modifiers/modifiers/will-destroy";
@@ -184,7 +184,7 @@ export default class ChatMessageActionsDesktop extends Component {
           }}
             <DropdownSelectBox
               @options={{hash
-                icon="ellipsis-v"
+                icon="ellipsis-vertical"
                 placement="left"
                 customStyle="true"
                 btnCustomClasses="btn-flat"

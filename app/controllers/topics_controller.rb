@@ -51,6 +51,10 @@ class TopicsController < ApplicationController
   end
 
   def show
+    if params[:id].is_a?(Array) || params[:id].is_a?(ActionController::Parameters)
+      raise Discourse::InvalidParameters.new("Show only accepts a single ID")
+    end
+
     flash["referer"] ||= request.referer[0..255] if request.referer
 
     # TODO: We'd like to migrate the wordpress feed to another url. This keeps up backwards
@@ -121,7 +125,7 @@ class TopicsController < ApplicationController
 
       deleted =
         guardian.can_see_topic?(ex.obj, false) ||
-          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj&.deleted_at)
+          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj.deleted_at)
 
       if SiteSetting.detailed_404
         if deleted
@@ -140,7 +144,7 @@ class TopicsController < ApplicationController
                   custom_message_params: {
                     group: group.name,
                   },
-                  group: group,
+                  group: serialize_data(group, BasicGroupSerializer, root: false),
                 )
         end
 
@@ -855,8 +859,11 @@ class TopicsController < ApplicationController
         params[:archetype] == "private_message"
     end
 
-    destination_topic = topic.move_posts(current_user, topic.posts.pluck(:id), args)
-    render_topic_changes(destination_topic)
+    acting_user = current_user
+    hijack(info: "merging topic #{topic_id.inspect} into #{destination_topic_id.inspect}") do
+      destination_topic = topic.move_posts(acting_user, topic.posts.pluck(:id), args)
+      render_topic_changes(destination_topic)
+    end
   end
 
   def move_posts
@@ -867,8 +874,6 @@ class TopicsController < ApplicationController
     params.permit(:participants)
     params.permit(:chronological_order)
     params.permit(:archetype)
-
-    raise Discourse::InvalidAccess if params[:archetype] == "private_message" && !guardian.is_staff?
 
     topic = Topic.with_deleted.find_by(id: topic_id)
     guardian.ensure_can_move_posts!(topic)
@@ -985,7 +990,7 @@ class TopicsController < ApplicationController
     rescue Discourse::InvalidAccess => ex
       deleted =
         guardian.can_see_topic?(ex.obj, false) ||
-          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj&.deleted_at)
+          (!guardian.can_see_topic?(ex.obj) && ex.obj&.access_topic_via_group && ex.obj.deleted_at)
 
       raise Discourse::NotFound.new(
               nil,
@@ -1028,9 +1033,12 @@ class TopicsController < ApplicationController
         .symbolize_keys
 
     raise ActionController::ParameterMissing.new(:operation_type) if operation[:type].blank?
+
     operator = TopicsBulkAction.new(current_user, topic_ids, operation, group: operation[:group])
-    changed_topic_ids = operator.perform!
-    render_json_dump topic_ids: changed_topic_ids
+    hijack(info: "topics bulk action #{operation[:type]}") do
+      changed_topic_ids = operator.perform!
+      render_json_dump topic_ids: changed_topic_ids
+    end
   end
 
   def private_message_reset_new
@@ -1186,38 +1194,14 @@ class TopicsController < ApplicationController
 
     topic.set_or_create_timer(slow_mode_type, time, by_user: timer&.user)
 
+    StaffActionLogger.new(current_user).log_topic_slow_mode(
+      topic,
+      enabled:,
+      seconds: params[:seconds],
+      until: time,
+    )
+
     head :ok
-  end
-
-  def summary
-    topic = Topic.find(params[:topic_id])
-    guardian.ensure_can_see!(topic)
-    strategy = Summarization::Base.selected_strategy
-
-    if strategy.nil? || !Summarization::Base.can_see_summary?(topic, current_user)
-      raise Discourse::NotFound
-    end
-
-    RateLimiter.new(current_user, "summary", 6, 5.minutes).performed! if current_user
-
-    opts = params.permit(:skip_age_check)
-
-    if params[:stream] && current_user
-      Jobs.enqueue(
-        :stream_topic_summary,
-        topic_id: topic.id,
-        user_id: current_user.id,
-        opts: opts.as_json,
-      )
-
-      render json: success_json
-    else
-      hijack do
-        summary = TopicSummarization.new(strategy).summarize(topic, current_user, opts)
-
-        render_serialized(summary, TopicSummarySerializer)
-      end
-    end
   end
 
   private
@@ -1297,7 +1281,6 @@ class TopicsController < ApplicationController
     topic_id = @topic_view.topic.id
     ip = request.remote_ip
     user_id = (current_user.id if current_user)
-    track_visit = should_track_visit_to_topic?
 
     if !request.format.json?
       hash = {
@@ -1314,13 +1297,28 @@ class TopicsController < ApplicationController
       TopicsController.defer_add_incoming_link(hash)
     end
 
-    TopicsController.defer_track_visit(topic_id, ip, user_id, track_visit)
+    TopicsController.defer_track_visit(topic_id, user_id) if should_track_visit_to_topic?
   end
 
-  def self.defer_track_visit(topic_id, ip, user_id, track_visit)
+  def self.defer_track_visit(topic_id, user_id)
     Scheduler::Defer.later "Track Visit" do
+      TopicUser.track_visit!(topic_id, user_id)
+    end
+  end
+
+  def self.defer_topic_view(topic_id, ip, user_id = nil)
+    Scheduler::Defer.later "Topic View" do
+      topic = Topic.find_by(id: topic_id)
+      next if topic.blank?
+      next if topic.shared_draft?
+
+      # We need to make sure that we aren't allowing recording
+      # random topic views against topics the user cannot see.
+      user = User.find_by(id: user_id) if user_id.present?
+      next if user_id.present? && user.blank?
+      next if !Guardian.new(user).can_see_topic?(topic)
+
       TopicViewItem.add(topic_id, ip, user_id)
-      TopicUser.track_visit!(topic_id, user_id) if track_visit
     end
   end
 
@@ -1340,15 +1338,18 @@ class TopicsController < ApplicationController
       return
     end
 
+    if params[:replies_to_post_number] || params[:filter_upwards_post_id] ||
+         params[:filter_top_level_replies] || @topic_view.next_page.present?
+      @topic_view.include_suggested = false
+      @topic_view.include_related = false
+    end
+
     topic_view_serializer =
       TopicViewSerializer.new(
         @topic_view,
         scope: guardian,
         root: false,
         include_raw: !!params[:include_raw],
-        exclude_suggested_and_related:
-          !!params[:replies_to_post_number] || !!params[:filter_upwards_post_id] ||
-            !!params[:filter_top_level_replies],
       )
 
     respond_to do |format|

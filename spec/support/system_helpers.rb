@@ -144,17 +144,18 @@ module SystemHelpers
   end
 
   def skip_unless_s3_system_specs_enabled!
-    if ENV["CI"]
-      return(
-        skip(
-          "S3 system specs are temporarily disabled in this environment to address parallel spec issues",
-        )
-      )
-    end
     if !ENV["CI"] && !ENV["RUN_S3_SYSTEM_SPECS"]
       skip(
         "S3 system specs are disabled in this environment, set CI=1 or RUN_S3_SYSTEM_SPECS=1 to enable them.",
       )
     end
+  end
+
+  def skip_on_ci!(message = "Flaky on CI")
+    skip(message) if ENV["CI"]
+  end
+
+  def click_logo
+    PageObjects::Components::Logo.click
   end
 end

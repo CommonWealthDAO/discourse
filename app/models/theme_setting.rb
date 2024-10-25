@@ -22,6 +22,13 @@ class ThemeSetting < ActiveRecord::Base
     if self.data_type == ThemeSetting.types[:upload] && saved_change_to_value?
       UploadReference.ensure_exist!(upload_ids: [self.value], target: self)
     end
+
+    if theme.theme_modifier_set.refresh_theme_setting_modifiers(
+         target_setting_name: self.name,
+         target_setting_value: self.value,
+       )
+      theme.theme_modifier_set.save!
+    end
   end
 
   def clear_settings_cache
@@ -54,7 +61,7 @@ class ThemeSetting < ActiveRecord::Base
         :json_value,
         I18n.t(
           "theme_settings.errors.json_value.too_large",
-          max_size_megabytes: MAXIMUM_JSON_VALUE_SIZE_BYTES / 1024 / 1024,
+          max_size: MAXIMUM_JSON_VALUE_SIZE_BYTES / 1024 / 1024,
         ),
       )
     end

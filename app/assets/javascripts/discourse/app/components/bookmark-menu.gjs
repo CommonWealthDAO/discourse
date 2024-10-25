@@ -3,7 +3,7 @@ import { tracked } from "@glimmer/tracking";
 import { array, fn } from "@ember/helper";
 import { action } from "@ember/object";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
 import DButton from "discourse/components/d-button";
 import DropdownMenu from "discourse/components/dropdown-menu";
 import BookmarkModal from "discourse/components/modal/bookmark";
@@ -38,9 +38,8 @@ export default class BookmarkMenu extends Component {
       this.timeShortcuts.threeDays(),
     ];
 
-    // So the label is a simple 'Custom...'
     const custom = this.timeShortcuts.custom();
-    custom.label = "time_shortcut.custom_short";
+    custom.label = "time_shortcut.more_options";
     this.reminderAtOptions.push(custom);
   }
 
@@ -174,7 +173,7 @@ export default class BookmarkMenu extends Component {
       this.toasts.success({
         duration: 1500,
         data: {
-          icon: "trash-alt",
+          icon: "trash-can",
           message: I18n.t("bookmarks.deleted_bookmark_success"),
         },
       });
@@ -252,25 +251,18 @@ export default class BookmarkMenu extends Component {
         <DropdownMenu as |dropdown|>
           {{#unless this.showEditDeleteMenu}}
             <dropdown.item class="bookmark-menu__title">
-              {{icon "check-circle"}}
+              {{icon "circle-check"}}
               <span>{{i18n "bookmarks.bookmarked_success"}}</span>
             </dropdown.item>
           {{/unless}}
 
           {{#if this.showEditDeleteMenu}}
-            {{#if this.site.mobileView}}
-              <dropdown.item class="bookmark-menu__title">
-                {{icon "bookmark"}}
-                <span>{{i18n "bookmarks.bookmark"}}</span>
-              </dropdown.item>
-            {{/if}}
-
             <dropdown.item
               class="bookmark-menu__row -edit"
               data-menu-option-id="edit"
             >
               <DButton
-                @icon="pencil-alt"
+                @icon="pencil"
                 @label="edit"
                 @action={{this.onEditBookmark}}
                 @class="bookmark-menu__row-btn btn-transparent"
@@ -283,7 +275,7 @@ export default class BookmarkMenu extends Component {
               data-menu-option-id="delete"
             >
               <DButton
-                @icon="trash-alt"
+                @icon="trash-can"
                 @label="delete"
                 @action={{this.onRemoveBookmark}}
                 @class="bookmark-menu__row-btn btn-transparent btn-danger"

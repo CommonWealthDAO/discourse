@@ -6,7 +6,8 @@ require "plugin/metadata"
 require "auth"
 
 class Plugin::CustomEmoji
-  CACHE_KEY ||= "plugin-emoji"
+  CACHE_KEY = "plugin-emoji"
+
   def self.cache_key
     @@cache_key ||= CACHE_KEY
   end
@@ -49,7 +50,6 @@ class Plugin::Instance
   # Memoized array readers
   %i[
     assets
-    color_schemes
     initializers
     javascripts
     locales
@@ -116,6 +116,18 @@ class Plugin::Instance
       location: location,
       use_new_show_route: opts.fetch(:use_new_show_route, false),
     }
+  end
+
+  def full_admin_route
+    route = self.admin_route
+    return unless route
+
+    route
+      .slice(:location, :label, :use_new_show_route)
+      .tap do |admin_route|
+        path = admin_route[:use_new_show_route] ? "show" : admin_route[:location]
+        admin_route[:full_location] = "adminPlugins.#{path}"
+      end
   end
 
   def configurable?
@@ -237,6 +249,17 @@ class Plugin::Instance
 
   def register_editable_group_custom_field(field)
     DiscoursePluginRegistry.register_editable_group_custom_field(field, self)
+  end
+
+  # Allows to define custom filter utilizing the user's input.
+  # Ensure proper input sanitization before using it in a query.
+  #
+  # Example usage:
+  #   add_filter_custom_filter("word_count") do |scope, value|
+  #     scope.where(word_count: value)
+  #   end
+  def add_filter_custom_filter(name, &block)
+    DiscoursePluginRegistry.register_custom_filter_mapping({ name => block }, self)
   end
 
   # Allows to define custom "status:" filter. Example usage:
@@ -565,13 +588,23 @@ class Plugin::Instance
     DiscourseEvent.on(event_name) { |*args, **kwargs| block.call(*args, **kwargs) if enabled? }
   end
 
-  def notify_after_initialize
-    color_schemes.each do |c|
-      unless ColorScheme.where(name: c[:name]).exists?
-        ColorScheme.create_from_base(name: c[:name], colors: c[:colors])
+  # A proxy to `DiscourseEvent.on(:site_setting_changed)` triggered when the plugin enabled setting specified by
+  # `enabled_site_setting` value is changed, including when the plugin is turned off.
+  #
+  # It is useful when the plugin needs to perform tasks like properly clearing caches when enabled/disabled
+  # note it will not be triggered when a plugin is installed/uninstalled by adding/removing its code
+  def on_enabled_change(&block)
+    event_proc =
+      Proc.new do |setting_name, old_value, new_value|
+        block.call(old_value, new_value) if setting_name == @enabled_site_setting
       end
-    end
+    DiscourseEvent.on(:site_setting_changed, &event_proc)
 
+    # returns the block to be used for DiscourseEvent.off(:site_setting_changed, &block) for testing purposes
+    event_proc
+  end
+
+  def notify_after_initialize
     initializers.each do |callback|
       begin
         callback.call(self)
@@ -705,10 +738,6 @@ class Plugin::Instance
     service_workers << [File.join(File.dirname(path), "assets", file), opts]
   end
 
-  def register_color_scheme(name, colors)
-    color_schemes << { name: name, colors: colors }
-  end
-
   def register_seed_data(key, value)
     seed_data[key] = value
   end
@@ -831,14 +860,28 @@ class Plugin::Instance
   end
 
   def register_reviewable_type(reviewable_type_class)
-    extend_list_method Reviewable, :types, [reviewable_type_class.name]
+    return unless reviewable_type_class < Reviewable
+    extend_list_method(Reviewable, :types, reviewable_type_class)
   end
 
   def extend_list_method(klass, method, new_attributes)
-    current_list = klass.public_send(method)
-    current_list.concat(new_attributes)
+    register_name = [klass, method].join("_").underscore
+    DiscoursePluginRegistry.define_filtered_register(register_name)
+    DiscoursePluginRegistry.public_send(
+      "register_#{register_name.singularize}",
+      new_attributes,
+      self,
+    )
 
-    reloadable_patch { klass.public_send(:define_singleton_method, method) { current_list } }
+    original_method_alias = "__original_#{method}__"
+    return if klass.respond_to?(original_method_alias)
+    reloadable_patch do
+      klass.singleton_class.alias_method(original_method_alias, method)
+      klass.define_singleton_method(method) do
+        public_send(original_method_alias) |
+          DiscoursePluginRegistry.public_send(register_name).flatten
+      end
+    end
   end
 
   def directory_name
@@ -1080,7 +1123,25 @@ class Plugin::Instance
   # group of stats is shown on the site About page in the Site Statistics
   # table. Some stats may be needed purely for reporting purposes and thus
   # do not need to be shown in the UI to admins/users.
-  def register_stat(name, show_in_ui: false, expose_via_api: false, &block)
+  #
+  # TODO(osama): remove show_in_ui when experimental_redesigned_about_page_groups is removed
+  def register_stat(
+    name,
+    show_in_ui: (
+      not_using_deprecated_arg = true
+      false
+    ),
+    expose_via_api: false,
+    &block
+  )
+    if !not_using_deprecated_arg
+      Discourse.deprecate(
+        "`show_in_ui` argument of the `register_stat` API is deprecated. Please use the `addAboutPageActivity` JS API instead if you want your custom stat to be shown on the about page.",
+        since: "3.4.0.beta2",
+        drop_from: "3.5.0.beta1",
+      )
+    end
+
     # We do not want to register and display the same group multiple times.
     return if DiscoursePluginRegistry.stats.any? { |stat| stat.name == name }
 
@@ -1182,6 +1243,9 @@ class Plugin::Instance
   # to summarize content. Staff can select which strategy to use
   # through the `summarization_strategy` setting.
   def register_summarization_strategy(strategy)
+    Discourse.deprecate(
+      "register_summarization_strategy is deprecated. Summarization code is now moved to Discourse AI",
+    )
     if !strategy.class.ancestors.include?(Summarization::Base)
       raise ArgumentError.new("Not a valid summarization strategy")
     end
@@ -1272,13 +1336,6 @@ class Plugin::Instance
       locale_chain = opts[:fallbackLocale] ? [locale, opts[:fallbackLocale]] : [locale]
       lib_locale_path = File.join(root_path, "lib/javascripts/locale")
 
-      path = File.join(lib_locale_path, "message_format")
-      opts[:message_format] = find_locale_file(locale_chain, path)
-      opts[:message_format] = JsLocaleHelper.find_message_format_locale(
-        locale_chain,
-        fallback_to_english: false,
-      ) unless opts[:message_format]
-
       path = File.join(lib_locale_path, "moment_js")
       opts[:moment_js] = find_locale_file(locale_chain, path)
       opts[:moment_js] = JsLocaleHelper.find_moment_locale(locale_chain) unless opts[:moment_js]
@@ -1354,8 +1411,7 @@ class Plugin::Instance
   def valid_locale?(custom_locale)
     File.exist?(custom_locale[:client_locale_file]) &&
       File.exist?(custom_locale[:server_locale_file]) &&
-      File.exist?(custom_locale[:js_locale_file]) && custom_locale[:message_format] &&
-      custom_locale[:moment_js]
+      File.exist?(custom_locale[:js_locale_file]) && custom_locale[:moment_js]
   end
 
   def find_locale_file(locale_chain, path)

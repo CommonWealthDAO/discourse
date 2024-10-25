@@ -179,7 +179,6 @@ class GroupsController < ApplicationController
       if params[:update_existing_users] == "true"
         update_existing_users(group.group_users, notification_level, categories, tags)
       end
-      AdminDashboardData.clear_found_problem("group_#{group.id}_email_credentials")
 
       # Redirect user to groups index page if they can no longer see the group
       return redirect_with_client_support groups_path if !guardian.can_see?(group)
@@ -484,10 +483,12 @@ class GroupsController < ApplicationController
     request_topic =
       Topic.find_by(
         title:
-          (
-            I18n.t "groups.request_membership_pm.title", group_name: group.name, locale: user.locale
+          I18n.t(
+            "groups.request_membership_pm.title",
+            group_name: group.name,
+            locale: user.effective_locale,
           ),
-        archetype: "private_message",
+        archetype: Archetype.private_message,
         user_id: user.id,
       )
 
@@ -506,7 +507,11 @@ class GroupsController < ApplicationController
         post_type: Post.types[:regular],
         topic_id: request_topic.id,
         raw:
-          (I18n.t "groups.request_accepted_pm.body", group_name: group.name, locale: user.locale),
+          I18n.t(
+            "groups.request_accepted_pm.body",
+            group_name: group.name,
+            locale: user.effective_locale,
+          ),
         reply_to_post_number: 1,
         target_usernames: user.username,
         skip_validations: true,
@@ -590,7 +595,7 @@ class GroupsController < ApplicationController
     end
   end
 
-  MAX_NOTIFIED_OWNERS ||= 20
+  MAX_NOTIFIED_OWNERS = 20
 
   def request_membership
     params.require(:reason)
@@ -709,7 +714,6 @@ class GroupsController < ApplicationController
     params.require(:host)
     params.require(:username)
     params.require(:password)
-    params.require(:ssl)
 
     group = Group.find(params[:group_id])
     guardian.ensure_can_edit!(group)
@@ -717,7 +721,6 @@ class GroupsController < ApplicationController
     RateLimiter.new(current_user, "group_test_email_settings", 5, 1.minute).performed!
 
     settings = params.except(:group_id, :protocol)
-    enable_tls = settings[:ssl] == "true"
     email_host = params[:host]
 
     if !%w[smtp imap].include?(params[:protocol])
@@ -728,13 +731,19 @@ class GroupsController < ApplicationController
       begin
         case params[:protocol]
         when "smtp"
-          enable_starttls_auto = false
-          settings.delete(:ssl)
+          raise Discourse::InvalidParameters if params[:ssl_mode].blank?
+
+          settings.delete(:ssl_mode)
+
+          if params[:ssl_mode].blank? ||
+               !Group.smtp_ssl_modes.values.include?(params[:ssl_mode].to_i)
+            raise Discourse::InvalidParameters.new("SSL mode must be present and valid")
+          end
 
           final_settings =
             settings.merge(
-              enable_tls: enable_tls,
-              enable_starttls_auto: enable_starttls_auto,
+              enable_tls: params[:ssl_mode].to_i == Group.smtp_ssl_modes[:ssl_tls],
+              enable_starttls_auto: params[:ssl_mode].to_i == Group.smtp_ssl_modes[:starttls],
             ).permit(:host, :port, :username, :password, :enable_tls, :enable_starttls_auto, :debug)
           EmailSettingsValidator.validate_as_user(
             current_user,
@@ -742,8 +751,17 @@ class GroupsController < ApplicationController
             **final_settings.to_h.symbolize_keys,
           )
         when "imap"
+          raise Discourse::InvalidParameters if params[:ssl].blank?
+
           final_settings =
-            settings.merge(ssl: enable_tls).permit(:host, :port, :username, :password, :ssl, :debug)
+            settings.merge(ssl: settings[:ssl] == "true").permit(
+              :host,
+              :port,
+              :username,
+              :password,
+              :ssl,
+              :debug,
+            )
           EmailSettingsValidator.validate_as_user(
             current_user,
             "imap",
@@ -806,7 +824,7 @@ class GroupsController < ApplicationController
         :incoming_email,
         :smtp_server,
         :smtp_port,
-        :smtp_ssl,
+        :smtp_ssl_mode,
         :smtp_enabled,
         :smtp_updated_by,
         :smtp_updated_at,
@@ -884,7 +902,7 @@ class GroupsController < ApplicationController
 
     if should_clear_smtp
       attributes[:smtp_server] = nil
-      attributes[:smtp_ssl] = false
+      attributes[:smtp_ssl_mode] = false
       attributes[:smtp_port] = nil
       attributes[:email_username] = nil
       attributes[:email_password] = nil

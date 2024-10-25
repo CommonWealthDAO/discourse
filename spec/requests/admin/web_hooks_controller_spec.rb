@@ -197,6 +197,47 @@ RSpec.describe Admin::WebHooksController do
     end
   end
 
+  describe "#list_events" do
+    fab!(:web_hook_event1) { Fabricate(:web_hook_event, web_hook: web_hook, id: 1, status: 200) }
+    fab!(:web_hook_event2) { Fabricate(:web_hook_event, web_hook: web_hook, id: 2, status: 404) }
+
+    before { sign_in(admin) }
+
+    context "when status param is provided" do
+      it "load_more_web_hook_events URL is correct" do
+        get "/admin/api/web_hook_events/#{web_hook.id}.json", params: { status: "successful" }
+        expect(response.parsed_body["load_more_web_hook_events"]).to include("status=successful")
+      end
+    end
+
+    context "when status is 'successful'" do
+      it "lists the successfully delivered webhook events" do
+        get "/admin/api/web_hook_events/#{web_hook.id}.json", params: { status: "successful" }
+        expect(response.parsed_body["web_hook_events"].map { |c| c["id"] }).to eq(
+          [web_hook_event1.id],
+        )
+      end
+    end
+
+    context "when status is 'failed'" do
+      it "lists the failed webhook events" do
+        get "/admin/api/web_hook_events/#{web_hook.id}.json", params: { status: "failed" }
+        expect(response.parsed_body["web_hook_events"].map { |c| c["id"] }).to eq(
+          [web_hook_event2.id],
+        )
+      end
+    end
+
+    context "when there is no status param" do
+      it "lists all webhook events" do
+        get "/admin/api/web_hook_events/#{web_hook.id}.json"
+        expect(response.parsed_body["web_hook_events"].map { |c| c["id"] }).to match_array(
+          [web_hook_event1.id, web_hook_event2.id],
+        )
+      end
+    end
+  end
+
   describe "#ping" do
     context "when logged in as admin" do
       before { sign_in(admin) }
@@ -320,6 +361,22 @@ RSpec.describe Admin::WebHooksController do
           &modifier_block
         )
       end
+    end
+  end
+
+  describe "#redeliver_failed_events" do
+    fab!(:web_hook_event) { Fabricate(:web_hook_event, web_hook: web_hook, status: 404) }
+
+    before { sign_in(admin) }
+
+    it "stores failed events" do
+      post "/admin/api/web_hooks/#{web_hook.id}/events/failed_redeliver.json",
+           params: {
+             event_ids: web_hook_event.id,
+           }
+      expect(RedeliveringWebhookEvent.find_by(web_hook_event_id: web_hook_event.id)).not_to be_nil
+      expect(response.status).to eq(200)
+      expect(response.parsed_body["event_ids"]).to eq([web_hook_event.id])
     end
   end
 end

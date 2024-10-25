@@ -119,6 +119,9 @@
         "chat_quoted": {
           "type": "integer"
         },
+        "chat_watched_thread": {
+          "type": "integer"
+        },
         "assigned": {
           "type": "integer"
         },
@@ -351,10 +354,22 @@
             "is_flag": {
               "type": "boolean"
             },
-            "is_custom_flag": {
+            "require_message": {
               "type": "boolean"
             },
             "enabled": {
+              "type": "boolean"
+            },
+            "applies_to": {
+              "type": "array"
+            },
+            "is_used": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "integer"
+            },
+            "auto_action_type": {
               "type": "boolean"
             }
           },
@@ -365,8 +380,11 @@
             "description",
             "short_description",
             "is_flag",
-            "is_custom_flag",
-            "enabled"
+            "require_message",
+            "enabled",
+            "applies_to",
+            "is_used",
+            "auto_action_type"
           ]
         }
     },
@@ -395,10 +413,22 @@
             "is_flag": {
               "type": "boolean"
             },
-            "is_custom_flag": {
+            "require_message": {
               "type": "boolean"
             },
             "enabled": {
+              "type": "boolean"
+            },
+            "applies_to": {
+              "type": "array"
+            },
+            "is_used": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "integer"
+            },
+            "auto_action_type": {
               "type": "boolean"
             }
           },
@@ -409,8 +439,11 @@
             "description",
             "short_description",
             "is_flag",
-            "is_custom_flag",
-            "enabled"
+            "require_message",
+            "enabled",
+            "applies_to",
+            "is_used",
+            "auto_action_type"
           ]
         }
     },
@@ -821,6 +854,9 @@
       "type": "array"
     },
     "denied_emojis" : {
+      "type": "array"
+    },
+    "valid_flag_applies_to_types" : {
       "type": "array"
     },
     "navigation_menu_site_top_tags": {

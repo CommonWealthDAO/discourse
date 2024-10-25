@@ -1,16 +1,15 @@
 /* eslint-disable simple-import-sort/imports */
+import Application from "../app";
 import "./loader-shims";
 /* eslint-enable simple-import-sort/imports */
 
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import {
   getSettledState,
   isSettled,
   setApplication,
   setResolver,
 } from "@ember/test-helpers";
-import "bootstrap/js/modal";
-import bootbox from "bootbox";
 import { addModuleExcludeMatcher } from "ember-cli-test-loader/test-support/index";
 import $ from "jquery";
 import MessageBus from "message-bus-client";
@@ -46,39 +45,11 @@ import deprecated from "discourse-common/lib/deprecated";
 import { setDefaultOwner } from "discourse-common/lib/get-owner";
 import { setupS3CDN, setupURL } from "discourse-common/lib/get-url";
 import { buildResolver } from "discourse-common/resolver";
-import Application from "../app";
 import { loadSprites } from "../lib/svg-sprite-loader";
 import * as FakerModule from "@faker-js/faker";
 import { setLoadedFaker } from "discourse/lib/load-faker";
 
-const Plugin = $.fn.modal;
-const Modal = Plugin.Constructor;
 let cancelled = false;
-
-function AcceptanceModal(option, _relatedTarget) {
-  return this.each(function () {
-    let $this = $(this);
-    let data = $this.data("bs.modal");
-    let options = Object.assign(
-      {},
-      Modal.DEFAULTS,
-      $this.data(),
-      typeof option === "object" && option
-    );
-
-    if (!data) {
-      $this.data("bs.modal", (data = new Modal(this, options)));
-    }
-    data.$body = $("#ember-testing");
-
-    if (typeof option === "string") {
-      data[option](_relatedTarget);
-    } else if (options.show) {
-      data.show(_relatedTarget);
-    }
-  });
-}
-
 let started = false;
 
 function createApplication(config, settings) {
@@ -255,8 +226,6 @@ export default function setupTests(config) {
     window.Logster = { enabled: false };
   }
 
-  $.fn.modal = AcceptanceModal;
-
   Object.defineProperty(window, "exists", {
     get() {
       deprecated(
@@ -280,7 +249,6 @@ export default function setupTests(config) {
 
   let app;
   QUnit.testStart(function (ctx) {
-    bootbox.$body = $("#ember-testing");
     let settings = resetSettings();
     resetThemeSettings();
 
@@ -349,10 +317,6 @@ export default function setupTests(config) {
     resetPretender();
     clearPresenceState();
 
-    // Clean up the DOM. Some tests might leave extra classes or elements behind.
-    Array.from(document.getElementsByClassName("modal-backdrop")).forEach((e) =>
-      e.remove()
-    );
     document.body.removeAttribute("class");
     let html = document.documentElement;
     html.removeAttribute("class");

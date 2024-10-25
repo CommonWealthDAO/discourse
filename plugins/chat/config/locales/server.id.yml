@@ -15,7 +15,6 @@ id:
     chat_allowed_messages_for_other_trust_levels: "Jumlah pesan yang boleh dikirim oleh pengguna dengan trust level 1-4 dalam 30 detik. Setel ke '0' untuk menonaktifkan batas."
     chat_silence_user_sensitivity: "Kemungkinan pengguna yang ditandai dalam obrolan akan disenyapkan secara otomatis."
     chat_auto_silence_from_flags_duration: "Jumlah menit pengguna akan disenyapkan ketika mereka disenyapkan secara otomatis karena pesan chat yang ditandai."
-    chat_default_channel_id: "Kanal obrolan yang akan dibuka secara bawaan saat pengguna tidak memiliki pesan yang belum dibaca atau sebutan di saluran lain."
     chat_duplicate_message_sensitivity: "Kemungkinan pesan duplikat oleh pengirim yang sama akan diblokir dalam waktu singkat. Angka desimal antara 0 dan 1.0, dengan 1.0 sebagai setelan tertinggi (memblokir pesan lebih sering dalam waktu yang lebih singkat). Setel ke `0` untuk mengizinkan pesan duplikat."
     chat_minimum_message_length: "Jumlah minimum karakter untuk pesan obrolan."
     chat_allow_uploads: "Izinkan unggahan di kanal obrolan publik dan kanal pesan langsung."
@@ -168,8 +167,6 @@ id:
         other: "%{count} anggota"
       and_x_others:
         other: "dan %{count} lainnya"
-    summaries:
-      no_targets: "Tidak ada pesan selama periode yang dipilih."
     transcript:
       default_thread_title: "Utas"
       split_thread_range: "pesan %{start} hingga %{end} dari %{total}"
@@ -205,16 +202,6 @@ id:
       description:
         other: "Anda memiliki pesan obrolan baru"
       from: "%{site_name}"
-      subject:
-        direct_message_from_1: "[%{email_prefix}] Pesan baru dari %{username}"
-        direct_message_from_2: "[%{email_prefix}] Pesan baru dari %{username1} dan %{username2}"
-        direct_message_from_more:
-          other: "[%{email_prefix}] Pesan baru dari %{username} dan %{count} lainnya"
-        chat_channel_1: "[%{email_prefix}] Pesan baru di %{channel}"
-        chat_channel_2: "[%{email_prefix}] Pesan baru di %{channel1} dan %{channel2}"
-        chat_channel_more:
-          other: "[%{email_prefix}] Pesan baru di %{channel} dan %{count} lainnya"
-        chat_channel_and_direct_message: "[%{email_prefix}] Pesan baru di %{channel} dan dari %{username}"
       unsubscribe: "Ringkasan obrolan ini dikirim dari %{site_link} saat Anda pergi. Ubah %{email_preferences_link}, atau %{unsubscribe_link} Anda untuk berhenti berlangganan."
       unsubscribe_no_link: "Ringkasan obrolan ini dikirim dari %{site_link} saat Anda pergi. Ubah %{email_preferences_link} Anda."
       view_messages:

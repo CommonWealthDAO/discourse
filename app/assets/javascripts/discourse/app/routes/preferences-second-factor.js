@@ -1,10 +1,7 @@
-import { action } from "@ember/object";
 import { service } from "@ember/service";
 import RestrictedUserRoute from "discourse/routes/restricted-user";
 
 export default class PreferencesSecondFactor extends RestrictedUserRoute {
-  @service currentUser;
-  @service siteSettings;
   @service router;
 
   model() {
@@ -32,25 +29,5 @@ export default class PreferencesSecondFactor extends RestrictedUserRoute {
       })
       .catch(controller.popupAjaxError)
       .finally(() => controller.set("loading", false));
-  }
-
-  @action
-  willTransition(transition) {
-    super.willTransition(...arguments);
-
-    if (
-      transition.targetName === "preferences.second-factor" ||
-      !this.currentUser ||
-      this.currentUser.is_anonymous ||
-      this.currentUser.second_factor_enabled ||
-      (this.siteSettings.enforce_second_factor === "staff" &&
-        !this.currentUser.staff) ||
-      this.siteSettings.enforce_second_factor === "no"
-    ) {
-      return true;
-    }
-
-    transition.abort();
-    return false;
   }
 }

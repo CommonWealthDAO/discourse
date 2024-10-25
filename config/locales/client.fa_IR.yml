@@ -21,6 +21,7 @@ fa_IR:
             kb: کیلوبایت
             mb: مگابایت
             tb: ترابایت
+      percent: "%{count}%"
       short:
         thousands: "%{number} هزار"
         millions: "%{number} میلیون"
@@ -123,7 +124,7 @@ fa_IR:
       topic_html: 'موضوع: <span class="topic-title">%{topicTitle}</span>'
       post: "نوشته #%{postNumber} توسط @%{username}"
       close: "بستن"
-      twitter: "در توییتر به اشتراک بگذارید"
+      twitter: "هم‌رسانی در X"
       facebook: "در فیس‌بوک به اشتراک بگذارید"
       email: "ارسال از طریق ایمیل"
       url: "کپی و اشتراک‌گذاری نشانی وب"
@@ -260,6 +261,7 @@ fa_IR:
       pill: "پیشنهادی"
       pm_title: "پیام‌های پیشنهادی"
     about:
+      edit: "ویرایش این صفحه"
       simple_title: "درباره"
       title: "درباره %{title}"
       stats: "آمارهای سایت"
@@ -277,7 +279,25 @@ fa_IR:
       user_count: "ثبت‌نام‌ها"
       active_user_count: "کاربران فعال"
       contact: "ارتباط با ما"
-      contact_info: "در شرایط حساس و مسائل اضطراری مربوط به سایت٬‌ لطفا از طریق %{contact_info} با تماس بگیرید."
+      view_more: "نمایش بیشتر"
+      view_less: "نمایش کمتر"
+      activities:
+        topics:
+          one: "%{formatted_number} موضوع"
+          other: "%{formatted_number} موضوعات"
+        posts:
+          one: "%{formatted_number} فرسته"
+          other: "%{formatted_number} نوشته"
+        active_users:
+          one: "%{formatted_number} کاربر فعال"
+          other: "%{formatted_number} کاربر فعال"
+        likes:
+          one: "%{formatted_number} پسندیده"
+          other: "%{formatted_number} پسندیده"
+        periods:
+          last_7_days: "در 7 روز گذشته"
+          today: "امروز"
+          all_time: "همیشه"
     bookmarked:
       title: "نشانک"
       edit_bookmark: "ویرایش نشانک"
@@ -624,7 +644,6 @@ fa_IR:
       never: "هرگز"
       last_custom: "آخرین تاریخ سفارشی"
       custom: "تاریخ و زمان سفارشی"
-      custom_short: "سفارشی..."
       select_timeframe: "انتخاب یک دوره‌زمانی"
     user_action:
       user_posted_topic: "<a href='%{userUrl}'>%{user}</a> <a href='%{topicUrl}'>یک موضوع</a> ایجاد کرد"
@@ -734,11 +753,12 @@ fa_IR:
           prefill:
             title: "از قبل پر کردن با تنظیمات برای:"
             gmail: "جی‌میل"
+          ssl_modes:
+            none: "هیچ کدام"
           credentials:
             title: "اطلاعات ورود"
             smtp_server: "سرور SMTP"
             smtp_port: "درگاه SMTP"
-            smtp_ssl: "از SSL برای SMTP استفاده کنید"
             imap_server: "سرور IMAP"
             imap_port: "درگاه IMAP"
             imap_ssl: "از SSL برای IMAP استفاده کنید"
@@ -964,6 +984,7 @@ fa_IR:
     user_fields:
       none: "(یک گزینه انتخاب کنید)"
       same_as_password: "رمز عبور شما نباید در قسمت‌های دیگر تکرار شود."
+      optional: (اختیاری)
     user:
       said: "%{username}:"
       profile: "نمایه"
@@ -1009,7 +1030,8 @@ fa_IR:
       activity_stream: "فعالیت"
       read: "خواندن"
       read_help: "موضوعات خوانده شده در زمان اخیر"
-      preferences: "تنظیمات"
+      preferences:
+        title: "تنظیمات"
       feature_topic_on_profile:
         open_search: "انتخاب یک موضوع نو"
         title: "انتخاب یک موضوع"
@@ -1177,6 +1199,7 @@ fa_IR:
         set_password: "تغییر رمز‌عبور"
         choose_new: "یک رمز‌عبور جدید وارد کنید"
         choose: "یک رمز‌عبور وارد کنید"
+        title: "باز‌یابی رمز‌عبور"
       second_factor_backup:
         regenerate: "ایجاد مجدد"
         disable: "ازکاراندازی"
@@ -1289,7 +1312,6 @@ fa_IR:
         add_email: "افزودن ایمیل جایگزین"
         auth_override_instructions: "ایمیل را از طریق ارائه دهنده احراز هویت می‌توانید به‌روزرسانی کنید."
         no_secondary: "بدون ایمیل ثانویه"
-        instructions: "هرگز به عموم نمایش داده نخواهد شد"
         ok: "برای تایید ایمیلی برایتان ارسال خواهیم کرد."
         required: "لطفا یک آدرس ایمیل وارد کنید"
         invalid: "لطفا یک آدرس ایمیل معتبر وارد کنید"
@@ -1308,10 +1330,17 @@ fa_IR:
         confirm_description:
           account_specific: "حساب%{provider} شما. %{account_description}برای احراز هویت استفاده خواهد شد."
           generic: "حساب کاربری%{provider} شما برای احراز‌هویت استفاده خواهد‌شد."
+      activate_account:
+        action: "برای فعال کردن حساب‌کاربری خود اینجا کلیک کنید"
+        already_done: "متاسفیم، این پیوند تاییدیه حساب کاربری دیگر معتبر نیست. شاید حساب‌کاربری شما در حال حاضر فعال است."
+        please_continue: "حساب‌کاربری جدید شما تایید شد؛ شما به صفحه اصلی هدایت می‌شوید. "
+        continue_button: "برو به %{site_name}"
+        welcome_to: "به %{site_name} خوش آمدید!"
+        approval_required: "یکی از مدیران باید حساب کاربری را برای دسترسی به این انجمن به‌صورت دستی تایید کند. شما ایمیلی مبنی به تایید حساب کاربریتان دریافت می کنید. "
       name:
         title: "نام"
-        instructions: "نام و نام‌خانوادگی شما (اختیاری)."
-        instructions_required: "نام و نام خانوادگی شما."
+        instructions: "نام و نام‌خانوادگی شما (اختیاری)"
+        instructions_required: "نام و نام خانوادگی شما"
         required: "لطفاً یک نام وارد کنید"
         too_short: "نام انتخابی شما خیلی کوتاه است"
         ok: "نام انتخابی شما به نطر می رسد خوب است"
@@ -1474,10 +1503,7 @@ fa_IR:
           success: "لینک دعوت با موفقیت ایجاد شد!"
           error: "خطایی در هنگام ایجاد لینک رخ داد"
         invite:
-          new_title: "ایجاد دعوت‌نامه"
-          edit_title: "ویرایش دعوت‌نامه"
           instructions: "این لینک را برای ارائه دسترسی فوری به سایت٬ به اشتراک بگذارید:"
-          copy_link: "کپی پیوند"
           expires_in_time: "در %{time} منقضی می شود"
           expired_at_time: "منقضی شده در %{time}"
           show_advanced: "نمایش تنظیمات پیشرفته"
@@ -1489,11 +1515,11 @@ fa_IR:
           max_redemptions_allowed: "حداکثر استفاده"
           add_to_groups: "افزودن به گروه‌ها"
           invite_to_topic: "وارد شدن به موضوع"
-          expires_at: "انقضا بعد از"
-          custom_message: "پیام شخصی اختیاری"
+          expires_after: "انقضا بعد از"
           send_invite_email: "ذخیره و ارسال ایمیل"
           send_invite_email_instructions: "محدود کردن ارسال ایمیل برای ارسال دعوت‌نامه"
-          save_invite: "ذخیره دعوت‌نامه"
+          save_invite: "ذخیره"
+          cancel: "انصراف"
           invite_saved: "دعوتنامه ذخیره شد."
         bulk_invite:
           none: "دعوتنامه ای برای نمایش در این صفحه موجود نیست."
@@ -1506,7 +1532,6 @@ fa_IR:
           error: "با عرض پوزش، نوع فایل باید CSV باشد."
       password:
         title: "رمزعبور"
-        too_short: "رمز عبورتان خیلی کوتاه است"
         common: "رمز عبور خیلی ساده است"
         same_as_username: "رمز عبورتان با نام کاربری شما برابر است."
         same_as_email: "رمز عبورتان با ایمیل شما برابر است. "
@@ -1632,6 +1657,11 @@ fa_IR:
     modal:
       close: "بسته"
       dismiss_error: "رد کردن خطا"
+    form_kit:
+      reset: بازنشانی
+      optional: اختیاری
+      errors:
+        required: "مورد نیاز"
     close: "بستن"
     logout: "شما از سایت خارج شده‌اید."
     refresh: "تازه کردن"
@@ -1642,15 +1672,6 @@ fa_IR:
       logout_disabled: "سایت در حال فقط خواندنی است و امکان خروج در این حالت وجود ندارد."
     staff_writes_only_mode:
       enabled: "این سایت در حالت فقط کارکنان است. می‌توانید موضوعات را مشاهده کنید، ولی امکان پاسخ دادن، پسندیدن و سایر اقدامات فقط برای اعضای کارکنان محدود شده است."
-    logs_error_rate_notice:
-      reached_hour_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# error/hour} other {# errors/hour}}</a> به حد مجاز از {limit, plural, one {# error/hour} other {# errors/hour}} رسیده است.
-      reached_minute_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# error/hour} other {# errors/hour}}</a> به حد مجاز از {limit, plural, one {# error/hour} other {# errors/hour}} رسیده است.
-      exceeded_hour_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# error/hour} other {# errors/hour}}</a> از حد مجاز از {limit, plural, one {# error/hour} other {# errors/hour}} عبور کرده است.
-      exceeded_minute_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{rate, plural, one {# error/hour} other {# errors/hour}}</a> از حد مجاز از {limit, plural, one {# error/hour} other {# errors/hour}} عبور کرده است.
     learn_more: "بیشتر بدانید…"
     mute: خاموش
     unmute: صدادار
@@ -1675,6 +1696,7 @@ fa_IR:
         other: "<b>%{count}</b> پاسخ داده شده."
       buttons:
         hide: "پنهان کردن خلاصه"
+        regenerate: "ایجاد مجدد"
       disable: "نمایش همه‌ی نوشته‌ها"
     deleted_filter:
       enabled_description: "این موضوع شامل نوشته‌های حذف شده‌ای است، که مخفی شده‌اند."
@@ -1706,6 +1728,11 @@ fa_IR:
       disclaimer: "با ثبت نام شما با <a href='%{privacy_link}' target='blank'>حریم خصوصی</a> و <a href='%{tos_link}' target='blank'>شرایط و ضوابط استفاده از سرویس </a> موافقت کرده اید."
       title: "ثبت نام"
       failed: "اشتباهی روی داده، شاید این نام کاربری پیش‌تر استفاده شده؛ پیوند فراموشی گذرواژه می‌تواند کمک کند."
+      already_have_account: "از قبل حساب کاربری دارید؟"
+      progress_bar:
+        signup: "ثبت نام"
+        approve: "تایید"
+        login: "ورود"
     forgot_password:
       title: "باز‌یابی رمز‌عبور"
       action: "رمز عبورم را فراموش کرده‌ام"
@@ -1774,6 +1801,7 @@ fa_IR:
       admin_not_allowed_from_ip_address: "شما نمی تواند با این آدرس آیپی وارد بخش مدیریت شوید."
       resend_activation_email: "برای ارسال مجدد ایمیل فعالسازی، اینجا را کلیک کنید."
       omniauth_disallow_totp: "حساب کاربری شما برای ورود دو مرحله ای تنظیم شده است. لطفا با رمز عبور وارد شوید."
+      activate_account: "فعال‌سازی حساب کاربری"
       resend_title: "ارسال مجدد ایمیل فعالسازی"
       change_email: "تغییر ایمیل"
       provide_new_email: "یک ایمیل جدید وارد کنید و ما ایمیل فعالسازی را برایتان ارسال می‌کنیم."
@@ -1982,7 +2010,6 @@ fa_IR:
       exit_fullscreen: "خارج شدن از حالت نوشتار تمام‌صفحه"
       exit_fullscreen_prompt: "برای خروج از تمام صفحه، دکمه <kbd>ESC</kbd> را فشار دهید"
       modal_ok: "تایید"
-      modal_cancel: "لغو"
       cant_send_pm: "متاسفانه , شما نمیتوانید به %{username} پیام بفرستید."
       yourself_confirm:
         title: "آیا اضافه کردن دریافت‌کنندگان را فراموش کردید؟"
@@ -2983,7 +3010,6 @@ fa_IR:
       list_filters:
         all: "همه موضوعات"
     flagging:
-      title: "تشکر برای کمک به نگه داشتن جامعه ما بصورت مدنی !"
       action: "پرچم‌گذاری نوشته"
       take_action_options:
         default:
@@ -3013,7 +3039,6 @@ fa_IR:
           one: "%{count} باقی مانده"
           other: "%{count} باقی مانده"
     flagging_topic:
-      title: "تشکر برای کمک به جامعه مدنی انجمن ما!"
       action: "پرچم‌گذاری موضوع"
       notify_action: "پیام"
     topic_map:
@@ -3023,6 +3048,9 @@ fa_IR:
       clicks:
         one: "%{count} کلیک"
         other: "%{count} کلیک"
+      views: "بازدید"
+      read: خواندن
+      minutes: کمترین
     post_links:
       about: "توسعه پیوند‌های بیشتر برای این نوشته"
       title:
@@ -3055,6 +3083,7 @@ fa_IR:
     pending_posts:
       label: "در انتظار"
       label_with_count: "(%{count}) در انتظار"
+    posters: "ارسال کنندگان"
     original_post: "نوشته اصلی"
     views: "نمایش‌ها"
     views_lowercase:
@@ -3278,7 +3307,6 @@ fa_IR:
       all_tags: "تمام برچسب‌ها"
       other_tags: "برچسب‌های دیگر"
       selector_tags: "برچسب‌ها"
-      selector_all_tags: "تمام برچسب‌ها"
       selector_no_tags: "بدون برچسب"
       selector_remove_filter: "حذف فیلتر"
       tags: "برچسب‌ها"
@@ -3402,6 +3430,8 @@ fa_IR:
       more: "بیشتر"
       all_categories: "همه‌ی دسته‌بندی‌ها"
       all_tags: "همه برچسب‌ها"
+      categories_form_modal:
+        show_more: "نمایش بیشتر"
       edit_navigation_modal_form:
         filter_dropdown:
           all: "همه"
@@ -3465,6 +3495,9 @@ fa_IR:
             faq:
               content: "پرسش‌های متداول"
               title: "راهنمای استفاده از این سایت"
+            guidelines:
+              content: "راهنماها"
+              title: "راهنمای استفاده از این سایت"
             groups:
               content: "گروه‌ها"
               title: "فهرست گروه‌های کاربری موجود"
@@ -3484,6 +3517,7 @@ fa_IR:
       panels:
         forum:
           label: انجمن
+      back_to_forum: "بازگشت به انجمن"
       filter: "فیلتر..."
     until: "تا وقتی که:"
     form_templates:
@@ -3507,10 +3541,10 @@ fa_IR:
         show: "نشان دادن"
         about: "درباره"
   admin_js:
+    settings: "تنظیمات"
     admin:
       title: "مدیر ارشد دیسکورس"
       moderator: "مدیر"
-      back_to_forum: "بازگشت به انجمن"
       filter_reports: صافی گزارشات
       tags:
         remove_muted_tags_from_latest:
@@ -3533,7 +3567,8 @@ fa_IR:
         stale_data: "بررسی برای بروزرسانی اخیراً انجام نگرفته است. از اجرای sidekiq اطمینان حاصل کنید."
         installed_version: "نصب"
         latest_version: "آخرین"
-        problems_found: "چند توصیه براثاث تنظیمات فعلی سایت شما"
+        problems_found: "چند توصیه بر اساس تنظیمات فعلی سایت شما"
+        dismiss_notice: "رد کردن"
         new_features:
           learn_more: "بیشتر بدانید..."
         last_checked: " آخرین بررسی"
@@ -3746,6 +3781,8 @@ fa_IR:
           timestamp: "ساخته شد"
           completion: "زمان تکمیل"
           actions: "عملیات"
+          filter_status:
+            failed: "ناموفق"
       home:
         title: "خانه"
       account:
@@ -3800,11 +3837,42 @@ fa_IR:
           screened_ips: "نمایش IP ها"
           screened_urls: "URL های نمایش داده شده"
           search_logs: "جستجوی گزارش‌ها"
-          security: "امنیت"
-          spam: "هرز‌نامه"
+      section_landing_pages:
+        account:
+          title: "حساب کاربری"
+          backups:
+            title: "نسخه‌های پشتیبان"
+          whats_new:
+            title: "چه چیزی جدید شده"
+      config_areas:
+        about:
+          header: "درباره سایت شما"
+          community_name: "نام انجمن"
+          contact_url_placeholder: "https://johnny-smith.com/contact"
+          your_organization: "سازمان شما"
+          company_name: "نام شرکت"
+          optional: "(اختیاری)"
+          update: "به روز رسانی"
+          saved: "ذخیره شد!"
+        flags:
+          description: "توضیح"
+          enabled: "فعال شده؟"
+          edit: "ویرایش"
+          delete: "حذف"
+          delete_confirm: 'آیا از حذف "%{name}" مطمئن هستید؟ '
+          flags_tab: "پرچم‌ها"
+          form:
+            save: "ذخیره"
+            name: "نام"
+            description: "توضیح"
+            invalid_applies_to: "مورد نیاز"
+            topic: "موضوعات"
+            post: "فرسته‌ها"
+        look_and_feel:
+          themes:
+            title: "قالب‌ها"
       plugins:
         title: "افزونه‌ها"
-        installed: "افزونه های نصب شده"
         name: "نام"
         none_installed: "افزونه‌ای نصب نشده است."
         version: "نسخه"
@@ -3814,6 +3882,7 @@ fa_IR:
         change_settings_short: "تنظیمات"
         howto: "چگونه یک افزونه نصب کنیم؟"
         author: "توسط %{author}"
+        experimental_badge: "آزمایشی"
         learn_more: "بیشتر بدانید"
         sidebar_link:
           installed: "نصب"
@@ -3839,7 +3908,7 @@ fa_IR:
         menu:
           backups: "نسخه‌های پشتیبانی"
           logs: "گزارش‌ها"
-        none: "هیچ پشتیبانی در دسترس نیست."
+        none: "هیچ پشتیبانی در دسترس نیست"
         read_only:
           enable:
             title: "فعال‌سازی حالت فقط خواندنی"
@@ -3870,12 +3939,11 @@ fa_IR:
           download:
             label: "دانلود"
             title: "ارسال ایمیل با لینک دانلود"
-            alert: "لینک دانلود نسخه پشتیبان به ایمیل شما ارسال شد."
+            alert: "لینک دانلود نسخه پشتیبان به ایمیل شما ارسال شد"
           destroy:
             title: "پاک کردن پشتیبان"
             confirm: "آیا مطمئنید که می‌خواهید پشتیبان را از بین ببرید؟"
           restore:
-            is_disabled: "بازگردانی در تنظیمات سایت از کار انداخته شده است."
             label: "بازیابی"
             title: "بازیابی پشتیبان"
             confirm: "آیا از بازگردانی این پشتیبان مطمئن هستید ؟"
@@ -3884,7 +3952,6 @@ fa_IR:
             title: "بازگردانی پایگاه داده به حالت قبلی که بدون مشکل کار می‌کرد"
             confirm: "آیا از بازنشانی پایگاه داده به حالت قبلی که کار می‌کرد، اطمینان دارید؟"
         location:
-          local: "حافظه محلی"
           s3: "S3"
         backup_storage_error: "دسترسی به حافظه پشتیبانی ناموفق: %{error_message}"
       export_csv:
@@ -4066,7 +4133,6 @@ fa_IR:
             description: "لینک‌ها، برخی از دکمه‌ها، اطلاعیه‌ها، و مد رنگ."
           quaternary:
             name: "چهارمی"
-            description: "پیوند‌های ناوبری."
           header_background:
             name: "پس زمینه سربرگ"
             description: "رنگ پس زمینه سربرگ سایت"
@@ -4234,6 +4300,7 @@ fa_IR:
             approve_user: "کاربر پذیرفته‌شده"
             change_theme_setting: "تغییر دادن تنظیمات قالب"
             delete_group: "حذف گروه"
+            delete_associated_accounts: "حذف حساب‌های کاربری مرتبط"
         screened_emails:
           title: "ایمیل ها نمایش داده شده"
           description: "وقتی کسی سعی می کند یک حساب جدید ایجاد کند، آدرس‌های ایمیل زیر بررسی و ثبت نام مسدود خواهد شد، و یا برخی از اقدام های دیگر انجام می شود."
@@ -4261,6 +4328,7 @@ fa_IR:
             text: "جمع کردن"
             title: "ساخت مسدود سازی زیر شبکه جدید اگر آنها آخرین 'min_ban_entries_for_roll_up' ورودی ها بودند."
         search_logs:
+          title: "جستجوی گزارش‌ها"
           searches: "جستجوها"
           types:
             header: "سربرگ"
@@ -4268,6 +4336,7 @@ fa_IR:
         logster:
           title: "گزارش خطا"
       watched_words:
+        title: "کلمات تماشا شده"
         search: "جست‌وجو"
         clear_filter: "واضح"
         case_sensitive: "«حساس به حروف کوچک و بزرگ»"
@@ -4362,6 +4431,9 @@ fa_IR:
           text: "نشان دادن"
         check_sso:
           text: "نمایش"
+        delete_associated_accounts:
+          title: "حذف تمام حساب‌های کاربرای مرتبط برای این کاربر"
+          text: "حذف حساب‌های کاربری مرتبط"
       user:
         suspend_failed: "در جریان به تعلیق درآوردن این کاربر اشتباهی رخ داد. %{error}"
         unsuspend_failed: "در جریان خارج کردن این کاربر از تعلیق، اشتباهی رخ داد %{error}"
@@ -4618,6 +4690,7 @@ fa_IR:
         file_types_list:
           add_image_types: "تصاویر"
       badges:
+        status: وضعیت
         title: نشان‌ها
         new_badge: نشان جدید
         new: جدید
@@ -4625,8 +4698,6 @@ fa_IR:
         badge: نشان
         display_name: نام نمایشی
         description: توضیح
-        long_description: شرح کامل
-        badge_type: نوع نشان
         badge_grouping: گروه
         badge_groupings:
           modal_title: گروه بندی نشان
@@ -4654,6 +4725,8 @@ fa_IR:
         disabled: غیرفعال شده
         icon: آیکن
         image: تصویر
+        select_an_icon: "یک آیکون را انتخاب کنید"
+        upload_an_image: "تصویری را بارگذاری کنید"
         query: پرس جوی نشان (SQL)
         target_posts: پرس‌و‌جوی نوشته‌های هدف
         auto_revoke: اجرای روزانه پروس‌و‌جوی لغو

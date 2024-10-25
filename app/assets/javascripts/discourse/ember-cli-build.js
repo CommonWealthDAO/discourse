@@ -13,9 +13,12 @@ const DeprecationSilencer = require("deprecation-silencer");
 const { compatBuild } = require("@embroider/compat");
 const { Webpack } = require("@embroider/webpack");
 const { StatsWriterPlugin } = require("webpack-stats-plugin");
+const { RetryChunkLoadPlugin } = require("webpack-retry-chunk-load-plugin");
 const withSideWatch = require("./lib/with-side-watch");
 const RawHandlebarsCompiler = require("discourse-hbr/raw-handlebars-compiler");
 const crypto = require("crypto");
+const commonBabelConfig = require("./lib/common-babel-config");
+const TerserPlugin = require("terser-webpack-plugin");
 
 process.env.BROCCOLI_ENABLED_MEMOIZE = true;
 
@@ -58,13 +61,7 @@ module.exports = function (defaults) {
       exclude: ["**/highlightjs/*", "**/javascripts/*"],
     },
 
-    "ember-cli-babel": {
-      throwUnlessParallelizable: true,
-    },
-
-    babel: {
-      plugins: [require.resolve("deprecation-silencer")],
-    },
+    ...commonBabelConfig(),
 
     vendorFiles: {
       // Freedom patch - includes bug fix and async stack support
@@ -83,7 +80,6 @@ module.exports = function (defaults) {
   });
 
   // WARNING: We should only import scripts here if they are not in NPM.
-  app.import(vendorJs + "bootbox.js");
   app.import(discourseRoot + "/app/assets/javascripts/polyfills.js");
 
   app.import(
@@ -146,8 +142,20 @@ module.exports = function (defaults) {
           chunkFilename: `assets/chunk.[chunkhash].${cachebusterHash}.js`,
         },
         optimization: {
-          // Disable webpack minimization. Embroider automatically applies terser after webpack.
-          minimize: false,
+          minimize: isProduction,
+          minimizer: [
+            new TerserPlugin({
+              minify: TerserPlugin.swcMinify,
+              terserOptions: {
+                compress: {
+                  // Stop swc unwrapping 'unnecessary' IIFE wrappers which are added by Babel
+                  // to workaround a bug in Safari 15 class fields.
+                  inline: false,
+                  reduce_funcs: false,
+                },
+              },
+            }),
+          ],
         },
         cache: isProduction
           ? false
@@ -183,22 +191,6 @@ module.exports = function (defaults) {
               exportsPresence: "error",
             },
           },
-          rules: [
-            {
-              test: require.resolve("bootstrap/js/modal"),
-              use: [
-                {
-                  loader: "imports-loader",
-                  options: {
-                    imports: {
-                      moduleName: "jquery",
-                      name: "jQuery",
-                    },
-                  },
-                },
-              ],
-            },
-          ],
         },
         plugins: [
           // The server use this output to map each asset to its chunks
@@ -232,6 +224,11 @@ module.exports = function (defaults) {
               return JSON.stringify(output, null, 2);
             },
           }),
+          new RetryChunkLoadPlugin({
+            retryDelay: 200,
+            maxRetries: 2,
+            chunks: ["assets/discourse.js"],
+          }),
         ],
       },
     },
@@ -241,6 +238,12 @@ module.exports = function (defaults) {
       },
       {
         package: "sinon",
+      },
+      {
+        package: "@json-editor/json-editor",
+      },
+      {
+        package: "ace-builds",
       },
     ],
   });

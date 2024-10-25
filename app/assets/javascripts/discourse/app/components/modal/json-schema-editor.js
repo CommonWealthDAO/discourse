@@ -1,10 +1,9 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
+import { waitForPromise } from "@ember/test-waiters";
 import { create } from "virtual-dom";
-import loadScript from "discourse/lib/load-script";
 import { iconNode } from "discourse-common/lib/icon-library";
-import { afterRender } from "discourse-common/utils/decorators";
 
 export default class JsonSchemaEditorModal extends Component {
   @tracked editor = null;
@@ -14,13 +13,6 @@ export default class JsonSchemaEditorModal extends Component {
 
   get settingName() {
     return this.args.model.settingName.replace(/\_/g, " ");
-  }
-
-  @action
-  buildJsonEditor(editor) {
-    loadScript("/javascripts/jsoneditor.js").then(
-      this._loadEditor.bind(this, editor)
-    );
   }
 
   @action
@@ -42,9 +34,11 @@ export default class JsonSchemaEditorModal extends Component {
     }
   }
 
-  @afterRender
-  _loadEditor(editor) {
-    let { JSONEditor } = window;
+  @action
+  async buildJsonEditor(element) {
+    const promise = import("@json-editor/json-editor");
+    waitForPromise(promise);
+    const { JSONEditor } = await promise;
 
     JSONEditor.defaults.options.theme = "barebones";
     JSONEditor.defaults.iconlibs = {
@@ -52,7 +46,7 @@ export default class JsonSchemaEditorModal extends Component {
     };
     JSONEditor.defaults.options.iconlib = "discourseIcons";
 
-    this.editor = new JSONEditor(editor, {
+    this.editor = new JSONEditor(element, {
       schema: this.args.model.jsonSchema,
       disable_array_delete_all_rows: true,
       disable_array_delete_last_row: true,
@@ -71,7 +65,7 @@ export default class JsonSchemaEditorModal extends Component {
 class DiscourseJsonSchemaEditorIconlib {
   constructor() {
     this.mapping = {
-      delete: "trash-alt",
+      delete: "trash-can",
       add: "plus",
       moveup: "arrow-up",
       movedown: "arrow-down",

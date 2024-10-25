@@ -3,7 +3,9 @@
 require "net/imap"
 
 class Group < ActiveRecord::Base
-  self.ignored_columns = %w[flair_url] # TODO: Remove when 20240212034010_drop_deprecated_columns has been promoted to pre-deploy
+  # TODO: Remove flair_url when 20240212034010_drop_deprecated_columns has been promoted to pre-deploy
+  # TODO: Remove smtp_ssl when db/post_migrate/20240717053710_drop_groups_smtp_ssl has been promoted to pre-deploy
+  self.ignored_columns = %w[flair_url smtp_ssl]
 
   include HasCustomFields
   include AnonCacheInvalidator
@@ -14,6 +16,7 @@ class Group < ActiveRecord::Base
   self.preloaded_custom_field_names = Set.new
 
   has_many :category_groups, dependent: :destroy
+  has_many :category_moderation_groups, dependent: :destroy
   has_many :group_users, dependent: :destroy
   has_many :group_requests, dependent: :destroy
   has_many :group_mentions, dependent: :destroy
@@ -22,15 +25,11 @@ class Group < ActiveRecord::Base
   has_many :group_archived_messages, dependent: :destroy
 
   has_many :categories, through: :category_groups
+  has_many :moderation_categories, through: :category_moderation_groups, source: :category
   has_many :users, through: :group_users
   has_many :human_users, -> { human_users }, through: :group_users, source: :user
   has_many :requesters, through: :group_requests, source: :user
   has_many :group_histories, dependent: :destroy
-  has_many :category_reviews,
-           class_name: "Category",
-           foreign_key: :reviewable_by_group_id,
-           dependent: :nullify
-  has_many :reviewables, foreign_key: :reviewable_by_group_id, dependent: :nullify
   has_many :group_category_notification_defaults, dependent: :destroy
   has_many :group_tag_notification_defaults, dependent: :destroy
   has_many :associated_groups, through: :group_associated_groups, dependent: :destroy
@@ -77,10 +76,6 @@ class Group < ActiveRecord::Base
 
   def expire_imap_mailbox_cache
     Discourse.cache.delete("group_imap_mailboxes_#{self.id}")
-  end
-
-  def remove_review_groups
-    Category.where(review_group_id: self.id).update_all(review_group_id: nil)
   end
 
   validate :name_format_validator
@@ -143,6 +138,10 @@ class Group < ActiveRecord::Base
 
   def self.visibility_levels
     @visibility_levels = Enum.new(public: 0, logged_on_users: 1, members: 2, staff: 3, owners: 4)
+  end
+
+  def self.smtp_ssl_modes
+    @visibility_levels = Enum.new(none: 0, ssl_tls: 1, starttls: 2)
   end
 
   def self.auto_groups_between(lower, upper)
@@ -458,7 +457,19 @@ class Group < ActiveRecord::Base
     Group.auto_groups_between(:trust_level_0, :trust_level_4).to_a
   end
 
+  class GroupPmUserLimitExceededError < StandardError
+  end
+
   def set_message_default_notification_levels!(topic, ignore_existing: false)
+    if user_count > SiteSetting.group_pm_user_limit
+      raise GroupPmUserLimitExceededError,
+            I18n.t(
+              "groups.errors.default_notification_level_users_limit",
+              count: SiteSetting.group_pm_user_limit,
+              group_name: name,
+            )
+    end
+
     group_users
       .pluck(:user_id, :notification_level)
       .each do |user_id, notification_level|
@@ -1292,7 +1303,6 @@ end
 #  mentionable_level                  :integer          default(0)
 #  smtp_server                        :string
 #  smtp_port                          :integer
-#  smtp_ssl                           :boolean
 #  imap_server                        :string
 #  imap_port                          :integer
 #  imap_ssl                           :boolean
@@ -1316,6 +1326,7 @@ end
 #  imap_updated_at                    :datetime
 #  imap_updated_by_id                 :integer
 #  email_from_alias                   :string
+#  smtp_ssl_mode                      :integer          default(0), not null
 #
 # Indexes
 #

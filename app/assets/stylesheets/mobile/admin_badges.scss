@@ -4,6 +4,7 @@
       margin: 0 0.25em;
       .content-list {
         flex: 0 0 100%;
+        width: 100%;
         .admin-badge-list {
           max-height: 40vh;
           margin-right: 0;
@@ -22,6 +23,15 @@
     }
     input[type="text"] {
       width: 100%;
+    }
+  }
+
+  .badges-header .create-new-badge .btn-default {
+    .d-button-label {
+      display: none;
+    }
+    .d-icon {
+      margin-right: 0;
     }
   }
 }

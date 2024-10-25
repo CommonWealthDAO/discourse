@@ -11,8 +11,23 @@ if Rails.env.development? && !Rails.configuration.cache_classes && Discourse.run
     "#{Rails.root}/plugins",
   ]
 
+  if Listen::Adapter::Linux.usable?
+    # The Listen gem watches recursively, which has a cost per-file on Linux (via rb-inotify)
+    # Skip a bunch of unnecessary directories to reduce the cost
+    # Ref https://github.com/guard/listen/issues/556
+    require "rb-inotify"
+    INotify::Notifier.prepend(
+      Module.new do
+        def watch(path, *flags, &callback)
+          return if path.end_with?("/node_modules", "/.git")
+          super(path, *flags, &callback)
+        end
+      end,
+    )
+  end
+
   Listen
-    .to(*paths, only: /\.rb$/) do |modified, added, removed|
+    .to(*paths, only: /\.rb$/, ignore: [/node_modules/]) do |modified, added, removed|
       supervisor_pid = UNICORN_DEV_SUPERVISOR_PID
       auto_restart = supervisor_pid && ENV["AUTO_RESTART"] != "0"
 

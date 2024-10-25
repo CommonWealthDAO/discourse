@@ -31,7 +31,7 @@ describe UsersController do
 
     before do
       register_test_bookmarkable(Chat::MessageBookmarkable)
-      SiteSetting.chat_allowed_groups = [chatters]
+      SiteSetting.chat_allowed_groups = chatters
       sign_in(current_user)
     end
 
@@ -51,6 +51,60 @@ describe UsersController do
 
       notifications = response.parsed_body["notifications"]
       expect(notifications.size).to eq(0)
+    end
+  end
+
+  describe "#show_card" do
+    fab!(:user) { Fabricate(:user) }
+    fab!(:another_user) { Fabricate(:user) }
+
+    before do
+      SiteSetting.chat_enabled = true
+      SiteSetting.chat_allowed_groups = Group::AUTO_GROUPS[:everyone]
+      SiteSetting.direct_message_enabled_groups = Group::AUTO_GROUPS[:everyone]
+    end
+
+    context "when the card belongs to the current user" do
+      before { sign_in(user) }
+
+      it "returns that the user can message themselves" do
+        user.user_option.update!(hide_profile_and_presence: false)
+        user.user_option.update!(chat_enabled: true)
+        get "/u/#{user.username}/card.json"
+        expect(response).to be_successful
+        expect(response.parsed_body["user"]["can_chat_user"]).to eq(true)
+      end
+
+      it "returns that the user can message themselves when the profile is hidden" do
+        user.user_option.update!(hide_profile_and_presence: true)
+        user.user_option.update!(chat_enabled: true)
+        get "/u/#{user.username}/card.json"
+        expect(response).to be_successful
+        expect(response.parsed_body["user"]["can_chat_user"]).to eq(true)
+      end
+    end
+
+    context "when hidden users" do
+      before do
+        sign_in(another_user)
+        user.user_option.update!(hide_profile_and_presence: true)
+      end
+
+      it "returns the correct partial response when the user has chat enabled" do
+        user.user_option.update!(chat_enabled: true)
+        get "/u/#{user.username}/card.json"
+        expect(response).to be_successful
+        expect(response.parsed_body["user"]["profile_hidden"]).to eq(true)
+        expect(response.parsed_body["user"]["can_chat_user"]).to eq(true)
+      end
+
+      it "returns the correct partial response when the user has chat disabled" do
+        user.user_option.update!(chat_enabled: false)
+        get "/u/#{user.username}/card.json"
+        expect(response).to be_successful
+        expect(response.parsed_body["user"]["profile_hidden"]).to eq(true)
+        expect(response.parsed_body["user"]["can_chat_user"]).to eq(false)
+      end
     end
   end
 end

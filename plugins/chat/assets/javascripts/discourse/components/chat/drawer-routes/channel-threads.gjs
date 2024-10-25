@@ -12,6 +12,7 @@ import ChatThreadList from "discourse/plugins/chat/discourse/components/chat-thr
 export default class ChatDrawerRoutesChannelThreads extends Component {
   @service chat;
   @service chatChannelsManager;
+  @service chatStateManager;
 
   backLinkTitle = I18n.t("chat.return_to_list");
 
@@ -40,28 +41,32 @@ export default class ChatDrawerRoutesChannelThreads extends Component {
   }
 
   <template>
-    {{#if this.chat.activeChannel}}
-      <Navbar @onClick={{this.chat.toggleDrawer}} as |navbar|>
-        <navbar.BackButton
-          @title={{this.backLinkTitle}}
-          @route="chat.channel"
-          @routeModels={{this.chat.activeChannel.routeModels}}
-        />
-        <navbar.Title @title={{this.title}} @icon="discourse-threads" />
-        <navbar.Actions as |a|>
-          <a.ToggleDrawerButton />
-          <a.FullPageButton />
-          <a.CloseDrawerButton />
-        </navbar.Actions>
-      </Navbar>
-    {{/if}}
-
-    <div class="chat-drawer-content" {{didInsert this.fetchChannel}}>
+    <div class="c-drawer-routes --channel-threads">
       {{#if this.chat.activeChannel}}
-        <ChatThreadList
-          @channel={{this.chat.activeChannel}}
-          @includeHeader={{false}}
-        />
+        <Navbar @onClick={{this.chat.toggleDrawer}} as |navbar|>
+          <navbar.BackButton
+            @title={{this.backLinkTitle}}
+            @route="chat.channel"
+            @routeModels={{this.chat.activeChannel.routeModels}}
+          />
+          <navbar.Title @title={{this.title}} @icon="discourse-threads" />
+          <navbar.Actions as |a|>
+            <a.ToggleDrawerButton />
+            <a.FullPageButton />
+            <a.CloseDrawerButton />
+          </navbar.Actions>
+        </Navbar>
+      {{/if}}
+
+      {{#if this.chatStateManager.isDrawerExpanded}}
+        <div class="chat-drawer-content" {{didInsert this.fetchChannel}}>
+          {{#if this.chat.activeChannel}}
+            <ChatThreadList
+              @channel={{this.chat.activeChannel}}
+              @includeHeader={{false}}
+            />
+          {{/if}}
+        </div>
       {{/if}}
     </div>
   </template>

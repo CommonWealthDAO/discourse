@@ -86,6 +86,7 @@ class UsersController < ApplicationController
   #  once that happens you can't log in with social
   skip_before_action :verify_authenticity_token, only: [:create]
   skip_before_action :redirect_to_login_if_required,
+                     :redirect_to_profile_if_required,
                      only: %i[
                        check_username
                        check_email
@@ -102,11 +103,11 @@ class UsersController < ApplicationController
                        admin_login
                        confirm_admin
                      ]
+  skip_before_action :redirect_to_profile_if_required, only: %i[show staff_info update]
 
-  after_action :add_noindex_header, only: %i[show my_redirect]
+  before_action :add_noindex_header, only: %i[show my_redirect]
 
-  allow_in_staff_writes_only_mode :admin_login
-  allow_in_staff_writes_only_mode :email_login
+  allow_in_staff_writes_only_mode :admin_login, :email_login, :password_reset_update
 
   MAX_RECENT_SEARCHES = 5
 
@@ -218,7 +219,12 @@ class UsersController < ApplicationController
         value = nil if value === "false"
         value = value[0...UserField.max_length] if value
 
-        if value.blank? && field.required?
+        if value.blank? &&
+             (
+               field.for_all_users? ||
+                 field.on_signup? &&
+                   user.custom_fields["#{User::USER_FIELD_PREFIX}#{field_id}"].present?
+             )
           return render_json_error(I18n.t("login.missing_user_field"))
         end
         attributes[:custom_fields]["#{User::USER_FIELD_PREFIX}#{field.id}"] = value
@@ -859,6 +865,8 @@ class UsersController < ApplicationController
     # no point doing anything else if we can't even find
     # a user from the token
     if @user
+      raise Discourse::ReadOnly if staff_writes_only_mode? && !@user.staff?
+
       if !secure_session["second-factor-#{token}"]
         second_factor_authentication_result =
           @user.authenticate_second_factor(params, secure_session)
@@ -898,6 +906,10 @@ class UsersController < ApplicationController
           Invite.invalidate_for_email(@user.email) # invite link can't be used to log in anymore
           secure_session["password-#{token}"] = nil
           secure_session["second-factor-#{token}"] = nil
+
+          if SiteSetting.delete_associated_accounts_on_password_reset
+            @user.user_associated_accounts.destroy_all
+          end
 
           UserHistory.create!(
             target_user: @user,
@@ -1089,7 +1101,11 @@ class UsersController < ApplicationController
 
   def activate_account
     expires_now
-    render layout: "no_ember"
+
+    respond_to do |format|
+      format.html { render "default/empty" }
+      format.json { render json: success_json }
+    end
   end
 
   def perform_account_activation
@@ -1119,21 +1135,22 @@ class UsersController < ApplicationController
         end
 
         if Wizard.user_requires_completion?(@user)
-          return redirect_to(wizard_path)
+          @redirect_to = wizard_path
         elsif destination_url.present?
-          return redirect_to(destination_url, allow_other_host: true)
+          @redirect_to = destination_url
         elsif SiteSetting.enable_discourse_connect_provider &&
               payload = cookies.delete(:sso_payload)
-          return redirect_to(session_sso_provider_url + "?" + payload)
+          @redirect_to = session_sso_provider_url + "?" + payload
         end
       else
         @needs_approval = true
       end
     else
-      flash.now[:error] = I18n.t("activation.already_done")
+      return render_json_error(I18n.t("activation.already_done"))
     end
 
-    render layout: "no_ember"
+    render json:
+             success_json.merge(redirect_to: @redirect_to, needs_approval: @needs_approval || false)
   end
 
   def update_activation_email
@@ -1542,12 +1559,14 @@ class UsersController < ApplicationController
           .select(:id, :name, :last_used, :created_at, :method)
           .where(enabled: true)
           .order(:created_at)
+          .as_json(only: %i[id name method last_used])
 
       security_keys =
         current_user
           .security_keys
           .where(factor_type: UserSecurityKey.factor_types[:second_factor])
           .order(:created_at)
+          .as_json(only: %i[id user_id credential_id public_key factor_type enabled name last_used])
 
       render json: success_json.merge(totps: totp_second_factors, security_keys: security_keys)
     else

@@ -262,4 +262,33 @@ $hpad: 0.65em;
   border-radius: 0.6em;
   text-decoration: none;
   text-wrap: nowrap;
+
+  &.--bot {
+    background: var(--success-low);
+  }
+
+  &.--wide {
+    background: var(--highlight-low-or-medium);
+  }
+
+  &.--current {
+    background: var(--tertiary-400);
+  }
+}
+
+@mixin nav-active() {
+  color: var(--d-nav-color--active);
+  background: var(--d-nav-bg-color--active);
+  .d-icon {
+    color: var(--d-nav-color--active);
+  }
+  &:after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    height: var(--d-nav-underline-height);
+    background: var(--d-nav-color--active);
+  }
 }

@@ -48,7 +48,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
             }
 
             get actionsIcon() {
-              return "cog";
+              return "gear";
             }
 
             get actions() {
@@ -195,7 +195,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
                   }
 
                   get hoverValue() {
-                    return "times";
+                    return "xmark";
                   }
 
                   get hoverAction() {
@@ -295,10 +295,9 @@ acceptance("Sidebar - Plugin API", function (needs) {
       "displays first link with correct text"
     );
 
-    assert.ok(
-      exists(".sidebar-section-link.my-class-name"),
-      "sets the custom class name for the section link"
-    );
+    assert
+      .dom(".sidebar-section-link.my-class-name")
+      .exists("sets the custom class name for the section link");
 
     assert.strictEqual(
       links[0].title,
@@ -423,7 +422,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
           }
 
           get actionsIcon() {
-            return "cog";
+            return "gear";
           }
 
           get actions() {
@@ -453,10 +452,9 @@ acceptance("Sidebar - Plugin API", function (needs) {
       "displays header with correct text"
     );
 
-    assert.ok(
-      exists("button.sidebar-section-header-button"),
-      "displays single header action button"
-    );
+    assert
+      .dom("button.sidebar-section-header-button")
+      .exists("displays single header action button");
 
     assert.ok(
       !exists(
@@ -479,7 +477,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
           }
 
           get actionsIcon() {
-            return "cog";
+            return "gear";
           }
 
           get actions() {
@@ -505,10 +503,9 @@ acceptance("Sidebar - Plugin API", function (needs) {
 
     await visit("/");
 
-    assert.notOk(
-      exists(".sidebar-section[data-section-name='test-chat-channels']"),
-      "does not display the section"
-    );
+    assert
+      .dom(".sidebar-section[data-section-name='test-chat-channels']")
+      .doesNotExist("does not display the section");
   });
 
   test("Registering a custom countable for a section link in the user's sidebar categories section", async function (assert) {
@@ -543,9 +540,9 @@ acceptance("Sidebar - Plugin API", function (needs) {
           route: "discovery.latestCategory",
           routeQuery: { status: "open" },
           shouldRegister: ({ category }) => {
-            if (category.name === category1.name) {
+            if (category.displayName === category1.displayName) {
               return true;
-            } else if (category.name === category2.name) {
+            } else if (category.displayName === category2.displayName) {
               return false;
             }
           },
@@ -779,7 +776,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
             }
 
             get actionsIcon() {
-              return "cog";
+              return "gear";
             }
 
             get links() {
@@ -942,7 +939,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
             }
 
             get actionsIcon() {
-              return "cog";
+              return "gear";
             }
 
             get links() {
@@ -977,7 +974,7 @@ acceptance("Sidebar - Plugin API", function (needs) {
                   }
 
                   get prefixValue() {
-                    return "cog";
+                    return "gear";
                   }
 
                   get prefixColor() {
@@ -1030,5 +1027,194 @@ acceptance("Sidebar - Plugin API", function (needs) {
     assert
       .dom(".sidebar-section[data-section-name='test-admin-section']")
       .doesNotExist();
+  });
+
+  test("Auto expand active sections", async function (assert) {
+    withPluginApi(PLUGIN_API_VERSION, (api) => {
+      api.addSidebarPanel((BaseCustomSidebarPanel) => {
+        return class extends BaseCustomSidebarPanel {
+          key = "new-panel";
+          expandActiveSection = true;
+        };
+      });
+      api.addSidebarSection(
+        (BaseCustomSidebarSection, BaseCustomSidebarSectionLink) => {
+          return class extends BaseCustomSidebarSection {
+            name = "test-section-1";
+            text = "The First Section";
+            collapsedByDefault = true;
+
+            get links() {
+              return [
+                new (class extends BaseCustomSidebarSectionLink {
+                  get name() {
+                    return `test-link-1`;
+                  }
+
+                  get href() {
+                    return `/test1`;
+                  }
+
+                  get title() {
+                    return `Test Link Title 1`;
+                  }
+
+                  get text() {
+                    return `Test Link Text 1`;
+                  }
+                })(),
+              ];
+            }
+          };
+        },
+        "new-panel"
+      );
+      api.addSidebarSection(
+        (BaseCustomSidebarSection, BaseCustomSidebarSectionLink) => {
+          return class extends BaseCustomSidebarSection {
+            name = "test-section-2";
+            text = "The Second Section";
+            collapsedByDefault = true;
+
+            get links() {
+              return [
+                new (class extends BaseCustomSidebarSectionLink {
+                  get name() {
+                    return `search`;
+                  }
+
+                  get route() {
+                    return `full-page-search`;
+                  }
+
+                  get title() {
+                    return `Search`;
+                  }
+
+                  get text() {
+                    return `Search`;
+                  }
+                })(),
+              ];
+            }
+          };
+        },
+        "new-panel"
+      );
+      api.setSeparatedSidebarMode();
+      api.setSidebarPanel("new-panel");
+    });
+
+    await visit("/");
+    assert.dom(".sidebar-section.sidebar-section--expanded").doesNotExist();
+
+    await visit("/search");
+    assert
+      .dom(
+        "div[data-section-name='test-section-2'].sidebar-section.sidebar-section--expanded"
+      )
+      .exists({ count: 1 });
+  });
+
+  test("Scroll active link into view", async function (assert) {
+    withPluginApi(PLUGIN_API_VERSION, (api) => {
+      api.addSidebarPanel((BaseCustomSidebarPanel) => {
+        return class extends BaseCustomSidebarPanel {
+          key = "new-panel";
+          expandActiveSection = true;
+          scrollActiveLinkIntoView = true;
+        };
+      });
+      api.addSidebarSection(
+        (BaseCustomSidebarSection, BaseCustomSidebarSectionLink) => {
+          return class extends BaseCustomSidebarSection {
+            name = `test-section-1`;
+            text = "The Section";
+            collapsedByDefault = false;
+
+            get links() {
+              const values = [...Array(100)].map(
+                (_, i) =>
+                  new (class extends BaseCustomSidebarSectionLink {
+                    get name() {
+                      return `test-link-${i}`;
+                    }
+
+                    get href() {
+                      return `/test${i}`;
+                    }
+
+                    get title() {
+                      return `Test Link Title ${i}`;
+                    }
+
+                    get text() {
+                      return `Test Link Text ${i}`;
+                    }
+                  })()
+              );
+
+              values.push(
+                new (class extends BaseCustomSidebarSectionLink {
+                  get name() {
+                    return `search`;
+                  }
+
+                  get route() {
+                    return `full-page-search`;
+                  }
+
+                  get title() {
+                    return `Search`;
+                  }
+
+                  get text() {
+                    return `Search`;
+                  }
+                })()
+              );
+
+              return values;
+            }
+          };
+        },
+        "new-panel"
+      );
+      api.setSeparatedSidebarMode();
+      api.setSidebarPanel("new-panel");
+    });
+
+    await visit("/");
+    const sidebarHeight = query(".sidebar-wrapper").clientHeight;
+    const searchLinkOffsetTop = query(
+      ".sidebar-section-link-wrapper[data-list-item-name='search']"
+    ).offsetTop;
+
+    assert.ok(
+      searchLinkOffsetTop > sidebarHeight,
+      "the link offsetTop is greater than the sidebar height"
+    );
+    assert.strictEqual(
+      query(".sidebar-sections").scrollTop,
+      0,
+      "the sidebar is not scrolled initially"
+    );
+
+    await visit("/search");
+    assert
+      .dom(
+        ".sidebar-section-link-wrapper[data-list-item-name='search'] > a.active"
+      )
+      .exists();
+
+    const sidebarScrollTop = query(".sidebar-sections").scrollTop;
+    assert.ok(
+      sidebarScrollTop > 0,
+      "the sidebar was scrolled to position the active element into view"
+    );
+    assert.ok(
+      searchLinkOffsetTop < sidebarScrollTop + sidebarHeight,
+      "the link is into view"
+    );
   });
 });

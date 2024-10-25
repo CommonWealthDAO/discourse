@@ -15,7 +15,6 @@
   <EmojiUploader
     @emojiGroups={{this.emojiGroups}}
     @done={{action "emojiUploaded"}}
-    @id="emoji-uploader"
   />
 
   <hr />
@@ -51,7 +50,7 @@
             <td class="action">
               <DButton
                 @action={{fn this.destroyEmoji e}}
-                @icon="far-trash-alt"
+                @icon="trash-can"
                 class="btn-danger"
               />
             </td>

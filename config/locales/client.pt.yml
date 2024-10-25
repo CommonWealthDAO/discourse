@@ -21,11 +21,13 @@ pt:
             kb: KB
             mb: MB
             tb: TB
+      percent: "%{count}%"
       short:
         thousands: "%{number}k"
         millions: "%{number}M"
     dates:
       time: "hh:mm"
+      time_short: "hh:mm"
       time_with_zone: "HH:mm (z)"
       time_short_day: "ddd, HH:mm"
       timeline_date: "MMM YYYY"
@@ -136,7 +138,6 @@ pt:
       topic_html: 'Tópico: <span class="topic-title">%{topicTitle}</span>'
       post: "publicação #%{postNumber} de @%{username}"
       close: "fechar"
-      twitter: "Partilhar no Twitter"
       facebook: "Partilhar no Facebook"
       email: "Enviar por e-mail"
       url: "Copiar e partilhar URL"
@@ -277,6 +278,7 @@ pt:
       pill: "Sugerido"
       pm_title: "Mensagens Sugeridas"
     about:
+      edit: "Editar esta página"
       simple_title: "Acerca"
       title: "Acerca de %{title}"
       stats: "Estatísticas do sítio"
@@ -294,7 +296,20 @@ pt:
       user_count: "Registos"
       active_user_count: "Utilizadores ativos"
       contact: "Contactar-nos"
-      contact_info: "No caso de um problema crítico ou de algum assunto urgente que afecte este sítio, por favor contacte-nos em %{contact_info}."
+      activities:
+        topics:
+          one: "%{formatted_number} tópico"
+          other: "%{formatted_number} tópicos"
+        posts:
+          one: "%{formatted_number} mensagem"
+          other: "%{formatted_number} mensagens"
+        likes:
+          one: "%{formatted_number} curtiu"
+          other: "%{formatted_number} curtiram"
+        periods:
+          last_7_days: "nos últimos 7 dias"
+          today: "hoje"
+          all_time: "desde sempre"
     bookmarked:
       title: "Adicionar Marcador"
       edit_bookmark: "Editar Favorito"
@@ -627,7 +642,6 @@ pt:
       never: "Nunca"
       last_custom: "Data e hora do último personalizado"
       custom: "Data e hora personalizadas"
-      custom_short: "Personalizar..."
       select_timeframe: "Selecione um intervalo de tempo"
     user_action:
       user_posted_topic: "<a href='%{userUrl}'>%{user}</a> publicou <a href='%{topicUrl}'>o tópico</a>"
@@ -736,11 +750,12 @@ pt:
           imap_mailbox_not_selected: "Tem de selecionar uma caixa de correio para esta configuração IMAP ou nenhuma caixa de correio será sincronizada!"
           prefill:
             title: "Preencher com configurações para:"
+          ssl_modes:
+            none: "Nenhuma"
           credentials:
             title: "Credenciais"
             smtp_server: "Servidor SMTP"
             smtp_port: "Porta SMTP"
-            smtp_ssl: "Utilizar SSL para SMTP"
             imap_server: "Servidor IMAP"
             imap_port: "Porta IMAP"
             imap_ssl: "Utilizar SSL para IMAP"
@@ -991,6 +1006,7 @@ pt:
     user_fields:
       none: "(selecione uma opção)"
       required: 'Por favor, insira um valor para "%{name}”'
+      optional: (opcional)
     user:
       said: "%{username}:"
       profile: "Perfil"
@@ -1038,7 +1054,8 @@ pt:
       activity_stream: "Atividade"
       read: "Lidos"
       read_help: "Tópicos lidos recentemente"
-      preferences: "Preferências"
+      preferences:
+        title: "Preferências"
       feature_topic_on_profile:
         open_search: "Selecione um Novo Tópico"
         title: "Selecione um Tópico"
@@ -1218,6 +1235,7 @@ pt:
         set_password: "Definir Palavra-passe"
         choose_new: "Escolha uma nova palavra-passe"
         choose: "Escolha uma palavra-passe"
+        title: "Repor Palavra-Passe"
       second_factor_backup:
         title: "Códigos de Reserva para Autenticação em Dois Passos"
         regenerate: "Regenerar"
@@ -1331,7 +1349,7 @@ pt:
         add_email: "Adicionar E-mail Alternativo"
         auth_override_instructions: "O e-mail pode ser atualizado a partir do provedor de autenticação."
         no_secondary: "Não existem emails secundários"
-        instructions: "Nunca mostrado ao público."
+        instructions: "Nunca mostrado ao público"
         admin_note: "Nota: Um administrador que alterou um e-mail de outro usuário não-administrador indica que o usuário perdeu o acesso a sua conta de e-mail original. então um e-mail de redefinição de senha será enviado para o novo endereço deles. O e-mail do usuário não será alterado até que ele complete o processo de redefinição de senha."
         ok: "Enviar-lhe-emos um email para confirmar"
         required: "Por favor introduza um endereço de e-mail"
@@ -1352,10 +1370,17 @@ pt:
         confirm_description:
           account_specific: "Sua conta de %{provider} '%{account_description}' será usada para autenticação."
           generic: "Sua conta de %{provider} '' será usada para autenticação."
+      activate_account:
+        action: "Clique aqui para ativar a sua conta"
+        already_done: "Pedimos desculpa, esta hiperligação de confirmação já não está válida. Talvez a sua conta já esteja ativa?"
+        please_continue: "A sua nova conta foi confirmada; será redirecionado para a página principal."
+        continue_button: "Continuar para %{site_name}"
+        welcome_to: "Bem-vindo a %{site_name}!"
+        approval_required: "Um moderador tem que aprovar a sua conta antes de poder aceder a este fórum. Irá receber um email quando a sua conta for aprovada!"
       name:
         title: "Nome"
-        instructions: "O seu nOme cOmpletO (OpciOnal)."
-        instructions_required: "O seu nome completo."
+        instructions: "O seu nOme cOmpletO (OpciOnal)"
+        instructions_required: "O seu nome completo"
         required: "Por favor introduza um nome"
         too_short: "O seu nome é demasiado curto"
         ok: "O seu nome parece adequado"
@@ -1516,21 +1541,19 @@ pt:
           success: "Hiperligação do convite gerada com sucesso!"
           error: "Ocorreu um erro ao gerar o Link de Convite"
         invite:
-          new_title: "Criar Convite"
-          edit_title: "Editar Convite"
           instructions: "Compartilhe este link para conceder acesso instantâneo a este site:"
-          copy_link: "copiar link"
           expires_in_time: "Expira em %{time}"
           expired_at_time: "Expirou em %{time}"
+          copy_link: "Copiar link"
           show_advanced: "Mostrar Opções Avançadas"
           hide_advanced: "Ocultar Opções Avançadas"
           restrict: "Restringir a"
           max_redemptions_allowed: "Máximo de utilizações"
           add_to_groups: "Adicionar aos grupos"
-          expires_at: "Expira após"
-          custom_message: "Mensagem pessoal opcional"
+          expires_after: "Expira após"
           send_invite_email: "Guardar e Enviar E-mail"
-          save_invite: "Salvar Convite"
+          save_invite: "Guardar"
+          cancel: "Cancelar"
           invite_saved: "Convite salvo."
         bulk_invite:
           none: "Sem convites para exibir nesta página."
@@ -1545,7 +1568,6 @@ pt:
         title: "Confirmar acesso"
       password:
         title: "Palavra-passe"
-        too_short: "A sua palavra-passe é muito curta."
         common: "Essa palavra-passe é muito comum."
         same_as_username: "A sua palavra-passe é a mesma que o seu nome de utilizador."
         same_as_email: "A sua palavra-passe é a mesma que o seu e-mail."
@@ -1668,6 +1690,11 @@ pt:
     modal:
       close: "fechar"
       dismiss_error: "Dispensar erro"
+    form_kit:
+      reset: Repor
+      optional: opcional
+      errors:
+        required: "Necessário"
     close: "Fechar"
     logout: "A sua sessão foi encerrada."
     refresh: "Atualizar"
@@ -1694,7 +1721,11 @@ pt:
       hidden_for_session: "OK, perguntaremos a você amanhã. Você sempre pode usar 'Efetuar Login' para criar uma conta, também."
       intro: "Olá! Parece que está a gostar da conversa, mas ainda não tem uma conta."
     summary:
+      buttons:
+        generate: "Resumir"
+        regenerate: "Regenerar"
       disable: "Mostrar Todas As Publicações"
+      show_all_label: "Mostrar tudo"
     deleted_filter:
       enabled_description: "Este tópico contém respostas eliminadas, que foram ocultadas."
       disabled_description: "As publicações eliminadas no tópico são exibidas."
@@ -1719,8 +1750,12 @@ pt:
       header_title: "Bem-vindo!"
       subheader_title: "Vamos criar a sua conta"
       disclaimer: "Ao registar-se, concorda com a <a href='%{privacy_link}' target='blank'>política de privacidade</a> e os <a href='%{tos_link}' target='blank'>termos do serviço</a>."
-      title: "Crie sua conta"
+      title: "Inscrever-se"
       failed: "Ocorreu algo de errado, este e-mail já pode estar registado. Tente utilizar a hiperligação \"Esqueci-me da Palavra-passe\"."
+      progress_bar:
+        signup: "Inscrever-se"
+        approve: "Aprovar"
+        login: "Iniciar Sessão"
     forgot_password:
       title: "Repor Palavra-Passe"
       action: "Eu esqueci-me da minha palavra-passe"
@@ -1751,7 +1786,7 @@ pt:
     login:
       header_title: "Bem-vindo de volta"
       subheader_title: "Faça login na sua conta"
-      title: "Efetuar login"
+      title: "Iniciar Sessão"
       username: "Utilizador"
       password: "Palavra-passe"
       show_password: "Mostrar"
@@ -1783,6 +1818,7 @@ pt:
       admin_not_allowed_from_ip_address: "Não pode iniciar a sessão como administrador a partir desse endereço de IP."
       resend_activation_email: "Clique aqui para enviar novamente a mensagem de ativação."
       omniauth_disallow_totp: "A sua conta tem a autenticação em dois passos ativa. Por favor entre com a sua senha."
+      activate_account: "Ativar Conta"
       resend_title: "Reenviar Mensagem de Ativação"
       change_email: "Alterar Endereço de E-mail"
       provide_new_email: "Forneça um novo endereço e nós iremos reenviar a sua mensagem de confirmação."
@@ -1853,8 +1889,8 @@ pt:
       loading: A carregar...
     category_row:
       subcategory_count:
-        one: "+ %{count} subcategoria"
-        other: "+ %{count} subcategorias"
+        one: "+%{count} subcategoria"
+        other: "+%{count} subcategorias"
       topic_count:
         one: "%{count} tópico nesta categoria"
         other: "%{count} tópicos nesta categoria"
@@ -1998,7 +2034,6 @@ pt:
       show_toolbar: "mostrar barra de compositor"
       hide_toolbar: "esconder barra de compositor"
       modal_ok: "CONFIRMAR"
-      modal_cancel: "Cancelar"
       cant_send_pm: "Desculpe, não pode enviar uma mensagem para %{username}."
       yourself_confirm:
         title: "Esqueceu-se de adicionar os destinatários?"
@@ -2397,6 +2432,7 @@ pt:
       unread_indicator: "Nenhum membro leu o último post deste tópico ainda."
       created_at: "Criado: %{date}"
       bumped_at: "Mais recente: %{date}"
+      browse_all_tags_or_latest: "<a href='%{basePath}/tags'>Navegue por todas as etiquetas</a> ou <a href='%{basePath}/latest'>visualize os tópicos mais recentes</a>."
       suggest_create_topic: Pronto para <a href>iniciar uma nova conversa?</a>
       deleted: "Este tópico foi eliminado"
       slow_mode_update:
@@ -3040,7 +3076,6 @@ pt:
         all: "todos os tópicos"
         none: "sem subcategorias"
     flagging:
-      title: "Obrigado por ajudar a manter a nossa comunidade cívica!"
       action: "Denunciar Publicação"
       take_action_options:
         suspend:
@@ -3075,7 +3110,6 @@ pt:
           one: "%{count} restante"
           other: "%{count} restantes"
     flagging_topic:
-      title: "Obrigado por ajudar a manter a nossa comunidade cívica!"
       action: "Denunciar Tópico"
       notify_action: "Mensagem"
     topic_map:
@@ -3085,6 +3119,9 @@ pt:
       clicks:
         one: "%{count} clique"
         other: "%{count} cliques"
+      views: "Vistas"
+      read: ler
+      minutes: mínimo
     post_links:
       about: "expandir mais ligações para esta publicação"
       title:
@@ -3117,6 +3154,7 @@ pt:
     pending_posts:
       label: "Pendente"
       label_with_count: "Pendentes (%{count})"
+    posters: "Autores"
     original_post: "Publicação Original"
     views: "Vistas"
     views_lowercase:
@@ -3343,7 +3381,6 @@ pt:
     tagging:
       other_tags: "Outras Tags"
       selector_tags: "etiquetas"
-      selector_all_tags: "todas as etiquetas"
       selector_no_tags: "sem etiquetas"
       selector_remove_filter: "remover filtro"
       tags: "Etiquetas"
@@ -3426,7 +3463,6 @@ pt:
         everyone_can_use: "Tags podem ser usadas por todos"
         usable_only_by_groups: "As tags são visíveis para todos, mas apenas os grupos a seguir podem usá-las"
         visible_only_to_groups: "As tags são visíveis apenas para os seguintes grupos"
-        cannot_save: "Não é possível salvar o grupo de tags. Verifique se há pelo menos uma tag presente, o nome do grupo de tags não está vazio e um grupo está selecionado para permissão de tags."
         tags_placeholder: "Pesquisar ou criar etiquetas"
         parent_tag_placeholder: "Opcional"
         disabled: "A etiquetagem está desativada. "
@@ -3482,6 +3518,8 @@ pt:
         other: "%{count} novos"
       more: "Mais"
       all_categories: "Todas as categorias"
+      categories_form_modal:
+        show_more: "Mostrar mais"
       edit_navigation_modal_form:
         filter_dropdown:
           all: "Tudo"
@@ -3525,6 +3563,8 @@ pt:
               content: "Tópicos"
             faq:
               content: "FAQ"
+            guidelines:
+              content: "Orientações"
             groups:
               content: "Grupos"
             users:
@@ -3554,7 +3594,9 @@ pt:
       spreadsheet:
         show: "Mostrar"
         about: "Sobre"
+    powered_by_discourse: "Alimentado pelo Discourse"
   admin_js:
+    settings: "Configurações"
     admin:
       title: "Administração Discourse"
       moderator: "Moderador"
@@ -3582,6 +3624,7 @@ pt:
         installed_version: "Instalado"
         latest_version: "Recentes"
         problems_found: "Alguns conselhos com base nas configurações atuais do seu site"
+        dismiss_notice: "Marcar Visto"
         new_features:
           learn_more: "Saiba mais..."
         last_checked: "Última verificação"
@@ -3825,6 +3868,8 @@ pt:
           timestamp: "Criado"
           completion: "Tempo de Resposta"
           actions: "Ações"
+          filter_status:
+            failed: "Falhado"
       home:
         title: "Início"
       account:
@@ -3869,11 +3914,36 @@ pt:
           screened_ips: "IPs Filtrados"
           screened_urls: "URLs Filtrados"
           search_logs: "Logs de Pesquisa"
-          security: "Segurança"
-          spam: "Spam"
+      section_landing_pages:
+        account:
+          title: "Conta"
+          backups:
+            title: "Fazer Cópias de Segurança"
+      config_areas:
+        about:
+          contact_url_placeholder: "https://johnny-smith.com/contact"
+          optional: "(opcional)"
+          update: "Atualização"
+          saved: "guardado!"
+        flags:
+          description: "Descrição"
+          enabled: "Ativado?"
+          edit: "Editar"
+          delete: "Eliminar"
+          delete_confirm: 'Tem certeza de que deseja excluir "%{name}"?'
+          flags_tab: "Sinalizações"
+          form:
+            save: "Guardar"
+            name: "Nome"
+            description: "Descrição"
+            invalid_applies_to: "Necessário"
+            topic: "tópicos"
+            post: "mensagens"
+        look_and_feel:
+          themes:
+            title: "Temas"
       plugins:
         title: "Plugins"
-        installed: "Plugins Instalados"
         name: "Nome"
         none_installed: "Não tem nenhum plugin instalado."
         version: "Versão"
@@ -3904,7 +3974,7 @@ pt:
         menu:
           backups: "Fazer Cópias de Segurança"
           logs: "Logs"
-        none: "Nenhuma cópia de segurança disponível."
+        none: "Nenhuma cópia de segurança disponível"
         read_only:
           enable:
             title: "Activar modo só de leitura"
@@ -3936,12 +4006,11 @@ pt:
           download:
             label: "Transferir"
             title: "Enviar mensagem com a hiperligação de transferência"
-            alert: "Foi-lhe enviada uma mensagem com uma hiperligação para transferir esta cópia de segurança."
+            alert: "Foi-lhe enviada uma mensagem com uma hiperligação para transferir esta cópia de segurança"
           destroy:
             title: "Remover a cópia de segurança"
             confirm: "Tem a certeza que deseja destruir esta cópia de segurança?"
           restore:
-            is_disabled: "A opção de restauro encontra-se desativada nas configurações do sítio."
             label: "Restaurar"
             title: "Restaurar a cópia de segurança"
             confirm: "Tem a certeza que deseja recuperar esta cópia de segurança?"
@@ -3950,7 +4019,6 @@ pt:
             title: "Reverter a base de dados para um estado anterior operacional"
             confirm: "Tem a certeza que pretende reverter a base de dados para o estado de funcionamento anterior?"
         location:
-          local: "Armazenamento Local"
           s3: "S3"
         backup_storage_error: "Falha ao acessar o armazenamento de backup: %{error_message}"
       export_csv:
@@ -4140,7 +4208,6 @@ pt:
             description: "Hiperligações, alguns botões, notificações, e cores acentuadas."
           quaternary:
             name: "quaternária"
-            description: "Hiperligações de navegação."
           header_background:
             name: "fundo do cabeçalho"
             description: "Cor de fundo do cabeçalho do sítio."
@@ -4703,6 +4770,7 @@ pt:
         file_types_list:
           add_image_types: "Imagens"
       badges:
+        status: Estado
         title: Crachás
         new_badge: Novo Crachá
         new: Novo
@@ -4710,8 +4778,6 @@ pt:
         badge: Crachá
         display_name: Exibir Nome
         description: Descrição
-        long_description: Descrição longa
-        badge_type: Tipo de Crachá
         badge_grouping: Grupo
         badge_groupings:
           modal_title: Grupos de Crachás
@@ -4740,8 +4806,8 @@ pt:
         icon: Ícone
         image: Imagem
         graphic: Gráfico
-        select_an_icon: "Selecione um Ícone"
-        upload_an_image: "Enviar uma Imagem"
+        select_an_icon: "Selecione um ícone"
+        upload_an_image: "Enviar uma imagem"
         query: Query do Crachá (SQL)
         target_posts: '"Query" direcionada a publicações'
         auto_revoke: Executar diariamente a "query" de revogação
@@ -4772,10 +4838,6 @@ pt:
             with_post: <span class="username">%{username}</span> pela publicação em %{link}
             with_post_time: <span class="username">%{username}</span> pela publicação em %{link} às <span class="time">%{time}</span>
             with_time: <span class="username">%{username}</span> às <span class="time">%{time}</span>
-        badge_intro:
-          title: "Selecione um crachá existente ou crie um novo para começar"
-          what_are_badges_title: "O que são os crachás?"
-          badge_query_examples_title: "Exemplos de queries de crachás"
       emoji:
         title: "Emoji"
         add: "Adicionar Novo Emoji"

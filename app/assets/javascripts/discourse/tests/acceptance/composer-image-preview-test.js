@@ -4,7 +4,6 @@ import { withPluginApi } from "discourse/lib/plugin-api";
 import {
   acceptance,
   count,
-  exists,
   invisible,
   query,
   visible,
@@ -141,10 +140,16 @@ acceptance("Composer - Image Preview", function (needs) {
     `
     );
 
-    assert.ok(
-      !exists("script"),
-      "it does not unescape script tags in code blocks"
+    // don't add controls to video uploads with dimensions in name
+    await fillIn(
+      ".d-editor-input",
+      "![SampleVideo_1280x720|video](upload://test.mp4)"
     );
+    assert.dom(".button-wrapper").doesNotExist();
+
+    assert
+      .dom("script")
+      .doesNotExist("it does not unescape script tags in code blocks");
   });
 
   test("Editing alt text (with enter key) for single image in preview updates alt text in composer", async function (assert) {
@@ -413,10 +418,9 @@ acceptance("Composer - Image Preview - Plugin API", function (needs) {
       "![image_example_0|666x500](upload://q4iRxcuSAzfnbUaCsbjMXcGrpaK.jpeg)"
     );
 
-    assert.ok(
-      exists(".image-wrapper .custom-button-class"),
-      "The custom button is added to the image preview wrapper"
-    );
+    assert
+      .dom(".image-wrapper .custom-button-class")
+      .exists("The custom button is added to the image preview wrapper");
 
     await click(".custom-button-class");
 

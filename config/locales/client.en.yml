@@ -17,12 +17,15 @@ en:
             kb: KB
             mb: MB
             tb: TB
+      percent: "%{count}%"
       short:
         thousands: "%{number}k"
         millions: "%{number}M"
     dates:
       # Use Moment.js format string: https://momentjs.com/docs/#/displaying/format/
       time: "h:mm a"
+      # Use Moment.js format string: https://momentjs.com/docs/#/displaying/format/
+      time_short: "h:mm"
       # Use Moment.js format string: https://momentjs.com/docs/#/displaying/format/
       time_with_zone: "hh:mm a (z)"
       # Use Moment.js format string: https://momentjs.com/docs/#/displaying/format/
@@ -156,7 +159,7 @@ en:
       topic_html: 'Topic: <span class="topic-title">%{topicTitle}</span>'
       post: "post #%{postNumber} by @%{username}"
       close: "close"
-      twitter: "Share on Twitter"
+      twitter: "Share on X"
       facebook: "Share on Facebook"
       email: "Send via email"
       url: "Copy and share URL"
@@ -225,6 +228,7 @@ en:
     broken_page_change_alert: "An onPageChange handler raised an error. Check the browser developer tools for more information."
 
     broken_plugin_alert: "Caused by plugin '%{name}'"
+    broken_transformer_alert: "There was an error. Your site may not work properly."
 
     critical_deprecation:
       notice: "<b>[Admin Notice]</b> One of your themes or plugins needs updating for compatibility with upcoming Discourse core changes."
@@ -295,6 +299,7 @@ en:
     now: "just now"
     read_more: "read more"
     more: "More"
+    more_options: "More options"
     x_more:
       one: "%{count} More"
       other: "%{count} More"
@@ -325,6 +330,7 @@ en:
       pm_title: "Suggested Messages"
 
     about:
+      edit: "Edit this page"
       simple_title: "About"
       title: "About %{title}"
       stats: "Site Statistics"
@@ -341,8 +347,67 @@ en:
       post_count: "Posts"
       user_count: "Sign-ups"
       active_user_count: "Active users"
+      visitor_count: "Visitors"
+      eu_visitor_count: "Visitors from European Union"
+      traffic_info_footer_MF: |
+        In the last 6 months, this site has served content to an estimated { total_visitors, plural,
+            one {# people}
+          other {# people}
+        } each month, with an estimated { eu_visitors, plural,
+            one {# people}
+          other {# people}
+        } from the European Union.
       contact: "Contact us"
-      contact_info: "In the event of a critical issue or urgent matter affecting this site, please contact us at %{contact_info}."
+      contact_info: "In the event of a critical issue or urgent matter affecting this site, please contact %{contact_info}."
+      site_activity: "Site activity"
+      view_more: "View more"
+      view_less: "View less"
+      activities:
+        topics:
+          one: "%{formatted_number} topic"
+          other: "%{formatted_number} topics"
+        posts:
+          one: "%{formatted_number} post"
+          other: "%{formatted_number} posts"
+        active_users:
+          one: "%{formatted_number} active user"
+          other: "%{formatted_number} active users"
+        sign_ups:
+          one: "%{formatted_number} sign-up"
+          other: "%{formatted_number} sign-ups"
+        likes:
+          one: "%{formatted_number} like"
+          other: "%{formatted_number} likes"
+        visitors_MF: |
+          { total_count, plural,
+              one {{total_formatted_number} visitor}
+            other {{total_formatted_number} visitors}
+          }, about { eu_count, plural,
+              one {{eu_formatted_number}}
+            other {{eu_formatted_number}}
+          } from the EU
+        periods:
+          last_7_days: "in the last 7 days"
+          today: "today"
+          all_time: "all time"
+      member_count:
+        one: "%{formatted_number} Member"
+        other: "%{formatted_number} Members"
+      admin_count:
+        one: "%{formatted_number} Admin"
+        other: "%{formatted_number} Admins"
+      moderator_count:
+        one: "%{formatted_number} Moderator"
+        other: "%{formatted_number} Moderators"
+      report_inappropriate_content: "If you come across any inappropriate content, don't hesitate to start a conversation with our moderators and admins. Remember to log in before reaching out."
+      site_age:
+        less_than_one_month: "Created < 1 month ago"
+        month:
+          one: "Created %{count} month ago"
+          other: "Created %{count} months ago"
+        year:
+          one: "Created %{count} year ago"
+          other: "Created %{count} years ago"
 
     bookmarked:
       title: "Bookmark"
@@ -407,12 +472,12 @@ en:
         name: "Clear Reminders"
         description:
           one: "Are you sure you want to clear the reminder for this bookmark?"
-          other: "Are you sure you want to clear the reminder for these <b>%{count}</b> bookmarks."
+          other: "Are you sure you want to clear the reminder for these <b>%{count}</b> bookmarks?"
       delete_bookmarks:
         name: "Delete Bookmark"
         description:
           one: "Are you sure you want to delete this bookmark?"
-          other: "Are you sure you want to delete these <b>%{count}</b> bookmarks."
+          other: "Are you sure you want to delete these <b>%{count}</b> bookmarks?"
 
     copy_codeblock:
       copied: "copied!"
@@ -753,7 +818,7 @@ en:
       never: "Never"
       last_custom: "Last custom datetime"
       custom: "Custom date and time"
-      custom_short: "Custom..."
+      more_options: "More options…"
       select_timeframe: "Select a timeframe"
 
     user_action:
@@ -867,16 +932,22 @@ en:
           imap_alpha_warning: "Warning: This is an alpha-stage feature. Only Gmail is officially supported. Use at your own risk!"
           imap_settings_valid: "IMAP settings valid."
           smtp_disable_confirm: "If you disable SMTP, all SMTP and IMAP settings will be reset and the associated functionality will be disabled. Are you sure you want to continue?"
-          imap_disable_confirm: "If you disable IMAP all IMAP settings will be reset and the associated functionality will be disabled. Are you sure you want to continue?"
+          imap_disable_confirm: "If you disable IMAP, all IMAP settings will be reset and the associated functionality will be disabled. Are you sure you want to continue?"
           imap_mailbox_not_selected: "You must select a Mailbox for this IMAP configuration or no mailboxes will be synced!"
           prefill:
             title: "Prefill with settings for:"
             gmail: "Gmail"
+            outlook: "Outlook.com"
+            office365: "Microsoft 365"
+          ssl_modes:
+            none: "None"
+            ssl_tls: "SSL/TLS"
+            starttls: "STARTTLS"
           credentials:
             title: "Credentials"
             smtp_server: "SMTP Server"
             smtp_port: "SMTP Port"
-            smtp_ssl: "Use SSL for SMTP"
+            smtp_ssl_mode: "SSL Mode"
             imap_server: "IMAP Server"
             imap_port: "IMAP Port"
             imap_ssl: "Use SSL for IMAP"
@@ -1076,7 +1147,6 @@ en:
     categories:
       categories_label: "categories"
       subcategories_label: "subcategories"
-      all_subcategories: "all subcategories"
       no_subcategories: "no subcategories"
       remove_filter: "remove filter"
       plus_more_count:
@@ -1142,6 +1212,7 @@ en:
       none: "(select an option)"
       required: 'Please enter a value for "%{name}"'
       same_as_password: "Your password should not be repeated in other fields."
+      optional: (optional)
 
     user:
       said: "%{username}:"
@@ -1198,7 +1269,10 @@ en:
       activity_stream: "Activity"
       read: "Read"
       read_help: "Recently read topics"
-      preferences: "Preferences"
+      preferences:
+        title: "Preferences"
+        profile:
+          enforced_required_fields: "You are required to provide additional information before continuing to use this site."
       feature_topic_on_profile:
         open_search: "Select a New Topic"
         title: "Select a Topic"
@@ -1418,25 +1492,25 @@ en:
             true {
               { UNREAD, plural,
                    =0 {}
-                  one {There is <a href='{basePath}/u/{username}/messages/group/{groupName}/unread'># unread</a>}
-                other {There are <a href='{basePath}/u/{username}/messages/group/{groupName}/unread'># unread</a>}
+                  one {There is <a href="{basePath}/u/{username}/messages/group/{groupName}/unread"># unread</a>}
+                other {There are <a href="{basePath}/u/{username}/messages/group/{groupName}/unread"># unread</a>}
               }
               { NEW, plural,
                    =0 {}
-                  one { and <a href='{basePath}/u/{username}/messages/group/{groupName}/new'># new</a> message remaining, or browse other messages in {groupLink}}
-                other { and <a href='{basePath}/u/{username}/messages/group/{groupName}/new'># new</a> messages remaining, or browse other messages in {groupLink}}
+                  one { and <a href="{basePath}/u/{username}/messages/group/{groupName}/new"># new</a> message remaining, or browse other messages in {groupLink}}
+                other { and <a href="{basePath}/u/{username}/messages/group/{groupName}/new"># new</a> messages remaining, or browse other messages in {groupLink}}
               }
             }
             false {
               { UNREAD, plural,
                    =0 {}
-                  one {There is <a href='{basePath}/u/{username}/messages/group/{groupName}/unread'># unread</a> message remaining, or browse other messages in {groupLink}}
-                other {There are <a href='{basePath}/u/{username}/messages/group/{groupName}/unread'># unread</a> messages remaining, or browse other messages in {groupLink}}
+                  one {There is <a href="{basePath}/u/{username}/messages/group/{groupName}/unread"># unread</a> message remaining, or browse other messages in {groupLink}}
+                other {There are <a href="{basePath}/u/{username}/messages/group/{groupName}/unread"># unread</a> messages remaining, or browse other messages in {groupLink}}
               }
               { NEW, plural,
                    =0 {}
-                  one {There is <a href='{basePath}/u/{username}/messages/group/{groupName}/new'># new</a> message remaining, or browse other messages in {groupLink}}
-                other {There are <a href='{basePath}/u/{username}/messages/group/{groupName}/new'># new</a> messages remaining, or browse other messages in {groupLink}}
+                  one {There is <a href="{basePath}/u/{username}/messages/group/{groupName}/new"># new</a> message remaining, or browse other messages in {groupLink}}
+                other {There are <a href="{basePath}/u/{username}/messages/group/{groupName}/new"># new</a> messages remaining, or browse other messages in {groupLink}}
               }
             }
             other {}
@@ -1451,25 +1525,25 @@ en:
             true {
               { UNREAD, plural,
                    =0 {}
-                  one {There is <a href='{basePath}/u/{username}/messages/unread'># unread</a>}
-                other {There are <a href='{basePath}/u/{username}/messages/unread'># unread</a>}
+                  one {There is <a href="{basePath}/u/{username}/messages/unread"># unread</a>}
+                other {There are <a href="{basePath}/u/{username}/messages/unread"># unread</a>}
               }
               { NEW, plural,
                    =0 {}
-                  one { and <a href='{basePath}/u/{username}/messages/new'># new</a> message remaining, or browse other <a href='{basePath}/u/{username}/messages'>personal messages</a>}
-                other { and <a href='{basePath}/u/{username}/messages/new'># new</a> messages remaining, or browse other <a href='{basePath}/u/{username}/messages'>personal messages</a>}
+                  one { and <a href="{basePath}/u/{username}/messages/new"># new</a> message remaining, or browse other <a href="{basePath}/u/{username}/messages">personal messages</a>}
+                other { and <a href="{basePath}/u/{username}/messages/new"># new</a> messages remaining, or browse other <a href="{basePath}/u/{username}/messages">personal messages</a>}
               }
             }
             false {
               { UNREAD, plural,
                    =0 {}
-                  one {There is <a href='{basePath}/u/{username}/messages/unread'># unread</a> message remaining, or browse other <a href='{basePath}/u/{username}/messages'>personal messages</a>}
-                other {There are <a href='{basePath}/u/{username}/messages/unread'># unread</a> messages remaining, or browse other <a href='{basePath}/u/{username}/messages'>personal messages</a>}
+                  one {There is <a href="{basePath}/u/{username}/messages/unread"># unread</a> message remaining, or browse other <a href="{basePath}/u/{username}/messages">personal messages</a>}
+                other {There are <a href="{basePath}/u/{username}/messages/unread"># unread</a> messages remaining, or browse other <a href="{basePath}/u/{username}/messages">personal messages</a>}
               }
               { NEW, plural,
                    =0 {}
-                  one {There is <a href='{basePath}/u/{username}/messages/new'># new</a> message remaining, or browse other <a href='{basePath}/u/{username}/messages'>personal messages</a>}
-                other {There are <a href='{basePath}/u/{username}/messages/new'># new</a> messages remaining, or browse other <a href='{basePath}/u/{username}/messages'>personal messages</a>}
+                  one {There is <a href="{basePath}/u/{username}/messages/new"># new</a> message remaining, or browse other <a href="{basePath}/u/{username}/messages">personal messages</a>}
+                other {There are <a href="{basePath}/u/{username}/messages/new"># new</a> messages remaining, or browse other <a href="{basePath}/u/{username}/messages">personal messages</a>}
               }
             }
             other {}
@@ -1540,6 +1614,7 @@ en:
           Two-factor authentication adds extra security to your account by requiring a one-time token in addition to your password. Tokens can be generated on <a href="https://www.google.com/search?q=authenticator+apps+for+android" target='_blank'>Android</a> and <a href="https://www.google.com/search?q=authenticator+apps+for+ios">iOS</a> devices.
         oauth_enabled_warning: "Please note that social logins will be disabled once two-factor authentication has been enabled on your account."
         use: "Use Authenticator app"
+        enforced_with_oauth_notice: "You are required to enable two-factor authentication. You will only be prompted to use this when logging in with a password, not with external authentication or social login methods."
         enforced_notice: "You are required to enable two-factor authentication before accessing this site."
         disable: "Disable"
         disable_confirm: "Are you sure you want to disable two-factor authentication?"
@@ -1668,7 +1743,7 @@ en:
         add_email: "Add Alternate Email"
         auth_override_instructions: "Email can be updated from authentication provider."
         no_secondary: "No secondary emails"
-        instructions: "Never shown to the public."
+        instructions: "Never shown to the public"
         admin_note: "Note: An admin user changing another non-admin user's email indicates the user has lost access to their original email account, so a reset password email will be sent to their new address. The user's email will not change until they complete the reset password process."
         ok: "We will email you to confirm"
         required: "Please enter an email address"
@@ -1692,16 +1767,25 @@ en:
           account_specific: "Your %{provider} account '%{account_description}' will be used for authentication."
           generic: "Your %{provider} account will be used for authentication."
 
+      activate_account:
+        action: "Click here to activate your account"
+        already_done: "Sorry, this account confirmation link is no longer valid. Perhaps your account is already active?"
+        please_continue: "Your new account is confirmed; you will be redirected to the home page."
+        continue_button: "Finish!"
+        welcome_to: "Welcome to %{site_name}!"
+        approval_required: "A moderator must manually approve your new account before you can access this forum. You'll get an email when your account is approved!"
+
       name:
         title: "Name"
-        instructions: "Your full name (optional)."
-        instructions_required: "Your full name."
+        title_optional: "Name (optional)"
+        instructions: "Your full name (optional)"
+        instructions_required: "Your full name"
         required: "Please enter a name"
         too_short: "Your name is too short"
         ok: "Your name looks good"
       username:
         title: "Username"
-        instructions: "Unique, no spaces, short."
+        instructions: "Unique, no spaces, short"
         short_instructions: "People can mention you as @%{username}"
         available: "Your username is available"
         not_available: "Not available. Try %{suggestion}?"
@@ -1881,14 +1965,26 @@ en:
           error: "There was an error generating Invite link"
 
         invite:
-          new_title: "Create Invite"
-          edit_title: "Edit Invite"
+          new_title: "Invite members"
+          edit_title: "Edit invite"
 
           instructions: "Share this link to instantly grant access to this site:"
-          copy_link: "copy link"
           expires_in_time: "Expires in %{time}"
           expired_at_time: "Expired at %{time}"
-
+          create_link_to_invite: "Create a link that can be shared to instantly grant access to this site."
+          copy_link_and_share_it: "Copy the link below and share it to instantly grant access to this site."
+          copy_link: "Copy link"
+          link_copied: "Link copied!"
+          share_link: "Share link"
+          link_validity_MF: |
+            Link is valid for up to { user_count, plural,
+                one {# user}
+              other {# users}
+            } and expires in { duration_days, plural,
+                one {# day}
+              other {# days}
+            }.
+          edit_link_options: "Edit link options."
           show_advanced: "Show Advanced Options"
           hide_advanced: "Hide Advanced Options"
 
@@ -1901,12 +1997,16 @@ en:
 
           add_to_groups: "Add to groups"
           invite_to_topic: "Arrive at topic"
-          expires_at: "Expire after"
-          custom_message: "Optional personal message"
+          expires_at: "Expire at"
+          expires_after: "Expire after"
+          custom_message: "Custom message"
+          custom_message_placeholder: "Add a personal note to your invitation"
 
           send_invite_email: "Save and Send Email"
           send_invite_email_instructions: "Restrict invite to email to send an invite email"
-          save_invite: "Save Invite"
+          save_invite: "Save"
+          cancel: "Cancel"
+          create_link: "Create link"
 
           invite_saved: "Invite saved."
 
@@ -1943,8 +2043,8 @@ en:
         same_as_email: "Your password is the same as your email."
         ok: "Your password looks good."
         instructions:
-          one: "At least %{count} character."
-          other: "At least %{count} characters."
+          one: "At least %{count} character"
+          other: "At least %{count} characters"
         required: "Please enter a password"
         confirm: "Confirm"
         incorrect_password: "The entered password is incorrect."
@@ -2032,6 +2132,9 @@ en:
         private_message: "message"
         the_topic: "the topic"
 
+      card: "User card"
+      profile_link: "%{username}, visit profile"
+
     user_status:
       save: "Save"
       set_custom_status: "Set custom status"
@@ -2086,6 +2189,26 @@ en:
     modal:
       close: "close"
       dismiss_error: "Dismiss error"
+    form_kit:
+      reset: Reset
+      optional: optional
+      errors_summary_title: "This form contains errors:"
+      dirty_form: "You didn't submit your changes! Are you sure you want to leave?"
+      errors:
+        required: "Required"
+        invalid_url: "Must be a valid URL"
+        not_an_integer: "Must be a whole number"
+        not_accepted: "Must be accepted"
+        not_a_number: "Must be a number"
+        too_high: "Must be at most %{count}"
+        too_low: "Must be at least %{count}"
+        too_long:
+          one: "Must be at most %{count} character"
+          other: "Must be at most %{count} characters"
+        too_short:
+          one: "Must be at least %{count} character"
+          other: "Must be at least %{count} characters"
+
     close: "Close"
     assets_changed_confirm: "This site just received a software update. Get the latest version now?"
     logout: "You were logged out."
@@ -2101,7 +2224,7 @@ en:
     logs_error_rate_notice:
       # This string uses the ICU Message Format. See https://meta.discourse.org/t/7035 for translation guidelines.
       reached_hour_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{ rate, plural,
+        <b>{relativeAge}</b> – <a href="{url}" target="_blank">{ rate, plural,
             one {# error/hour}
           other {# errors/hour}
         }</a> reached site setting limit of {limit, plural,
@@ -2111,7 +2234,7 @@ en:
 
       # This string uses the ICU Message Format. See https://meta.discourse.org/t/7035 for translation guidelines.
       reached_minute_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{ rate, plural,
+        <b>{relativeAge}</b> – <a href="{url}" target="_blank">{ rate, plural,
             one {# error/minute}
           other {# errors/minute}
         }</a> reached site setting limit of { limit, plural,
@@ -2121,7 +2244,7 @@ en:
 
       # This string uses the ICU Message Format. See https://meta.discourse.org/t/7035 for translation guidelines.
       exceeded_hour_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{ rate, plural,
+        <b>{relativeAge}</b> – <a href="{url}" target="_blank">{ rate, plural,
             one {# error/hour}
           other {# errors/hour}
         }</a> exceeded site setting limit of { limit, plural,
@@ -2131,7 +2254,7 @@ en:
 
       # This string uses the ICU Message Format. See https://meta.discourse.org/t/7035 for translation guidelines.
       exceeded_minute_MF: |
-        <b>{relativeAge}</b> – <a href='{url}' target='_blank'>{ rate, plural,
+        <b>{relativeAge}</b> – <a href="{url}" target="_blank">{ rate, plural,
             one {# error/minute}
           other {# errors/minute}
         }</a> exceeded site setting limit of { limit, plural,
@@ -2140,6 +2263,7 @@ en:
         }.
 
     learn_more: "Learn more…"
+    learn_more_with_link: "<a href='%{url}' target='_blank'>Learn more…</a>"
 
     mute: Mute
     unmute: Unmute
@@ -2180,8 +2304,8 @@ en:
         other: "There are <b>%{count}</b> replies."
       buttons:
         hide: "Hide summary"
-        generate: "Summarize with AI"
-        regenerate: "Regenerate summary"
+        generate: "Summarize"
+        regenerate: "Regenerate"
 
       # This string uses the ICU Message Format. See https://meta.discourse.org/t/7035 for translation guidelines.
       description_time_MF: |
@@ -2196,6 +2320,7 @@ en:
       enable: "Show top replies"
       disable: "Show All Posts"
       short_label: "Top replies"
+      show_all_label: "Show all"
       short_title: "Show this topic top replies: the most interesting posts as determined by the community"
 
     deleted_filter:
@@ -2227,12 +2352,18 @@ en:
 
     create_account:
       header_title: "Welcome!"
-      subheader_title: "Let's create your account"
       disclaimer: "By registering, you agree to the <a href='%{privacy_link}' target='blank'>privacy policy</a> and <a href='%{tos_link}' target='blank'>terms of service</a>."
-      title: "Create your account"
+      title: "Sign Up"
       failed: "Something went wrong, perhaps this email is already registered, try the forgot password link"
       associate: "Already have an account? <a href='%{associate_link}'>Log In</a> to link your %{provider} account."
       activation_title: "Activate your account"
+      already_have_account: "Already have an account?"
+      no_account_yet: "Don't have an account?"
+      progress_bar:
+        signup: "Sign Up"
+        activate: "Activate"
+        approve: "Approve"
+        login: "Log In"
 
     forgot_password:
       title: "Password Reset"
@@ -2268,8 +2399,7 @@ en:
 
     login:
       header_title: "Welcome back"
-      subheader_title: "Log in to your account"
-      title: "Log in"
+      title: "Log In"
       username: "User"
       password: "Password"
       show_password: "Show"
@@ -2312,6 +2442,7 @@ en:
       resend_activation_email: "Click here to send the activation email again."
       omniauth_disallow_totp: "Your account has two-factor authentication enabled. Please log in with your password."
 
+      activate_account: "Activate Account"
       resend_title: "Resend Activation Email"
       change_email: "Change Email Address"
       provide_new_email: "Provide a new address and we'll resend your confirmation email."
@@ -2369,7 +2500,6 @@ en:
       success: "Your account has been created and you're now logged in."
       name_label: "Name"
       password_label: "Password"
-      existing_user_can_redeem: "Redeem your invitation to a topic or group."
 
     password_reset:
       continue: "Continue to %{site_name}"
@@ -2384,6 +2514,7 @@ en:
 
     category_page_style:
       categories_only: "Categories Only"
+      categories_only_optimized: "Categories Only (Optimized)"
       categories_with_featured_topics: "Categories with Featured Topics"
       categories_and_latest_topics: "Categories and Latest Topics"
       categories_and_latest_topics_created_date: "Categories and Latest Topics (sort by topic created date)"
@@ -2403,8 +2534,8 @@ en:
 
     category_row:
       subcategory_count:
-        one: "+ %{count} subcategory"
-        other: "+ %{count} subcategories"
+        one: "+%{count} subcategory"
+        other: "+%{count} subcategories"
       topic_count:
         one: "%{count} topic in this category"
         other: "%{count} topics in this category"
@@ -2443,6 +2574,7 @@ en:
     file_size_input:
       error:
         size_too_large: "%{provided_file_size} is greater than the max allowed %{max_file_size}"
+        size_too_small: "%{provided_file_size} is smaller than the min allowed %{min_file_size}"
 
     emoji_picker:
       filter_placeholder: Search for emoji
@@ -2599,7 +2731,6 @@ en:
       show_toolbar: "show composer toolbar"
       hide_toolbar: "hide composer toolbar"
       modal_ok: "OK"
-      modal_cancel: "Cancel"
       cant_send_pm: "Sorry, you can't send a message to %{username}."
       create_message_error: "Sorry, there was an error creating that message. Please try again."
       yourself_confirm:
@@ -3618,7 +3749,9 @@ en:
       show_hidden: "View ignored content."
       deleted_by_author_simple: "(post deleted by author)"
       collapse: "collapse"
+      load_more_replies: "load more replies"
       sr_collapse_replies: "Collapse embedded replies"
+      sr_load_more_replies: "Load more embedded replies"
       sr_date: "Post date"
       sr_expand_replies:
         one: "This post has %{count} reply"
@@ -3913,6 +4046,8 @@ en:
       badge_colors: "Badge colors"
       background_color: "Background color"
       foreground_color: "Foreground color"
+      color_used: "Color in use"
+      predefined_colors: "Predefined color options"
       name_placeholder: "One or two words maximum"
       color_placeholder: "Any web color"
       delete_confirm: "Are you sure you want to delete this category?"
@@ -4024,7 +4159,7 @@ en:
       colors_disabled: "You can’t select colors because you have a category style of none."
 
     flagging:
-      title: "Thanks for helping to keep our community civil!"
+      title: "Thanks for keeping our community civil!"
       action: "Flag Post"
       take_action: "Take Action…"
       take_action_options:
@@ -4082,7 +4217,7 @@ en:
           other: "%{count} remaining"
 
     flagging_topic:
-      title: "Thanks for helping to keep our community civil!"
+      title: "Thanks for keeping our community civil!"
       action: "Flag Topic"
       notify_action: "Message"
 
@@ -4094,6 +4229,17 @@ en:
       clicks:
         one: "%{count} click"
         other: "%{count} clicks"
+      menu_titles:
+        replies: Most liked replies
+        views: Recent views
+      view_explainer: One view per unique visitor every 8 hours.
+      no_views: No view stats yet, check back later.
+      chart_error: Error rendering chart, please try again.
+      views: "Views"
+      predicted_views: "Predicted Views"
+      so_far: (so far)
+      read: read
+      minutes: min
     post_links:
       about: "expand more links for this post"
       title:
@@ -4136,36 +4282,33 @@ en:
     pending_posts:
       label: "Pending"
       label_with_count: "Pending (%{count})"
+    sr_topic_list_caption: Topic list, column headers with buttons are sortable.
 
     # This string uses the ICU Message Format. See https://meta.discourse.org/t/7035 for translation guidelines.
     posts_likes_MF: |
-      This topic has { count, plural,
-          one {# reply}
-        other {# replies}
-      } { ratio, select,
-          low {with a high like to post ratio}
-          med {with a very high like to post ratio}
-         high {with an extremely high like to post ratio}
+      { count, plural,
+          one {# reply,}
+        other {# replies,}
+      }{ ratio, select,
+          low { high like to post ratio,}
+          med { very high like to post ratio,}
+         high { extremely high like to post ratio,}
         other {}
-      }
+      } jump to the first or last post…
 
+    posters: "Posters"
     latest_poster_link: "%{username}'s profile, latest poster"
     original_post: "Original Post"
     views: "Views"
-    sr_views: "Sort by views"
     views_lowercase:
       one: "view"
       other: "views"
     replies: "Replies"
-    sr_replies: "Sort by replies"
     views_long:
       one: "this topic has been viewed %{count} time"
       other: "this topic has been viewed %{count} times"
     activity: "Activity"
-    sr_activity: "Sort by activity"
     likes: "Likes"
-    sr_likes: "Sort by likes"
-    sr_op_likes: "Sort by original post likes"
     likes_lowercase:
       one: "like"
       other: "likes"
@@ -4454,7 +4597,6 @@ en:
       all_tags: "All tags"
       other_tags: "Other Tags"
       selector_tags: "tags"
-      selector_all_tags: "all tags"
       selector_no_tags: "no tags"
       selector_remove_filter: "remove filter"
       tags: "Tags"
@@ -4561,7 +4703,7 @@ en:
         everyone_can_use: "Tags can be used by everyone"
         usable_only_by_groups: "Tags are visible to everyone, but only the following groups can use them"
         visible_only_to_groups: "Tags are visible only to the following groups"
-        cannot_save: "Cannot save tag group. Make sure that there is at least one tag present, tag group name is not empty, and a group is selected for tags permission."
+        cannot_save: "Cannot save tag group. Make sure that there is at least one tag present, tag group name is not empty and less than 100 characters, and a group is selected for tags permission."
         tags_placeholder: "Search or create tags"
         parent_tag_placeholder: "Optional"
         select_groups_placeholder: "Select groups…"
@@ -4641,8 +4783,10 @@ en:
     no_group_messages_title: "No group messages found"
 
     topic_entrance:
-      sr_jump_top_button: "Jump to the first post"
-      sr_jump_bottom_button: "Jump to the last post"
+      sr_jump_top_button: "Jump to the first post - %{date}"
+      sr_jump_bottom_button: "Jump to the last post - %{date}"
+      jump_top_button_title: "Jump to the first post"
+      jump_bottom_button_title: "Jump to the last post"
     fullscreen_table:
       expand_btn: "Expand Table"
       view_table: "View Table"
@@ -4668,6 +4812,7 @@ en:
           text: "and we'll automatically show this site's most popular categories"
         filter_placeholder: "Filter categories"
         no_categories: "There are no categories matching the given term."
+        show_more: "Show more"
       tags_form_modal:
         title: "Edit tags navigation"
         filter_placeholder: "Filter tags"
@@ -4774,6 +4919,9 @@ en:
             faq:
               content: "FAQ"
               title: "Guidelines for using this site"
+            guidelines:
+              content: "Guidelines"
+              title: "Guidelines for using this site"
             groups:
               content: "Groups"
               title: "List of available user groups"
@@ -4798,6 +4946,9 @@ en:
       panels:
         forum:
           label: Forum
+      back_to_forum: "Back to Forum"
+      collapse_all_sections: "Collapse all sections"
+      expand_all_sections: "Expand all sections"
       filter: "Filter..."
       clear_filter: "Clear filter"
       no_results:
@@ -4914,14 +5065,12 @@ en:
   admin_js:
     # This is a text input placeholder, keep the translation short
     type_to_filter: "type to filter…"
+    settings: "Settings"
 
     admin:
       title: "Discourse Admin"
       moderator: "Moderator"
-      back_to_forum: "Back to Forum"
       filter_reports: Filter reports
-      expand_all_sections: "Expand all sections"
-      collapse_all_sections: "Collapse all sections"
 
       tags:
         remove_muted_tags_from_latest:
@@ -4953,10 +5102,19 @@ en:
         installed_version: "Installed"
         latest_version: "Latest"
         problems_found: "Some advice based on your current site settings"
+        dismiss_notice: "Dismiss"
         new_features:
           title: "What's new"
+          subtitle: "We are releasing new features and improvements all the time. This page covers the highlights, but you can click 'Learn more' to see extensive release notes."
           previous_announcements: "You can see previous new feature announcements on <a href='%{url}' target='_blank'>Discourse Meta</a>"
           learn_more: "Learn more..."
+          experiment_enabled: "You have enabled the experimental feature."
+          experiment_disabled: "You have disabled the experimental feature."
+          experiment_toggled_too_fast: "You have toggled the experimental feature too fast. Please wait a few seconds before trying again."
+          experiment_tooltip:
+            title: "Try our experimental feature"
+            content: "Give our newest feature in development a spin! It's still in the experimental stage, so we might remove it at any time. You can opt-out whenever you like."
+
         last_checked: "Last checked"
         refresh_problems: "Refresh"
         no_problems: "No problems were found."
@@ -5033,6 +5191,8 @@ en:
               label: Category
             include_subcategories:
               label: "Include Subcategories"
+            type_of_web_hook_event:
+              label: "Type of event"
       flags:
         title: "Moderation Flags"
         description: "Description"
@@ -5041,7 +5201,6 @@ en:
           title: "More options"
           move_up: "Move up"
           move_down: "Move down"
-
       groups:
         new:
           title: "New Group"
@@ -5075,6 +5234,7 @@ en:
 
           membership:
             automatic: Automatic
+            automatic_tooltip: "This group is automatic, you cannot delete it and members are added and removed automatically"
             trust_levels_title: "Trust level automatically granted to members when they're added:"
             effects: Effects
             trust_levels_none: "None"
@@ -5339,6 +5499,7 @@ en:
         events:
           none: "There are no related events."
           redeliver: "Redeliver"
+          redeliver_failed: "Redeliver Failed"
           incoming:
             one: "There is a new event."
             other: "There are %{count} new events."
@@ -5348,6 +5509,10 @@ en:
           request: "Request"
           response: "Response"
           redeliver_confirm: "Are you sure you want to redeliver the same payload?"
+          redeliver_failed_confirm:
+            one: "Are you sure you want to redeliver %{count} webhook event?"
+            other: "Are you sure you want to redeliver %{count} webhook events?"
+          no_events_to_redeliver: "No events to redeliver."
           headers: "Headers"
           payload: "Payload"
           body: "Body"
@@ -5357,6 +5522,10 @@ en:
           timestamp: "Created"
           completion: "Completion Time"
           actions: "Actions"
+          filter_status:
+            all: "All Events"
+            successful: "Delivered"
+            failed: "Failed"
       home:
         title: "Home"
       account:
@@ -5381,7 +5550,6 @@ en:
           watched_words: "Watched Words"
           legal: "Legal"
           moderation_flags: "Moderation Flags"
-
 
       appearance:
         title: "Appearance"
@@ -5421,13 +5589,124 @@ en:
           screened_ips: "Screened IPs"
           screened_urls: "Screened URLs"
           search_logs: "Search Logs"
-          security: "Security"
-          spam: "Spam"
+          security: "Security settings"
+          spam: "Spam settings"
           staff_action_logs: "Staff Action Logs"
 
+      section_landing_pages:
+        account:
+          title: "Account"
+          backups:
+            title: "Backups"
+            description: "Take a backup of your site's data"
+          whats_new:
+            title: "What's New"
+            description: "Discover new releases and improvements to Discourse"
+
+      config_areas:
+        about:
+          header: "About your site"
+          description: "Provide information here about this site and your team so that people can learn what your community is about, who is behind it, and how to reach you in case there is an issue. Displayed on your site's <a href='%{basePath}/about'>About page</a>."
+          general_settings: "General settings"
+          community_name: "Community name"
+          community_name_placeholder: "Example Community"
+          community_summary: "Community summary"
+          community_description: "Community description"
+          banner_image: "Banner image"
+          banner_image_help: |
+            This will be used on your About page. Recommended size: 1100x300px. Accepted types: JPG, PNG, and SVG up to 10MB.
+          contact_information: "Contact information"
+          community_owner: "Community owner"
+          community_owner_placeholder: "Johnny Smith"
+          community_owner_help: |
+            Name used for critical notifications, and also displayed on /about. Visible to anonymous users on public sites.
+          contact_email: "Contact email"
+          contact_email_placeholder: "contact@johnny-smith.com"
+          contact_email_help: |
+            Email used for critical notifications, and also displayed on /about. Visible to anonymous users on public sites.
+          contact_url: "Contact URL"
+          contact_url_placeholder: "https://johnny-smith.com/contact"
+          contact_url_help: |
+            When present, replaces contact email address on /about and visible to anonymous users on public sites.
+          site_contact_name: "Site contact name"
+          site_contact_name_help: |
+            A staff username to send all automated messages from. If left blank, the default System account will be used.
+          site_contact_group: "Site contact group"
+          site_contact_group_help: |
+            The group that gets invited to all automatically sent private messages.
+          your_organization: "Organization name"
+          company_name: "Company name"
+          company_name_placeholder: "Sample Company Inc."
+          company_name_warning: |
+            If left blank, no boilerplate Terms of Service or Privacy Notice will be provided.
+          governing_law: "Governing law"
+          governing_law_placeholder: "State of New York"
+          governing_law_help: |
+            Specify the jurisdiction that governs the legal aspects of the site, including Terms of Service and Privacy Notice. This is typically the country or state where the company operating the site is registered or conducts business.
+          city_for_disputes: "City for disputes"
+          city_for_disputes_placeholder: "New York City"
+          city_for_disputes_help: |
+            Specify the city that will be used as the jurisdiction for resolving any disputes related to the use of this forum. This information is typically included in legal documents such as the forum's Terms of Service.
+          optional: "(optional)"
+          update: "Update"
+          toasts:
+            general_settings_saved: "General settings saved"
+            contact_information_saved: "Contact information saved"
+            your_organization_saved: "Your organization saved"
+          saved: "saved!"
+        flags:
+          header: "Moderation Flags"
+          edit_header: "Edit Flag"
+          subheader: "The flagging system in Discourse helps you and your moderator team manage content and user behavior, keeping your community respectful and healthy. The defaults are suitable for most communities and you don’t have to change them. However, if your site has particular requirements you can disable flags you don’t need and add your own custom flags."
+          description: "Description"
+          enabled: "Enabled?"
+          add: "Add Flag"
+          edit: "Edit"
+          back: "Back to flags"
+          delete: "Delete"
+          delete_confirm: 'Are you sure you want to delete "%{name}"?'
+          flags_tab: "Flags"
+          settings: "Flags Settings"
+          form:
+            add_header: "Add flag"
+            edit_header: "Edit flag"
+            save: "Save"
+            name: "Name"
+            description: "Description"
+            applies_to: "Display this flag on"
+            invalid_applies_to: "Required"
+            topic: "topics"
+            post: "posts"
+            chat_message: "chat messages"
+            enabled: "Enable this custom flag after saving"
+            alert: "Once a custom flag has been used, it can only be disabled but not edited or deleted."
+            edit_flag: "Edit flag"
+            non_editable: "You cannot edit this flag because it is a system flag or has already been used in the review system, however you can still disable it."
+            delete_flag: "Delete flag"
+            non_deletable: "You cannot delete this flag because it is a system flag or has already been used in the review system, however you can still disable it."
+            require_message: "Prompt users to provide additional reasons"
+            require_message_description: "When this flag is selected, a text field will be displayed for the user to provide additional detail about why they are flagging the content"
+            auto_action_type: "Auto hide flagged content"
+          more_options:
+            title: "More options"
+            move_up: "Move up"
+            move_down: "Move down"
+        look_and_feel:
+          title: "Look & feel"
+          description: "Themes, components, and color schemes can be used to customise and brand your Discourse site, giving it a distinctive style."
+          themes:
+            title: "Themes"
+            themes_intro: "Install a new theme to get started, or create your own from scratch using these resources."
+            themes_intro_img_alt: "New theme placeholder"
+            set_default_theme: "Set default"
+            default_theme: "Default theme"
+            themes_description: "Themes are expansive customizations that change multiple elements of the style of your forum design, and often also include additional front-end features."
+            new_theme: "New theme"
+            user_selectable: "User selectable"
       plugins:
         title: "Plugins"
-        installed: "Installed Plugins"
+        installed: "Installed plugins"
+        description: "Any Discourse plugins that you have installed, or plugins that come preinstalled with Discourse hosting, will appear in this list."
         name: "Name"
         none_installed: "You don't have any plugins installed."
         version: "Version"
@@ -5468,10 +5747,14 @@ en:
 
       backups:
         title: "Backups"
+        files_title: "Backup files"
+        description: "Discourse backups include the full site database, which contains everything on the site: topics, posts, users, groups, settings, themes, etc. Depending on how the backup file is created, it may or may not include uploads."
+        learn_more_url: ""
         menu:
           backups: "Backups"
+          backup_files: "Backup files"
           logs: "Logs"
-        none: "No backup available."
+        none: "No backup available"
         read_only:
           enable:
             title: "Enable read-only mode"
@@ -5509,12 +5792,12 @@ en:
           download:
             label: "Download"
             title: "Send email with download link"
-            alert: "A link to download this backup has been emailed to you."
+            alert: "A link to download this backup has been emailed to you"
           destroy:
             title: "Remove the backup"
             confirm: "Are you sure you want to destroy this backup?"
           restore:
-            is_disabled: "Restore is disabled in the site settings."
+            is_disabled: "Restore is currently disabled. To enable it, visit the <a href='%{url}'>site settings</a>."
             label: "Restore"
             title: "Restore the backup"
             confirm: "Are you sure you want to restore this backup?"
@@ -5523,7 +5806,7 @@ en:
             title: "Rollback the database to previous working state"
             confirm: "Are you sure you want to rollback the database to the previous working state?"
         location:
-          local: "Local Storage"
+          local: "Local storage"
           s3: "S3"
         backup_storage_error: "Failed to access backup storage: %{error_message}"
 
@@ -5592,6 +5875,8 @@ en:
           theme_name: "Theme name"
           component_name: "Component name"
           themes_intro: "Select an existing theme or install a new one to get started"
+          themes_intro_new: "Install a new theme to get started, or create your own from scratch using these resources."
+          themes_intro_img_alt: "New theme placeholder"
           beginners_guide_title: "Beginner’s guide to using Discourse Themes"
           developers_guide_title: "Developer’s guide to Discourse Themes"
           browse_themes: "Browse community themes"
@@ -5639,6 +5924,9 @@ en:
           convert_theme_alert_generic: "Are you sure you want to convert this theme to component?"
           convert_theme_tooltip: "Convert this theme to component"
           inactive_themes: "Inactive themes:"
+          set_default_theme: "Set default"
+          default_theme: "Default theme"
+          set_default_success: "Default theme set to %{theme}"
           inactive_components: "Unused components:"
           selected:
             one: "%{count} selected"
@@ -5829,7 +6117,7 @@ en:
             description: "Links, some buttons, notifications, and accent color."
           quaternary:
             name: "quaternary"
-            description: "Navigation links."
+            description: "For optional use in themes."
           header_background:
             name: "header background"
             description: "Background color of the site's header."
@@ -6102,6 +6390,19 @@ en:
             delete_watched_word_group: "delete watched word group"
             toggle_flag: "toggle flag"
             move_flag: "move flag"
+            create_flag: "create flag"
+            update_flag: "update flag"
+            delete_flag: "delete flag"
+            topic_slow_mode_set: "set topic slow mode"
+            topic_slow_mode_removed: "remove topic slow mode"
+            custom_emoji_create: "create custom emoji"
+            custom_emoji_destroy: "delete custom emoji"
+            delete_post_permanently: "permanently delete post"
+            delete_topic_permanently: "permanently delete topic"
+            tag_group_create: "create tag group"
+            tag_group_destroy: "delete tag group"
+            tag_group_change: "change tag group"
+            delete_associated_accounts: "delete associated accounts"
         screened_emails:
           title: "Screened Emails"
           description: "When someone tries to create a new account, the following email addresses will be checked and the registration will be blocked, or some other action performed."
@@ -6331,6 +6632,9 @@ en:
         check_sso:
           title: "Reveal SSO payload"
           text: "Show"
+        delete_associated_accounts:
+          title: "Delete all associated accounts for this user"
+          text: "Delete associated accounts"
 
       user:
         suspend_failed: "Something went wrong suspending this user %{error}"
@@ -6448,6 +6752,7 @@ en:
         post_edits_count: "Post Edits"
         anonymize: "Anonymize User"
         anonymize_confirm: "Are you SURE you want to anonymize this account? This will change the username and email, and reset all profile information."
+        delete_associated_accounts_confirm: "Are you SURE you want to delete all associated accounts from this account? The user may not be able to log in if their email has changed."
         anonymize_yes: "Yes, anonymize this account"
         anonymize_failed: "There was a problem anonymizing the account."
         delete: "Delete User"
@@ -6624,9 +6929,13 @@ en:
           title: "Field Requirement"
           optional:
             title: "Optional"
+          for_all_users:
+            title: "For all users"
+            description: "When new users sign up, they must fill out this field. When existing users return to the site and this is a new required field for them, they will also be prompted to fill it out. To re-prompt all users, delete this custom field and re-create it."
           on_signup:
             title: "On signup"
             description: "When new users sign up, they must fill out this field. Existing users are unaffected."
+          confirmation: "This will prompt existing users to fill in this field and will not allow them to do anything else on your site until the field is filled. Proceed?"
         editable:
           title: "Editable after signup"
           enabled: "editable"
@@ -6661,6 +6970,8 @@ en:
         recommended: "We recommend customizing the following text to suit your needs:"
         show_overriden: "Only show overridden"
         show_outdated: "Only show outdated/invalid"
+        show_untranslated: "Only show untranslated"
+        only_show_selected_locale: "Only show results in selected locale"
         locale: "Language:"
         more_than_50_results: "There are more than 50 results. Please refine your search."
         no_results: "No matching site texts found"
@@ -6677,6 +6988,9 @@ en:
         history: "View change history"
         reset: "reset"
         none: "none"
+        save: "save"
+        cancel: "cancel"
+        unmask: "unmask input"
       site_settings:
         emoji_list:
           invalid_input: "Emoji list should only contain valid emoji names, eg: hugs"
@@ -6750,17 +7064,36 @@ en:
           add_types_title: "Allow extensions %{types}"
           add_types_toast: "%{types} file types added"
         mandatory_group: "Group is mandatory"
+        requires_confirmation_messages:
+          default:
+            prompt: "Changing this setting may have far-reaching or unintended consequences for your site. Are you sure you want to proceed?"
+            confirm: "Yes, I'm sure"
+          min_password_length:
+            prompt: "You’re about to change your password policy. This will affect all users changing their passwords from now on. Are you sure you want to proceed?"
+            confirm: "Yes, update password policy"
+          min_admin_password_length:
+            prompt: "You’re about to change your password policy. This will affect all admins changing their passwords from now on. Are you sure you want to proceed?"
+            confirm: "Yes, update password policy"
+          password_unique_charactes:
+            prompt: "You’re about to change your password policy. This will affect all users changing their passwords from now on. Are you sure you want to proceed?"
+            confirm: "Yes, update password policy"
+          block_common_passwords:
+            prompt: "You’re about to change your password policy. This will affect all users changing their passwords from now on. Are you sure you want to proceed?"
+            confirm: "Yes, update password policy"
 
       badges:
+        status: Status
         title: Badges
+        page_description: Badges reward users for their activities, contributions, and achievements to recognize, validate, and encourage positive behavior and engagement within the community.
         new_badge: New Badge
         new: New
         name: Name
         badge: Badge
         display_name: Display Name
         description: Description
-        long_description: Long Description
-        badge_type: Badge Type
+        long_description: Long description
+        badge_type: Badge type
+        group_settings: Group Settings
         badge_grouping: Group
         badge_groupings:
           modal_title: Badge Groupings
@@ -6789,10 +7122,10 @@ en:
         icon: Icon
         image: Image
         graphic: Graphic
+        icon_or_image: A badge requires an icon or an image
         icon_help: "Enter a Font Awesome icon name (use prefix 'far-' for regular icons and 'fab-' for brand icons)"
-        image_help: "Uploading an image overrides icon field if both are set."
-        select_an_icon: "Select an Icon"
-        upload_an_image: "Upload an Image"
+        select_an_icon: "Select an icon"
+        upload_an_image: "Upload an image"
         read_only_setting_help: "Customize text"
         query: Badge Query (SQL)
         target_posts: Query targets posts
@@ -6825,9 +7158,8 @@ en:
             with_post_time: <span class="username">%{username}</span> for post in %{link} at <span class="time">%{time}</span>
             with_time: <span class="username">%{username}</span> at <span class="time">%{time}</span>
         badge_intro:
-          title: "Select an existing badge or create a new one to get started"
-          what_are_badges_title: "What are badges?"
-          badge_query_examples_title: "Badge query examples"
+          title: "Choose a badge or create a new one"
+          description: "Start by selecting an existing badge to customize, or create a brand new badge"
         mass_award:
           title: Bulk Award
           description: Award the same badge to many users at once.
@@ -6840,7 +7172,7 @@ en:
             other: "Your CSV was received and %{count} users will receive their badge shortly."
           csv_has_unmatched_users: "The following entries are in the CSV file but they couldn't be matched to existing users, and therefore won't receive the badge:"
           csv_has_unmatched_users_truncated_list:
-            one: "There was %{count} entry in the CSV file that couldn't be matched to existing users, and therefore won't receive the badge. Due to the large number of unmatched entries, only the first 100 are shown:"
+            one: "There was %{count} entry in the CSV file that couldn't be matched to existing users, and therefore won't receive the badge."
             other: "There were %{count} entries in the CSV file that couldn't be matched to existing users, and therefore won't receive the badge. Due to the large number of unmatched entries, only the first 100 are shown:"
           replace_owners: Remove the badge from previous owners
           grant_existing_holders: Grant additional badges to existing badge holders

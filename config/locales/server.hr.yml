@@ -433,6 +433,8 @@ hr:
         raw: "Tijelo"
       user_profile:
         bio_raw: "O meni"
+      user:
+        password: "Lozinka"
     errors:
       models:
         topic:
@@ -456,6 +458,15 @@ hr:
             ip_address:
               blocked: "Nove registracije nisu dopuštene s vaše IP adrese."
               max_new_accounts_per_registration_ip: "Nove registracije nisu dopuštene s vaše IP adrese (dostignuto je maksimalno ograničenje). Kontaktirajte člana osoblja."
+        user_password:
+          attributes:
+            password:
+              common: "je jedna od 10000 najčešćih zaporki. Molimo odaberite sigurniju zaporku."
+              same_as_username: "je ista kao vaše korisničko ime. Molimo upotrijebite sigurniju lozinku."
+              same_as_email: "je ista kao vaš email. Molimo upotrijebite sigurniju lozinku."
+              same_as_current: "je ista kao vaša trenutna lozinka."
+              same_as_name: "je ista kao vaše ime."
+              unique_characters: "ima previše ponovljenih znakova. Molimo upotrijebite sigurniju lozinku."
         color_scheme_color:
           attributes:
             hex:
@@ -683,11 +694,7 @@ hr:
   associated_accounts:
     connected: "(povezano)"
   activation:
-    action: "Kliknite ovdje kako bi aktivirali vaš korisnički račun"
     already_done: "Žao nam je, poveznica za aktivaciju računa više nije važeća. Možda vam je račun već aktivan?"
-    please_continue: "Vaš novi račun je potvrđen, biti će te preusmjereni na glavnu stranicu."
-    continue_button: "Nastavite na %{site_name}"
-    welcome_to: "Dobrodošli na %{site_name}"
     approval_required: "Moderator vam mora ručno odobriti račun da bi mogli pristupiti ovom forumu. Dobiti će te email kad vam račun bude odobren!"
     missing_session: "Ne možemo utvrditi je li vaš korisnički račun kreiran, molimo osigurajte da su vam omogućeni cookieji (kolačići)."
     activated: "Žao nam je, ovaj korisnički račun je već aktiviran."
@@ -867,11 +874,11 @@ hr:
     trust_level_growth:
       yaxis: "Dan"
     consolidated_page_views:
-      title: "Konsolidirani prikazi stranica"
+      title_legacy: "Konsolidirani prikazi stranica"
       xaxis:
         page_view_logged_in: "Prijavljeni korisnici"
       yaxis: "Dan"
-      description: "Prikazi stranica za prijavljene korisnike, anonimne korisnike i alate za indeksiranje."
+      description_legacy: "Prikazi stranica za prijavljene korisnike, anonimne korisnike i alate za indeksiranje."
       labels:
         post: Objava
         editor: Urednik
@@ -883,6 +890,8 @@ hr:
         user_api: "Korisnički API"
       yaxis: "Dan"
     consolidated_page_views_browser_detection:
+      yaxis: "Dan"
+    site_traffic:
       yaxis: "Dan"
     dau_by_mau:
       xaxis: "Dan"
@@ -1011,6 +1020,9 @@ hr:
       xaxis: "Dan"
       yaxis: "Ukupni broj prikaza stranice"
       description: "Broj novih prikaza stranica od svih posjetitelja."
+    page_view_legacy_total_reqs:
+      xaxis: "Dan"
+      yaxis: "Ukupni broj prikaza stranice"
     page_view_logged_in_mobile_reqs:
       title: "Prijavljeni prikazi stranica"
       xaxis: "Dan"
@@ -1069,6 +1081,8 @@ hr:
         user_agent: "Korisnički agent"
         page_views: "Pregledi stranica"
       description: "Popis korisničkih agenata alata za indeksiranje, poredanih po prikazima stranica."
+    web_hook_events_daily_aggregate:
+      xaxis: "Dan"
     suspicious_logins:
       title: "Sumnjive prijave"
       labels:
@@ -1095,6 +1109,12 @@ hr:
       labels:
         user: Korisnik
         qtt_like: Like-ova primljeno
+    topic_view_stats:
+      labels:
+        topic: Tema
+        logged_in_views: Prijavljeni
+        anon_views: Anonimno
+        total_views: Ukupno
   dashboard:
     problem:
       rails_env: "Server vam radi na %{env} način."
@@ -1385,7 +1405,6 @@ hr:
     allowed_href_schemes: "Sheme dopuštene u vezama uz http i https."
     embed_post_limit: "Maksimalan broj postova za ugradnju."
     embed_username_required: "Potrebno je korisničko ime za kreiranje teme."
-    delete_merged_stub_topics_after_days: "Broj dana čekanja prije automatskog brisanja potpuno spojenih tema. Postavite na 0 da nikada ne brišete nezavršene teme."
     prevent_anons_from_downloading_files: "Spriječite anonimne korisnike u preuzimanju privitaka."
     secure_uploads: 'Ograničava pristup SVIM prijenosima (slike, video, audio, tekst, pdf-ovi, zipovi i ostalo). Ako je "potrebna prijava" omogućena, samo prijavljeni korisnici mogu pristupiti učitavanjima. U suprotnom, pristup će biti ograničen samo na učitavanje medija u privatnim porukama i privatnim kategorijama. UPOZORENJE: Ova je postavka složena i zahtijeva duboko administrativno razumijevanje. Pogledajte <a target="_blank" href="https://meta.discourse.org/t/-/140017">sigurnu učitava temu na Meta</a> za detalje.'
     secure_uploads_allow_embed_images_in_emails: "Omogućuje ugrađivanje sigurnih slika koje bi se inače redigirale u e-porukama, ako je njihova veličina manja od postavke 'maksimalna veličina slike za ugrađivanje e-pošte u sigurne prijenose kb'."
@@ -1414,6 +1433,7 @@ hr:
     suppress_overlapping_tags_in_list: "Ako oznake odgovaraju točnim riječima u naslovima tema, nemojte prikazivati oznaku"
     remove_muted_tags_from_latest: "Ne prikazuj teme označene samo prigušenim oznakama na najnovijem popisu tema."
     force_lowercase_tags: "Prisilno navedite da sve nove oznake budu ispisane malim slovima."
+    watched_precedence_over_muted: "Obavijesti me o temama u kategorijama ili oznakama koje pratim, a koje također pripadaju onoj koju sam utišao."
     shared_drafts_category: "Omogućite značajku Dijeljene skice određivanjem kategorije za skice tema. Teme u ovoj kategoriji bit će potisnute s popisa tema za korisnike osoblja."
     shared_drafts_min_trust_level: "Dopustite korisnicima da vide i uređuju dijeljene skice."
     push_notifications_prompt: "Prikaži banner pristanka korisnika za push obavijesti. Ova postavka pokreće upit koji od korisnika traži dopuštenje za slanje push obavijesti. Pojavljuje se samo kada push obavijesti nisu već omogućene, podržava ih korisnikov uređaj i korisnik je ili objavio objavu ili koristi progresivnu web-aplikaciju (PWA). Upit se neće ponovno prikazati ako ga je korisnik već odbacio ili dao/odbio dopuštenje."
@@ -2257,6 +2277,8 @@ hr:
     boolean_yes: "Da"
     boolean_no: "Ne"
     rate_limit_error: "Objave mogu biti preuzimane jednom na dan, molimo pokušajte sutra."
+  guidelines_topic:
+    guidelines_title: "Vodić za uporabu"
   tos_topic:
     title: "Uvjeti korištenja"
   privacy_topic:
@@ -2335,7 +2357,12 @@ hr:
       privacy:
         fields:
           login_required:
-            placeholder: "Privatno"
+            label: "Vidljivost"
+            choices:
+              public:
+                label: "Javnost"
+              private:
+                label: "Privatno"
           chat_enabled:
             placeholder: "Omogući chat"
       styling:

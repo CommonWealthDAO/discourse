@@ -2,15 +2,15 @@
 
 module Jobs
   module Chat
-    class AutoJoinChannelBatch < ServiceJob
+    class AutoJoinChannelBatch < ::Jobs::Base
       def execute(args)
-        with_service(::Chat::AutoJoinChannelBatch, **args) do
+        ::Chat::AutoJoinChannelBatch.call(params: args) do
           on_failure { Rails.logger.error("Failed with unexpected error") }
           on_failed_contract do |contract|
             Rails.logger.error(contract.errors.full_messages.join(", "))
           end
-          on_model_not_found(:channel) do
-            Rails.logger.error("Channel not found (id=#{result.contract.channel_id})")
+          on_model_not_found(:channel) do |params:|
+            Rails.logger.error("Channel not found (id=#{params.channel_id})")
           end
         end
       end

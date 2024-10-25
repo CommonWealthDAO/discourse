@@ -186,7 +186,18 @@ end
 PER_SPEC_TIMEOUT_SECONDS = 45
 BROWSER_READ_TIMEOUT = 30
 
+# To avoid erasing `any_instance` from Mocha
+require "rspec/mocks/syntax"
+RSpec::Mocks::Syntax.singleton_class.define_method(:enable_should) { |*| nil }
+RSpec::Mocks::Syntax.singleton_class.define_method(:disable_should) { |*| nil }
+
+RSpec::Mocks::ArgumentMatchers.remove_method(:hash_including) # We’re currently relying on the version from Webmock
+
 RSpec.configure do |config|
+  config.expect_with :rspec do |c|
+    c.syntax = :expect
+  end
+
   config.fail_fast = ENV["RSPEC_FAIL_FAST"] == "1"
   config.silence_filter_announcements = ENV["RSPEC_SILENCE_FILTER_ANNOUNCEMENTS"] == "1"
   config.extend RedisSnapshotHelper
@@ -200,15 +211,23 @@ RSpec.configure do |config|
   config.include SiteSettingsHelpers
   config.include SidekiqHelpers
   config.include UploadsHelpers
+  config.include BackupsHelpers
   config.include OneboxHelpers
   config.include FastImageHelpers
-  config.include WithServiceHelper
   config.include ServiceMatchers
   config.include I18nHelpers
 
-  config.mock_framework = :mocha
   config.order = "random"
   config.infer_spec_type_from_file_location!
+
+  config.mock_with :rspec do |mocks|
+    mocks.verify_partial_doubles = true
+    mocks.verify_doubled_constant_names = true
+    mocks.syntax = :expect
+  end
+  config.mock_with MultiMock::Adapter.for(:mocha, :rspec)
+
+  config.include Mocha::API
 
   if ENV["GITHUB_ACTIONS"]
     # Enable color output in GitHub Actions
@@ -239,13 +258,28 @@ RSpec.configure do |config|
   # rspec-rails.
   config.infer_base_class_for_anonymous_controllers = true
 
-  config.full_cause_backtrace = true
+  # Shows more than one line of backtrace in case of an error or spec failure.
+  config.full_cause_backtrace = false
+
+  # Sometimes the backtrace is quite big for failing specs, this will
+  # remove rspec/gem paths from the backtrace so it's easier to see the
+  # actual application code that caused the failure.
+  if ENV["RSPEC_EXCLUDE_NOISE_IN_BACKTRACE"]
+    config.backtrace_exclusion_patterns = [
+      %r{/lib\d*/ruby/},
+      %r{bin/},
+      /gems/,
+      %r{spec/spec_helper\.rb},
+      %r{spec/rails_helper\.rb},
+      %r{lib/rspec/(core|expectations|matchers|mocks)},
+    ]
+  end
 
   config.before(:suite) do
     CachedCounting.disable
 
     begin
-      ActiveRecord::Migration.check_pending!
+      ActiveRecord::Migration.check_all_pending!
     rescue ActiveRecord::PendingMigrationError
       raise "There are pending migrations, run RAILS_ENV=test bin/rake db:migrate"
     end
@@ -291,6 +325,16 @@ RSpec.configure do |config|
             ["discoursetest"]
           end
         )
+
+      test_i = ENV["TEST_ENV_NUMBER"].to_i
+
+      data_dir = "#{Rails.root}/tmp/test_data_#{test_i}/minio"
+      FileUtils.rm_rf(data_dir)
+      FileUtils.mkdir_p(data_dir)
+      minio_runner_config.minio_data_directory = data_dir
+
+      minio_runner_config.minio_port = 9_000 + 2 * test_i
+      minio_runner_config.minio_console_port = 9_001 + 2 * test_i
     end
 
     WebMock.disable_net_connect!(
@@ -386,6 +430,7 @@ RSpec.configure do |config|
         .new(logging_prefs: { "browser" => browser_log_level, "driver" => "ALL" })
         .tap do |options|
           apply_base_chrome_options(options)
+          options.add_argument("--disable-search-engine-choice-screen")
           options.add_argument("--window-size=1400,1400")
           options.add_preference("download.default_directory", Downloads::FOLDER)
         end
@@ -412,6 +457,7 @@ RSpec.configure do |config|
       Selenium::WebDriver::Chrome::Options
         .new(logging_prefs: { "browser" => browser_log_level, "driver" => "ALL" })
         .tap do |options|
+          options.add_argument("--disable-search-engine-choice-screen")
           options.add_emulation(device_name: "iPhone 12 Pro")
           options.add_argument(
             '--user-agent="--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/36.0  Mobile/15E148 Safari/605.1.15"',
@@ -430,11 +476,34 @@ RSpec.configure do |config|
       Capybara::Selenium::Driver.new(app, **mobile_driver_options)
     end
 
-    if ENV["ELEVATED_UPLOADS_ID"]
-      DB.exec "SELECT setval('uploads_id_seq', 10000)"
-    else
-      DB.exec "SELECT setval('uploads_id_seq', 1)"
+    migrate_column_to_bigint(AllowedPmUser, :allowed_pm_user_id)
+    migrate_column_to_bigint(Bookmark, :bookmarkable_id)
+    migrate_column_to_bigint(IgnoredUser, :ignored_user_id)
+    migrate_column_to_bigint(PostAction, :post_action_type_id)
+    migrate_column_to_bigint(Reviewable, :target_id)
+    migrate_column_to_bigint(ReviewableHistory, :reviewable_id)
+    migrate_column_to_bigint(ReviewableScore, :reviewable_id)
+    migrate_column_to_bigint(ReviewableScore, :reviewable_score_type)
+    migrate_column_to_bigint(SidebarSectionLink, :linkable_id)
+    migrate_column_to_bigint(SidebarSectionLink, :sidebar_section_id)
+    migrate_column_to_bigint(User, :last_seen_reviewable_id)
+    migrate_column_to_bigint(User, :required_fields_version)
+
+    $columns_to_migrate_to_bigint.each do |model, column|
+      if model.is_a?(String)
+        DB.exec("ALTER TABLE #{model} ALTER #{column} TYPE bigint")
+      else
+        DB.exec("ALTER TABLE #{model.table_name} ALTER #{column} TYPE bigint")
+        model.reset_column_information
+      end
     end
+
+    # Sets sequence's value to be greater than the max value that an INT column can hold. This is done to prevent
+    # type mistmatches for foreign keys that references a column of type BIGINT. We set the value to 10_000_000_000
+    # instead of 2**31-1 so that the values are easier to read.
+    DB
+      .query("SELECT sequence_name FROM information_schema.sequences WHERE data_type = 'bigint'")
+      .each { |row| DB.exec "SELECT setval('#{row.sequence_name}', '10000000000')" }
 
     # Prevents 500 errors for site setting URLs pointing to test.localhost in system specs.
     SiteIconManager.clear_cache!
@@ -519,33 +588,31 @@ RSpec.configure do |config|
       end
     end
 
-    # This is a monkey patch for the `Selenium::WebDriver::Platform.localhost` method in `selenium-webdriver`. For some
+    # This is a monkey patch for the `Capybara.using_session` method in `capybara`. For some
     # unknown reasons on Github Actions, we are seeing system tests failing intermittently with the error
-    # `Socket::ResolutionError: getaddrinfo: Temporary failure in name resolution` when `selenium-webdriver` tries to
-    # resolve `localhost` in a `Capybara#using_session` block.
+    # `Socket::ResolutionError: getaddrinfo: Temporary failure in name resolution` when the app tries to resolve
+    # `localhost` from within a `Capybara#using_session` block.
     #
     # Too much time has been spent trying to debug this issue and the root cause is still unknown so we are just dropping
-    # this workaround for now.
-    module Selenium
-      module WebDriver
-        module Platform
-          def self.localhost_with_retry
-            attempts = 0
-
-            begin
-              localhost_without_retry
-            rescue Socket::ResolutionError
-              attempts += 1
-              attempts <= 3 ? retry : raise
-            end
-          end
+    # this workaround for now where we will retry the block once before raising the error.
+    #
+    # Potentially related: https://bugs.ruby-lang.org/issues/20172
+    module Capybara
+      class << self
+        def using_session_with_localhost_resolution(name, &block)
+          attempts = 0
+          self._using_session(name, &block)
+        rescue Socket::ResolutionError
+          puts "Socket::ResolutionError error encountered... Current thread count: #{Thread.list.size}"
+          attempts += 1
+          attempts <= 1 ? retry : raise
         end
       end
     end
 
-    Selenium::WebDriver::Platform.singleton_class.class_eval do
-      alias_method :localhost_without_retry, :localhost
-      alias_method :localhost, :localhost_with_retry
+    Capybara.singleton_class.class_eval do
+      alias_method :_using_session, :using_session
+      alias_method :using_session, :using_session_with_localhost_resolution
     end
   end
 
@@ -624,6 +691,33 @@ RSpec.configure do |config|
     BlockRequestsMiddleware.current_example_location = example.location
   end
 
+  config.after :each do |example|
+    if example.exception && RspecErrorTracker.exceptions.present?
+      lines = (RSpec.current_example.metadata[:extra_failure_lines] ||= +"")
+
+      lines << "~~~~~~~ SERVER EXCEPTIONS ~~~~~~~"
+
+      RspecErrorTracker.exceptions.each_with_index do |(path, ex), index|
+        lines << "\n"
+        lines << "Error encountered while proccessing #{path}"
+        lines << "  #{ex.class}: #{ex.message}"
+        ex.backtrace.each_with_index do |line, backtrace_index|
+          if ENV["RSPEC_EXCLUDE_GEMS_IN_BACKTRACE"]
+            next if line.match?(%r{/gems/})
+          end
+          lines << "    #{line}\n"
+        end
+      end
+
+      lines << "~~~~~~~ END SERVER EXCEPTIONS ~~~~~~~"
+      lines << "\n"
+    end
+
+    unfreeze_time
+    ActionMailer::Base.deliveries.clear
+    Discourse.redis.flushdb
+  end
+
   config.after(:each, type: :system) do |example|
     lines = RSpec.current_example.metadata[:extra_failure_lines]
 
@@ -682,33 +776,6 @@ RSpec.configure do |config|
 
     Capybara.reset_session!
     MessageBus.backend_instance.reset! # Clears all existing backlog from memory backend
-    Discourse.redis.flushdb
-  end
-
-  config.after :each do |example|
-    if example.exception && RspecErrorTracker.exceptions.present?
-      lines = (RSpec.current_example.metadata[:extra_failure_lines] ||= +"")
-
-      lines << "~~~~~~~ SERVER EXCEPTIONS ~~~~~~~"
-
-      RspecErrorTracker.exceptions.each_with_index do |(path, ex), index|
-        lines << "\n"
-        lines << "Error encountered while proccessing #{path}"
-        lines << "  #{ex.class}: #{ex.message}"
-        ex.backtrace.each_with_index do |line, backtrace_index|
-          if ENV["RSPEC_EXCLUDE_GEMS_IN_BACKTRACE"]
-            next if line.match?(%r{/gems/})
-          end
-          lines << "    #{line}\n"
-        end
-      end
-
-      lines << "~~~~~~~ END SERVER EXCEPTIONS ~~~~~~~"
-      lines << "\n"
-    end
-
-    unfreeze_time
-    ActionMailer::Base.deliveries.clear
   end
 
   config.before(:each, type: :multisite) do
@@ -720,7 +787,7 @@ RSpec.configure do |config|
   end
 
   config.after(:each, type: :multisite) do
-    ActiveRecord::Base.clear_all_connections!
+    ActiveRecord::Base.connection_handler.clear_all_connections!
     Rails.configuration.multisite = false # rubocop:disable Discourse/NoDirectMultisiteManipulation
     RailsMultisite::ConnectionManagement.clear_settings!
     ActiveRecord::Base.establish_connection
@@ -982,6 +1049,10 @@ def apply_base_chrome_options(options)
   if ENV["CHROME_DISABLE_FORCE_DEVICE_SCALE_FACTOR"].blank?
     options.add_argument("--force-device-scale-factor=1")
   end
+end
+
+def migrate_column_to_bigint(model, column)
+  ($columns_to_migrate_to_bigint ||= []) << [model, column]
 end
 
 class SpecSecureRandom

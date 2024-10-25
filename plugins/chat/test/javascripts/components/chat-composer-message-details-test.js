@@ -1,4 +1,4 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { render } from "@ember/test-helpers";
 import hbs from "htmlbars-inline-precompile";
 import { module, test } from "qunit";
@@ -31,7 +31,7 @@ module(
         hbs`<ChatComposerMessageDetails @message={{this.message}} />`
       );
 
-      assert.dom(".chat-composer-message-details .d-icon-pencil-alt").exists();
+      assert.dom(".chat-composer-message-details .d-icon-pencil").exists();
     });
 
     test("replying to a message has the reply icon", async function (assert) {

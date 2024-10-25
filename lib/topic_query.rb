@@ -8,8 +8,8 @@
 class TopicQuery
   include PrivateMessageLists
 
-  PG_MAX_INT ||= 2_147_483_647
-  DEFAULT_PER_PAGE_COUNT ||= 30
+  PG_MAX_INT = 2_147_483_647
+  DEFAULT_PER_PAGE_COUNT = 30
 
   def self.validators
     @validators ||=
@@ -17,14 +17,32 @@ class TopicQuery
         int = lambda { |x| Integer === x || (String === x && x.match?(/\A-?[0-9]+\z/)) }
         zero_up_to_max_int = lambda { |x| int.call(x) && x.to_i.between?(0, PG_MAX_INT) }
         array_or_string = lambda { |x| Array === x || String === x }
+        string = lambda { |x| String === x }
+        true_or_false = lambda { |x| x == true || x == false || x == "true" || x == "false" }
 
         {
+          page: zero_up_to_max_int,
           before: zero_up_to_max_int,
           bumped_before: zero_up_to_max_int,
-          max_posts: zero_up_to_max_int,
+          topic_ids: array_or_string,
+          category: string,
+          order: string,
+          ascending: true_or_false,
           min_posts: zero_up_to_max_int,
-          page: zero_up_to_max_int,
+          max_posts: zero_up_to_max_int,
+          status: string,
+          filter: string,
+          state: string,
+          search: string,
+          q: string,
+          f: string,
+          subset: string,
+          group_name: string,
           tags: array_or_string,
+          match_all_tags: true_or_false,
+          no_subcategories: true_or_false,
+          no_tags: true_or_false,
+          exclude_tag: string,
         }
       end
   end
@@ -757,7 +775,7 @@ class TopicQuery
     category_id = get_category_id(options[:category])
     @options[:category_id] = category_id
     if category_id
-      if options[:no_subcategories]
+      if ActiveModel::Type::Boolean.new.cast(options[:no_subcategories])
         result = result.where("topics.category_id = ?", category_id)
       else
         result = result.where("topics.category_id IN (?)", Category.subcategory_ids(category_id))
@@ -1010,7 +1028,7 @@ class TopicQuery
     return list if muted_tag_ids.blank?
 
     # if viewing the topic list for a muted tag, show all the topics
-    if !opts[:no_tags] && opts[:tags].present?
+    if !ActiveModel::Type::Boolean.new.cast(opts[:no_tags]) && opts[:tags].present?
       if TagUser
            .lookup(user, :muted)
            .joins(:tag)
@@ -1263,7 +1281,9 @@ class TopicQuery
 
     if tags_arg && tags_arg.size > 0
       tags_arg = tags_arg.split if String === tags_arg
-      tags_query = tags_arg[0].is_a?(String) ? Tag.where_name(tags_arg) : Tag.where(id: tags_arg)
+      tags_query = DiscourseTagging.visible_tags(@guardian)
+      tags_query =
+        tags_arg[0].is_a?(String) ? tags_query.where_name(tags_arg) : tags_query.where(id: tags_arg)
       tags = tags_query.select(:id, :target_tag_id).map { |t| t.target_tag_id || t.id }.uniq
 
       if ActiveModel::Type::Boolean.new.cast(@options[:match_all_tags])
@@ -1286,7 +1306,7 @@ class TopicQuery
       end
 
       @options[:tag_ids] = tags
-    elsif @options[:no_tags]
+    elsif ActiveModel::Type::Boolean.new.cast(@options[:no_tags])
       # the following will do: ("topics"."id" NOT IN (SELECT DISTINCT "topic_tags"."topic_id" FROM "topic_tags"))
       result = result.where.not(id: TopicTag.distinct.select(:topic_id))
     end

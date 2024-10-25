@@ -7,7 +7,7 @@ class ProblemCheckTracker < ActiveRecord::Base
   scope :failing, -> { where("last_problem_at = last_run_at") }
   scope :passing, -> { where("last_success_at = last_run_at") }
 
-  def self.[](identifier, target = nil)
+  def self.[](identifier, target = ProblemCheck::NO_TARGET)
     find_or_create_by(identifier:, target:)
   end
 
@@ -32,15 +32,25 @@ class ProblemCheckTracker < ActiveRecord::Base
   end
 
   def no_problem!(next_run_at: nil)
-    now = Time.current
-
-    update!(blips: 0, last_run_at: now, last_success_at: now, next_run_at:)
-
+    reset
     silence_the_alarm
   end
 
+  def reset(next_run_at: nil)
+    now = Time.current
+
+    update!(blips: 0, last_run_at: now, last_success_at: now, next_run_at:)
+  end
+
   def check
-    ProblemCheck[identifier]
+    check = ProblemCheck[identifier]
+
+    return check if check.present?
+
+    silence_the_alarm
+    destroy
+
+    nil
   end
 
   private
@@ -52,7 +62,7 @@ class ProblemCheckTracker < ActiveRecord::Base
   def sound_the_alarm
     admin_notice.create_with(
       priority: check.priority,
-      details: details.merge(target:),
+      details: details.merge(target: target || ProblemCheck::NO_TARGET),
     ).find_or_create_by(identifier:)
   end
 
@@ -61,11 +71,7 @@ class ProblemCheckTracker < ActiveRecord::Base
   end
 
   def admin_notice
-    if target.present?
-      AdminNotice.problem.where("details->>'target' = ?", target)
-    else
-      AdminNotice.problem.where("(details->>'target') IS NULL")
-    end
+    AdminNotice.problem.where("details->>'target' = ?", target || ProblemCheck::NO_TARGET)
   end
 end
 
@@ -81,7 +87,7 @@ end
 #  last_success_at :datetime
 #  last_problem_at :datetime
 #  details         :json
-#  target          :string
+#  target          :string           default("__NULL__")
 #
 # Indexes
 #

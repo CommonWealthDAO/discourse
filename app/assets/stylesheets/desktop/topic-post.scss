@@ -205,7 +205,6 @@ pre.codeblock-buttons:hover {
     border: none;
     > div {
       position: relative;
-      margin-bottom: 1.5em;
       &:last-of-type {
         margin-bottom: 0;
         .row {
@@ -296,6 +295,13 @@ pre.codeblock-buttons:hover {
         }
       }
     }
+    .load-more-replies {
+      font-size: var(--font-down-1);
+      position: absolute;
+      left: 55%;
+      transform: translate(-50%, 50%);
+      padding: 0.35em 0.5em;
+    }
 
     .topic-avatar {
       padding-left: 1em;
@@ -372,76 +378,6 @@ pre.codeblock-buttons:hover {
   }
   .avatar {
     margin-right: 2px;
-  }
-}
-
-.topic-map {
-  margin: 20px 0 20px var(--topic-body-width-padding);
-  .map {
-    .secondary {
-      text-align: center;
-    }
-    li {
-      float: left;
-      padding: 7px 10px;
-      &:last-of-type {
-        border-right: 0;
-      }
-      &:nth-child(3) {
-        text-align: center;
-      }
-    }
-    .number {
-      color: var(--primary-high);
-    }
-    .number,
-    .d-icon {
-      font-size: var(--font-up-2);
-      line-height: var(--line-height-medium);
-    }
-    button .d-icon,
-    button:hover .d-icon {
-      color: var(--primary-high);
-    }
-    .avatar a {
-      float: left;
-    }
-    .topic-map-post {
-      margin-top: 6px;
-    }
-  }
-  .avatars,
-  .links,
-  .information {
-    padding: 7px 10px 7px 10px;
-    color: var(--primary);
-  }
-  .buttons {
-    float: right;
-    .btn {
-      border: 0;
-      padding: 0 23px;
-      color: var(--primary-med-or-secondary-high);
-      background: var(--blend-primary-secondary-5);
-      border-left: 1px solid var(--primary-low);
-      border-top: 1px solid transparent;
-      &:hover {
-        color: var(--primary);
-        background: var(--primary-low);
-      }
-      &.collapsed {
-        padding-bottom: 1px;
-      }
-      .fa {
-        margin: 0;
-        font-size: var(--font-up-2);
-        line-height: 52px;
-      }
-    }
-  }
-
-  .toggle-summary .summary-box {
-    margin-top: 10px;
   }
 }
 

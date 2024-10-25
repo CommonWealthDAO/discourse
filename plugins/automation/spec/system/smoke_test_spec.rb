@@ -1,39 +1,11 @@
 # frozen_string_literal: true
 
-describe "DiscourseAutomation | smoke test", type: :system, js: true do
+describe "DiscourseAutomation | smoke test", type: :system do
   fab!(:admin)
   fab!(:group) { Fabricate(:group, name: "test") }
   fab!(:badge) { Fabricate(:badge, name: "badge") }
 
   before do
-    I18n.backend.store_translations(
-      :en,
-      {
-        discourse_automation: {
-          scriptables: {
-            test: {
-              title: "Test",
-              description: "Test",
-            },
-            something_about_us: {
-              title: "Something about us.",
-              description: "We rock!",
-            },
-            nothing_about_us: {
-              title: "Nothing about us.",
-              description: "We don't rock!",
-            },
-          },
-          triggerables: {
-            title: "Triggerable",
-            description: "Triggerable",
-            user_first_logged_in: {
-              description: "User first logged in.",
-            },
-          },
-        },
-      },
-    )
     SiteSetting.discourse_automation_enabled = true
     sign_in(admin)
   end
@@ -50,13 +22,9 @@ describe "DiscourseAutomation | smoke test", type: :system, js: true do
 
     it "populate correctly" do
       visit("/admin/plugins/discourse-automation")
-      find(".new-automation").click
+      find(".admin-section-landing__header-filter").set("test")
+      find(".admin-section-landing-item__content", match: :first).click
       fill_in("automation-name", with: "aaaaa")
-      select_kit = PageObjects::Components::SelectKit.new(".scriptables")
-      select_kit.expand
-      select_kit.select_row_by_value("test")
-      find(".create-automation").click
-
       select_kit = PageObjects::Components::SelectKit.new(".triggerables")
       select_kit.expand
       select_kit.select_row_by_value("post_created_edited")
@@ -68,12 +36,9 @@ describe "DiscourseAutomation | smoke test", type: :system, js: true do
   it "works" do
     visit("/admin/plugins/discourse-automation")
 
-    find(".new-automation").click
+    find(".admin-section-landing__header-filter").set("user group membership through badge")
+    find(".admin-section-landing-item__content", match: :first).click
     fill_in("automation-name", with: "aaaaa")
-    select_kit = PageObjects::Components::SelectKit.new(".scriptables")
-    select_kit.expand
-    select_kit.select_row_by_value("user_group_membership_through_badge")
-    find(".create-automation").click
     select_kit = PageObjects::Components::SelectKit.new(".triggerables")
     select_kit.expand
     select_kit.select_row_by_value("user_first_logged_in")
@@ -86,6 +51,6 @@ describe "DiscourseAutomation | smoke test", type: :system, js: true do
     find(".automation-enabled input").click
     find(".update-automation").click
 
-    expect(page).to have_field("automation-name", with: "aaaaa")
+    expect(page).to have_css('[role="button"]', text: "aaaaa")
   end
 end

@@ -14,20 +14,18 @@ module Chat
     class HandleCategoryUpdated
       include Service::Base
 
-      contract
-      step :assign_defaults
       policy :chat_enabled
+      params do
+        attribute :category_id, :integer
+
+        validates :category_id, presence: true
+      end
+      step :assign_defaults
       model :category
       model :category_channel_ids
       model :users
       step :remove_users_without_channel_permission
       step :publish
-
-      class Contract
-        attribute :category_id, :integer
-
-        validates :category_id, presence: true
-      end
 
       private
 
@@ -39,8 +37,8 @@ module Chat
         SiteSetting.chat_enabled
       end
 
-      def fetch_category(contract:)
-        Category.find_by(id: contract.category_id)
+      def fetch_category(params:)
+        Category.find_by(id: params[:category_id])
       end
 
       def fetch_category_channel_ids(category:)
@@ -61,7 +59,7 @@ module Chat
       def remove_users_without_channel_permission(users:, category_channel_ids:)
         memberships_to_remove =
           Chat::Action::CalculateMembershipsForRemoval.call(
-            scoped_users: users,
+            scoped_users_query: users,
             channel_ids: category_channel_ids,
           )
 

@@ -21,17 +21,17 @@
 
   &:focus {
     @include default-focus;
-    border-color: var(--quaternary);
-    outline-color: var(--quaternary);
+    border-color: var(--d-nav-color--active);
+    outline-color: var(--d-nav-color--active);
   }
 }
 
 .channels-list,
 .channels-list-container {
-  padding-bottom: env(safe-area-inset-bottom);
   position: relative;
   @include chat-scrollbar();
   height: 100%;
+  padding-bottom: 1rem;
 
   @include breakpoint(mobile-large) {
     @include chat-scrollbar();
@@ -83,10 +83,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: bold;
   font-family: var(--heading-font-family);
-  font-size: var(--font-down-1);
-  color: var(--quaternary);
+  color: var(--primary);
 
   .channel-title {
     line-height: var(--line-height-medium);

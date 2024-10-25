@@ -44,11 +44,12 @@ export function registerRawHelpers(hbs, handlebarsClass, owner) {
       }
       let list = get(this, contextName);
       let output = [];
+      let innerContext = options.contexts[0];
       for (let i = 0; i < list.length; i++) {
-        let innerContext = {};
         innerContext[localName] = list[i];
         output.push(options.fn(innerContext));
       }
+      delete innerContext[localName];
       return output.join("");
     }
   );
@@ -96,7 +97,7 @@ function lazyLoadHelpers(hbs, owner) {
   hbs.registerHelper("helperMissing", function (...args) {
     const opts = args[args.length - 1];
     if (opts?.name) {
-      // Lookup and evaluate the relevant module. Raw helpers may be registed as a side effect
+      // Lookup and evaluate the relevant module. Raw helpers may be registered as a side effect
       owner.lookup(`helper:${opts.name}`);
 
       if (hbs.helpers[opts.name]) {

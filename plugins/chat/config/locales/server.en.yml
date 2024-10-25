@@ -11,7 +11,6 @@ en:
     chat_allowed_messages_for_other_trust_levels: "Number of messages that users with trust levels 1-4 is allowed to send in 30 seconds. Set to '0' to disable limit."
     chat_silence_user_sensitivity: "The likelihood that a user flagged in chat will be automatically silenced."
     chat_auto_silence_from_flags_duration: "Number of minutes that users will be silenced for when they are automatically silenced due to flagged chat messages."
-    chat_default_channel_id: "The chat channel that will be opened by default when a user has no unread messages or mentions in other channels."
     chat_duplicate_message_sensitivity: "The likelihood that a duplicate message by the same sender will be blocked in a short period. Decimal number between 0 and 1.0, with 1.0 being the highest setting (blocks messages more frequently in a shorter amount of time). Set to `0` to allow duplicate messages."
     chat_minimum_message_length: "Minimum number of characters for a chat message."
     chat_allow_uploads: "Allow uploads in public chat channels and direct message channels."
@@ -25,7 +24,7 @@ en:
     chat_editing_grace_period: "For (n) seconds after sending a chat, editing will not display the (edited) tag by the chat message."
     chat_editing_grace_period_max_diff_low_trust: "Maximum number of character changes allowed in chat editing grace period, if more changed display the (edited) tag by the chat message (trust level 0 and 1)."
     chat_editing_grace_period_max_diff_high_trust: "Maximum number of character changes allowed in chat editing grace period, if more changed display the (edited) tag by the chat message (trust level 2 and up)."
-    chat_preferred_mobile_index: "Preferred tab when loading /chat on mobile."
+    chat_preferred_index: "Preferred tab when loading /chat."
     errors:
       chat_default_channel: "The default chat channel must be a public channel."
       direct_message_enabled_groups_invalid: "You must specify at least one group for this setting. If you do not want anyone except staff to send direct messages, choose the staff group."
@@ -196,9 +195,6 @@ en:
         one: "and %{count} other"
         other: "and %{count} others"
 
-    summaries:
-      no_targets: "There were no messages during the selected period."
-
     transcript:
       default_thread_title: "Thread"
       split_thread_range: "messages %{start} to %{end} of %{total}"
@@ -240,18 +236,20 @@ en:
         other: "You have new chat messages"
       from: "%{site_name}"
       subject:
-        private_message: "[%{email_prefix}] New message"
-        direct_message_from_1: "[%{email_prefix}] New message from %{username}"
-        direct_message_from_2: "[%{email_prefix}] New message from %{username1} and %{username2}"
-        direct_message_from_more:
-          one: "[%{email_prefix}] New message from %{username} and %{count} other"
-          other: "[%{email_prefix}] New message from %{username} and %{count} others"
-        chat_channel_1: "[%{email_prefix}] New message in %{channel}"
-        chat_channel_2: "[%{email_prefix}] New message in %{channel1} and %{channel2}"
-        chat_channel_more:
-          one: "[%{email_prefix}] New message in %{channel} and %{count} other"
-          other: "[%{email_prefix}] New message in %{channel} and %{count} others"
-        chat_channel_and_direct_message: "[%{email_prefix}] New message in %{channel} and from %{username}"
+        private_email:
+          one: "[%{site_name}] New message"
+          other: "[%{site_name}] New messages"
+        chat_dm_1:
+          one: "[%{site_name}] New message from %{name}"
+          other: "[%{site_name}] New messages from %{name}"
+        chat_dm_2: "[%{site_name}] New messages from %{name_1} and %{name_2}"
+        chat_dm_3_or_more: "[%{site_name}] New messages from %{name} and %{count} others"
+        chat_channel_1:
+          one: "[%{site_name}] New message in %{channel}"
+          other: "[%{site_name}] New messages in %{channel}"
+        chat_channel_2: "[%{site_name}] New messages in %{channel_1} and %{channel_2}"
+        chat_channel_3_or_more: "[%{site_name}] New messages in %{channel} and %{count} others"
+        chat_channel_and_dm: "[%{site_name}] New messages in %{channel} and from %{name}"
       unsubscribe: "This chat summary is sent from %{site_link} when you are away. Change your %{email_preferences_link}, or %{unsubscribe_link} to unsubscribe."
       unsubscribe_no_link: "This chat summary is sent from %{site_link} when you are away. Change your %{email_preferences_link}."
       view_messages:

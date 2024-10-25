@@ -401,6 +401,40 @@ RSpec.describe CookedPostProcessor do
         end
       end
 
+      context "with small images" do
+        fab!(:upload) { Fabricate(:image_upload, width: 150, height: 150) }
+        fab!(:post) { Fabricate(:post, user: user_with_auto_groups, raw: <<~HTML) }
+          <img src="#{upload.url}">
+          HTML
+        let(:cpp) { CookedPostProcessor.new(post, disable_dominant_color: true) }
+
+        before { SiteSetting.create_thumbnails = true }
+
+        it "shows the lightbox when both dimensions are above the minimum" do
+          cpp.post_process
+          expect(cpp.html).to match(/<div class="lightbox-wrapper">/)
+        end
+
+        it "does not show lightbox when both dimensions are below the minimum" do
+          upload.update!(width: 50, height: 50)
+          cpp.post_process
+
+          expect(cpp.html).not_to match(/<div class="lightbox-wrapper">/)
+        end
+
+        it "does not show lightbox when either dimension is below the minimum" do
+          upload.update!(width: 50, height: 150)
+          cpp.post_process
+
+          expect(cpp.html).not_to match(/<div class="lightbox-wrapper">/)
+        end
+
+        it "does not create thumbnails for small images" do
+          Upload.any_instance.expects(:create_thumbnail!).never
+          cpp.post_process
+        end
+      end
+
       context "with large images" do
         fab!(:upload) { Fabricate(:image_upload, width: 1750, height: 2000) }
 
@@ -1906,13 +1940,12 @@ RSpec.describe CookedPostProcessor do
     end
 
     context "with an unmodified quote" do
-      let(:cp) do
-        Fabricate(
-          :post,
-          raw:
-            "[quote=\"#{pp.user.username}, post: #{pp.post_number}, topic:#{pp.topic_id}]\nripe for quoting\n[/quote]\ntest",
-        )
-      end
+      let(:cp) { Fabricate(:post, raw: <<~MARKDOWN) }
+        [quote="#{pp.user.username}, post: #{pp.post_number}, topic:#{pp.topic_id}"]
+        ripe for quoting
+        [/quote]
+        test
+      MARKDOWN
 
       it "should not be marked as modified" do
         cpp.post_process_quotes
@@ -1921,13 +1954,12 @@ RSpec.describe CookedPostProcessor do
     end
 
     context "with a modified quote" do
-      let(:cp) do
-        Fabricate(
-          :post,
-          raw:
-            "[quote=\"#{pp.user.username}, post: #{pp.post_number}, topic:#{pp.topic_id}]\nmodified\n[/quote]\ntest",
-        )
-      end
+      let(:cp) { Fabricate(:post, raw: <<~MARKDOWN) }
+        [quote="#{pp.user.username}, post: #{pp.post_number}, topic:#{pp.topic_id}"]
+        modified
+        [/quote]
+        test
+      MARKDOWN
 
       it "should be marked as modified" do
         cpp.post_process_quotes
@@ -1936,13 +1968,12 @@ RSpec.describe CookedPostProcessor do
     end
 
     context "with external discourse instance quote" do
-      let(:external_raw) { <<~RAW.strip }
+      let(:cp) { Fabricate(:post, user: user_with_auto_groups, raw: <<~MARKDOWN.strip) }
         [quote="random_guy_not_from_our_discourse, post:2004, topic:401"]
         this quote is not from our discourse
         [/quote]
         and this is a reply
-        RAW
-      let(:cp) { Fabricate(:post, user: user_with_auto_groups, raw: external_raw) }
+      MARKDOWN
 
       it "it should be marked as missing" do
         cpp.post_process_quotes

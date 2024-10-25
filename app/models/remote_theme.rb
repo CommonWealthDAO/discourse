@@ -85,7 +85,7 @@ class RemoteTheme < ActiveRecord::Base
   # This is only used in the development and test environment and is currently not supported for other environments
   if Rails.env.test? || Rails.env.development?
     def self.import_theme_from_directory(directory)
-      update_theme(ThemeStore::DirectoryImporter.new(directory))
+      update_theme(ThemeStore::DirectoryImporter.new(directory), update_components: "none")
     end
   end
 
@@ -109,6 +109,7 @@ class RemoteTheme < ActiveRecord::Base
 
     theme.component = theme_info["component"].to_s == "true"
     theme.child_components = child_components = theme_info["components"].presence || []
+    theme.skip_child_components_update = true if update_components == "none"
 
     remote_theme = new
     remote_theme.theme = theme
@@ -296,10 +297,12 @@ class RemoteTheme < ActiveRecord::Base
     end
 
     ThemeModifierSet.modifiers.keys.each do |modifier_name|
-      theme.theme_modifier_set.public_send(
-        :"#{modifier_name}=",
-        theme_info.dig("modifiers", modifier_name.to_s),
-      )
+      value = theme_info.dig("modifiers", modifier_name.to_s)
+      if Hash === value && value["type"] == "setting"
+        theme.theme_modifier_set.add_theme_setting_modifier(modifier_name, value["value"])
+      else
+        theme.theme_modifier_set.public_send(:"#{modifier_name}=", value)
+      end
     end
 
     if !theme.theme_modifier_set.valid?
@@ -381,6 +384,8 @@ class RemoteTheme < ActiveRecord::Base
     else
       self.transaction(&transaction_block)
     end
+
+    theme.theme_modifier_set.save! if theme.theme_modifier_set.refresh_theme_setting_modifiers
 
     self
   ensure

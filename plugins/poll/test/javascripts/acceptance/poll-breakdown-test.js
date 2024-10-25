@@ -3,7 +3,6 @@ import { test } from "qunit";
 import {
   acceptance,
   count,
-  exists,
   query,
 } from "discourse/tests/helpers/qunit-helpers";
 
@@ -65,16 +64,18 @@ acceptance("Poll breakdown", function (needs) {
 
   test("Displaying the poll breakdown modal", async function (assert) {
     await visit("/t/-/topic_with_pie_chart_poll");
+
     await click(".widget-dropdown-header");
 
-    assert.ok(
-      exists(".item-showBreakdown"),
-      "shows the breakdown button when poll_groupable_user_fields is non-empty"
-    );
+    assert
+      .dom("button.show-breakdown")
+      .exists(
+        "shows the breakdown button when poll_groupable_user_fields is non-empty"
+      );
 
-    await click(".item-showBreakdown");
+    await click("button.show-breakdown");
 
-    assert.ok(exists(".poll-breakdown-total-votes"), "displays the vote count");
+    assert.dom(".poll-breakdown-total-votes").exists("displays the vote count");
 
     assert.strictEqual(
       count(".poll-breakdown-chart-container"),
@@ -91,7 +92,8 @@ acceptance("Poll breakdown", function (needs) {
   test("Changing the display mode from percentage to count", async function (assert) {
     await visit("/t/-/topic_with_pie_chart_poll");
     await click(".widget-dropdown-header");
-    await click(".item-showBreakdown");
+
+    await click("button.show-breakdown");
 
     assert.strictEqual(
       query(".poll-breakdown-option-count").textContent.trim(),

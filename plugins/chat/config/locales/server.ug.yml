@@ -17,7 +17,6 @@ ug:
     chat_allowed_messages_for_other_trust_levels: "ئىشەنچ دەرىجىسى 1-4 كىچە بولغان ئىشلەتكۈچىنىڭ 30 سېكۇنتتا يوللىيالايدىغان ئۇچۇر سانى. «0» گە تەڭشەلسە چەكلىمە بولمايدۇ."
     chat_silence_user_sensitivity: "پاش قىلىنغان ئىشلەتكۈچىنىڭ سۆھبەتتە ئۆزلۈكىدىن ئۈنسىزلىنىشىنىڭ ئېھتىماللىقى."
     chat_auto_silence_from_flags_duration: "ئىشلەتكۈچى پاش قىلىنغان سۆھبەت ئۇچۇرى تۈپەيلىدىن ئۆزلۈكىدىن ئۈنسىزلەنگەندە، ئۈنسىزلىنىشنىڭ مىنۇت سانى."
-    chat_default_channel_id: "ئىشلەتكۈچىنىڭ باشقا قانالدا ئوقۇمىغان ئۇچۇر ياكى ئاتاش بولمىغاندا، كۆڭۈلدىكى ئەھۋالدا ئاچىدىغان قانال."
     chat_duplicate_message_sensitivity: "ئوخشاش بىر ئۇچۇر يوللىغۇچىنىڭ قىسقا ۋاقىتتا تەكرارلىغان ئۇچۇر يوللانمىسىغا ئاساسەن توسۇلۇش ئېھتىماللىقى. 0 بىلەن 1.0 ئارىلىقىدىكى ئونلۇق كەسىر سان، 1.0 ئەڭ يۇقىرى قىممىتى تەڭشىكى (تېخىمۇ قىسقا ۋاقىت ئىچىدە تېخىمۇ يۇقىرى چاستوتىدا ئۇچۇرنى توسىدۇ). 0 گە تەڭشەلسە ئۇچۇرنى تەكرارلاشقا يول قويىدۇ."
     chat_minimum_message_length: "سۆھبەت ئۇچۇرىنىڭ ئەڭ ئاز ھەرپ سانى."
     chat_allow_uploads: "ئاممىۋى سۆھبەت قانىلى ۋە بىۋاسىتە ئۇچۇر قانىلىدا يۈكلەنمە يوللاشقا يول قويىدۇ."
@@ -31,7 +30,7 @@ ug:
     chat_editing_grace_period: "سۆھبەتنى يوللاپ (n) سېكۇنت ئىچىدە تەھرىرلىگەندە، سۆھبەت ئۇچۇرى يېنىدا (تەھرىرلەنگەن) بەلگىنى كۆرسەتمەيدۇ."
     chat_editing_grace_period_max_diff_low_trust: "سۆھبەتنى تەھرىرلەش سۈرۈك ۋاقتىدا ئۆزگەرتىشكە يول قويىدىغان ئەڭ كۆپ ھەرپ سانى، ئەگەر بۇ قىممەتتىن ئېشىپ كەتسە سۆھبەت يىنىدا (تەھرىرلەنگەن) بەلگە كۆرۈنىدۇ (ئىشەنچلىك دەرىجىسى 0 ۋە 1)."
     chat_editing_grace_period_max_diff_high_trust: "سۆھبەتنى تەھرىرلەش سۈرۈك ۋاقتىدا ئۆزگەرتىشكە يول قويىدىغان ئەڭ كۆپ ھەرپ سانى، ئەگەر بۇ قىممەتتىن ئېشىپ كەتسە سۆھبەت يىنىدا (تەھرىرلەنگەن) بەلگە كۆرۈنىدۇ (ئىشەنچلىك دەرىجىسى2 ۋە ئۇنىڭدىن يۇقىرى)."
-    chat_preferred_mobile_index: "كۆچمە ئۈسكۈنىدە /chat نى يۈكلىگەندە ياقتۇرىدىغان بەتكۈچ."
+    chat_preferred_index: "يۈكلىگەندىكى/سۆھبەتلەشكەندىكى ياقتۇرىدىغان بەتكۈچ."
     errors:
       chat_default_channel: "سۈكۈتتىكى سۆھبەت قانىلى چوقۇم ئاممىۋى قانال بولۇشى كېرەك."
       direct_message_enabled_groups_invalid: "بۇ تەڭشەك ئۈچۈن كەم دېگەندە بىر گۇرۇپپىنى بەلگىلىشىڭىز كېرەك. ئەگەر باشقۇرغۇچىلاردىن باشقا ھېچكىمنىڭ بىۋاسىتە ئۇچۇر ئەۋەتىشىنى خالىمىسىڭىز، باشقۇرغۇچى گۇرۇپپىسىنى تاللاڭ."
@@ -194,8 +193,6 @@ ug:
       and_x_others:
         one: "ۋە باشقا %{count}"
         other: "ۋە باشقا %{count}"
-    summaries:
-      no_targets: "تاللىغان مەزگىلدىكى ئۇچۇر يوق."
     transcript:
       default_thread_title: "سۆھبەت ماۋزۇسى"
       split_thread_range: "%{total} ئۇچۇر %{start}-%{end}"
@@ -233,18 +230,20 @@ ug:
         other: "يېڭى سۆھبەت ئۇچۇرىڭىز بار"
       from: "%{site_name}"
       subject:
-        private_message: "%{email_prefix} يېڭى ئۇچۇر"
-        direct_message_from_1: "[%{email_prefix}] %{username} دىن كەلگەن يېڭى ئۇچۇر"
-        direct_message_from_2: "[%{email_prefix}] %{username1} ۋە %{username2} دىن كەلگەن يېڭى ئۇچۇر"
-        direct_message_from_more:
-          one: "[%{email_prefix}] %{username} ۋە باشقا %{count} ئىشلەتكۈچىدىن كەلگەن يېڭى ئۇچۇر"
-          other: "[%{email_prefix}] %{username} ۋە باشقا %{count} ئىشلەتكۈچىدىن كەلگەن يېڭى ئۇچۇر"
-        chat_channel_1: "[%{email_prefix}] %{channel} دىكى يېڭى ئۇچۇر"
-        chat_channel_2: "[%{email_prefix}] %{channel1} ۋە %{channel2} دىكى يېڭى ئۇچۇر"
-        chat_channel_more:
-          one: "[%{email_prefix}] %{channel} ۋە باشقا %{count} قانالدىكى يېڭى ئۇچۇر"
-          other: "[%{email_prefix}] %{channel} ۋە باشقا %{count} قانالدىكى يېڭى ئۇچۇر"
-        chat_channel_and_direct_message: "[%{email_prefix}] %{channel} ۋە %{username} دىن كەلگەن يېڭى ئۇچۇر"
+        private_email:
+          one: "%{site_name} يېڭى ئۇچۇر"
+          other: "%{site_name} يېڭى ئۇچۇر"
+        chat_dm_1:
+          one: "[%{site_name}] %{name} دىن كەلگەن يېڭى ئۇچۇر"
+          other: "[%{site_name}] %{name} دىن كەلگەن يېڭى ئۇچۇر"
+        chat_dm_2: "[%{site_name}] %{name_1} ۋە %{name_2} دىن كەلگەن يېڭى ئۇچۇر"
+        chat_dm_3_or_more: "[%{site_name}] %{name} ۋە باشقا %{count} ئىشلەتكۈچىدىن كەلگەن يېڭى ئۇچۇر"
+        chat_channel_1:
+          one: "[%{site_name}] %{channel} دىكى يېڭى ئۇچۇر"
+          other: "[%{site_name}] %{channel} دىكى يېڭى ئۇچۇر"
+        chat_channel_2: "[%{site_name}] %{channel_1} ۋە %{channel_2} دىكى يېڭى ئۇچۇر"
+        chat_channel_3_or_more: "[%{site_name}] %{channel} ۋە باشقا %{count} دىكى يېڭى ئۇچۇر"
+        chat_channel_and_dm: "[%{site_name}] %{channel} ۋە %{name} دىن كەلگەن يېڭى ئۇچۇر"
       unsubscribe: "سىز ئايرىلغاندا %{site_link} دىن بۇ سۆھبەتنىڭ خۇلاسىسى ئەۋەتىلدى. %{email_preferences_link} نى ئۆزگەرتىڭ ياكى %{unsubscribe_link} مۇشتەرىلىكتىن چېكىنىڭ."
       unsubscribe_no_link: "سىز ئايرىلغاندا %{site_link} دىن بۇ سۆھبەتنىڭ خۇلاسىسى ئەۋەتىلدى. %{email_preferences_link} نى ئۆزگەرتىڭ."
       view_messages:

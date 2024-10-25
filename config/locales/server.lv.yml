@@ -125,6 +125,8 @@ lv:
         raw: "Saturs"
       user_profile:
         bio_raw: "Par Mani"
+      user:
+        password: "Parole"
     errors:
       <<: *errors
   general_category_name: "Vispārīgi"
@@ -197,9 +199,6 @@ lv:
         other: "pirms %{count} dienām"
   password_reset:
     title: "Atjaunot paroli"
-  activation:
-    continue_button: "Turpināt %{site_name}"
-    welcome_to: "Laipni lūdzam %{site_name}!"
   reviewable_score_types:
     needs_approval:
       title: "Nepieciešama apstiprināšana"
@@ -272,6 +271,8 @@ lv:
         user_api: "Lietotāja API"
       yaxis: "Diena"
     consolidated_page_views_browser_detection:
+      yaxis: "Diena"
+    site_traffic:
       yaxis: "Diena"
     dau_by_mau:
       xaxis: "Diena"
@@ -346,6 +347,8 @@ lv:
     page_view_total_reqs:
       title: "Lapu skatījumi"
       xaxis: "Diena"
+    page_view_legacy_total_reqs:
+      xaxis: "Diena"
     page_view_logged_in_mobile_reqs:
       xaxis: "Diena"
     page_view_anon_mobile_reqs:
@@ -377,6 +380,8 @@ lv:
     web_crawlers:
       labels:
         page_views: "Lapu skatījumi"
+    web_hook_events_daily_aggregate:
+      xaxis: "Diena"
     suspicious_logins:
       labels:
         user: Lietotājs
@@ -400,6 +405,11 @@ lv:
       labels:
         user: Lietotājs
         qtt_like: Saņemtās atzinības
+    topic_view_stats:
+      labels:
+        topic: Tēmas
+        anon_views: Anonīmi
+        total_views: Kopā
   site_settings:
     disabled: "atslēgt"
     send_welcome_message: "Nosūtiet visiem jaunajiem lietotājiem apsveikuma ziņojumu ar īso darba sākšanas rokasgrāmatu."
@@ -472,6 +482,7 @@ lv:
     rate_limit_error: "Ierakstus var lejuplādēt reizi dienā, lūdzu mēģiniet atkal rītdien."
   guidelines_topic:
     title: "BUJ/Vadlīnijas"
+    guidelines_title: "Vadlīnijas"
   tos_topic:
     title: "Pakalpojuma noteikumi"
   privacy_topic:
@@ -495,7 +506,11 @@ lv:
       privacy:
         fields:
           login_required:
-            placeholder: "Privāts"
+            choices:
+              public:
+                label: "Publisks"
+              private:
+                label: "Privāts"
       styling:
         fields:
           styling_preview:

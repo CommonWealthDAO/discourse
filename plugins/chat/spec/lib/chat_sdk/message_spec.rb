@@ -15,6 +15,11 @@ describe ChatSDK::Message do
       expect(message.message).to eq("something")
     end
 
+    it "sets created_by_sdk to true" do
+      message = described_class.create(**params)
+      expect(message).to have_attributes(created_by_sdk: true)
+    end
+
     context "when thread_id is present" do
       fab!(:thread_1) { Fabricate(:chat_thread, channel: channel_1) }
 
@@ -55,7 +60,7 @@ describe ChatSDK::Message do
 
     context "when membership is enforced" do
       it "works" do
-        SiteSetting.chat_allowed_groups = [Group::AUTO_GROUPS[:everyone]]
+        SiteSetting.chat_allowed_groups = Group::AUTO_GROUPS[:everyone]
         params[:enforce_membership] = true
         params[:guardian] = Fabricate(:user).guardian
 
@@ -110,7 +115,7 @@ describe ChatSDK::Message do
     fab!(:message_1) { Fabricate(:chat_message, message: "first") }
 
     before do
-      SiteSetting.chat_allowed_groups = [Group::AUTO_GROUPS[:everyone]]
+      SiteSetting.chat_allowed_groups = Group::AUTO_GROUPS[:everyone]
       message_1.chat_channel.add(message_1.user)
       message_1.update!(streaming: true)
     end

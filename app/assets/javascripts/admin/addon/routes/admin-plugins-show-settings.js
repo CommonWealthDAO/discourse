@@ -1,18 +1,25 @@
-import Route from "@ember/routing/route";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
+import DiscourseRoute from "discourse/routes/discourse";
+import I18n from "discourse-i18n";
 import SiteSetting from "admin/models/site-setting";
 
-export default class AdminPluginsShowSettingsRoute extends Route {
+export default class AdminPluginsShowSettingsRoute extends DiscourseRoute {
   @service router;
 
   queryParams = {
     filter: { replace: true },
   };
 
-  model(params) {
+  async model(params) {
     const plugin = this.modelFor("adminPlugins.show");
-    return SiteSetting.findAll({ plugin: plugin.name }).then((settings) => {
-      return { plugin, settings, initialFilter: params.filter };
-    });
+    return {
+      plugin,
+      settings: await SiteSetting.findAll({ plugin: plugin.name }),
+      initialFilter: params.filter,
+    };
+  }
+
+  titleToken() {
+    return I18n.t("admin.plugins.change_settings_short");
   }
 }

@@ -39,6 +39,12 @@ pl_PL:
       chat_messages_count: "Wiadomości czatu"
       chat_channels_count: "Kanały czatu"
       chat_users_count: "Użytkownicy czatu"
+      activities:
+        chat_messages:
+          one: "%{formatted_number} wiadomość czatu"
+          few: "%{formatted_number} wiadomości czatu"
+          many: "%{formatted_number} wiadomości czatu"
+          other: "%{formatted_number} wiadomości czatu"
     chat:
       text_copied: Tekst skopiowany do schowka
       link_copied: Link skopiowany do schowka
@@ -46,7 +52,6 @@ pl_PL:
       deleted_chat_username: usunięte
       dates:
         yesterday: "Wczoraj"
-        time_tiny: "h:mm"
       all_loaded: "Pokazuje wszystkie wiadomości"
       already_enabled: "Czat jest już włączony w tym temacie. Spróbuj odświeżyć strone."
       disabled_for_topic: "Czat jest wyłączony w tym temacie."
@@ -65,6 +70,12 @@ pl_PL:
           many: "Przenosisz <strong>%{count}</strong> wiadomości. Wybierz kanał docelowy. W kanale <strong>%{channelTitle}</strong> zostanie utworzona wiadomość zastępcza, aby wskazać, że te wiadomości zostały przeniesione. Pamiętaj, że łańcuchy odpowiedzi nie zostaną zachowane w nowym kanale, a wiadomości w starym kanale nie będą już wyświetlane jako odpowiedzi na przeniesione wiadomości."
           other: "Przenosisz <strong>%{count}</strong> wiadomości. Wybierz kanał docelowy. W kanale <strong>%{channelTitle}</strong> zostanie utworzona wiadomość zastępcza, aby wskazać, że te wiadomości zostały przeniesione. Pamiętaj, że łańcuchy odpowiedzi nie zostaną zachowane w nowym kanale, a wiadomości w starym kanale nie będą już wyświetlane jako odpowiedzi na przeniesione wiadomości."
         confirm_move: "Przenieś wiadomości"
+      delete_messages:
+        confirm:
+          one: "Czy na pewno chcesz usunąć tę wiadomość?"
+          few: "Czy na pewno chcesz usunąć te %{count} wiadomości?"
+          many: "Czy na pewno chcesz usunąć te %{count} wiadomości?"
+          other: "Czy na pewno chcesz usunąć te %{count} wiadomości?"
       channel_settings:
         title: "Ustawienia kanału"
         edit: "Edytuj"
@@ -130,7 +141,7 @@ pl_PL:
       header_indicator_preference:
         title: "Pokaż wskaźnik aktywności w nagłówku"
         all_new: "Wszystkie nowe wiadomości"
-        dm_and_mentions: "Bezpośrednie wiadomości i wzmianki"
+        dm_and_mentions: "Bezpośrednie wiadomości, wzmianki i obserwowane wątki"
         only_mentions: "Tylko wzmianki"
         never: "Nigdy"
       separate_sidebar_mode:
@@ -145,15 +156,6 @@ pl_PL:
       heading: "Czat"
       join: "Dołącz"
       last_visit: "ostatnia wizyta"
-      summarization:
-        title: "Podsumuj wiadomości"
-        description: "Wybierz opcję poniżej, aby podsumować rozmowę wysłaną w żądanym przedziale czasowym."
-        summarize: "Podsumuj"
-        since:
-          one: "Ostatnia godzina"
-          few: "Ostatnie %{count} godziny"
-          many: "Ostatnie %{count} godzin"
-          other: "Ostatnie %{count} godzin"
       mention_warning:
         invitations_sent:
           one: "Zaproszenie wysłane"
@@ -252,6 +254,9 @@ pl_PL:
       ignore_channel_wide_mention:
         title: "Ignoruj wzmianki dotyczące całego kanału"
         description: "Nie wysyłaj powiadomień dla wzmianek dotyczących całego kanału (@here i @all)"
+      show_thread_title_prompts:
+        title: "Pokaż podpowiedzi tytułu wątku"
+        description: "Wyświetlaj podpowiedzi o ustawienie tytułu dla nowych wątków."
       open: "Otwórz czat"
       open_full_page: "Otwórz czat na pełnym ekranie"
       close_full_page: "Zamknij czat pełnoekranowy"
@@ -260,6 +265,7 @@ pl_PL:
       placeholder_channel: "Czat w %{channelName}"
       placeholder_thread: "Czat w wątku"
       placeholder_users: "Czat z %{commaSeparatedNames}"
+      placeholder_group: "Czat w grupie"
       placeholder_new_message_disallowed:
         archived: "Kanał jest zarchiwizowany, nie możesz teraz wysyłać nowych wiadomości."
         closed: "Kanał jest zamknięty, nie możesz teraz wysyłać nowych wiadomości."
@@ -272,6 +278,7 @@ pl_PL:
       copy_link: "Skopiuj link"
       copy_text: "Skopiuj tekst"
       rebake_message: "Odśwież HTML"
+      message_too_long: "Wiadomość jest zbyt długa, wiadomości muszą mieć maksymalnie %{count} znaków."
       retry_staged_message:
         title: "Błąd sieci"
         action: "Wyślij ponownie?"
@@ -491,10 +498,8 @@ pl_PL:
         auto_join_users_info: "Sprawdzaj co godzinę, którzy użytkownicy byli aktywni w ciągu ostatnich 3 miesięcy. Dodaj ich do tego kanału, jeśli mają dostęp do kategorii %{category}."
         auto_join_users_info_no_category: "Sprawdzaj co godzinę, którzy użytkownicy byli aktywni w ciągu ostatnich 3 miesięcy. Dodaj ich do tego kanału, jeśli mają dostęp do wybranej kategorii."
         auto_join_users_warning: "Każdy użytkownik, który nie jest członkiem tego kanału i ma dostęp do kategorii %{category} , dołączy do niego. Czy jesteś pewien?"
-        desktop_notification_level: "Powiadomienia na pulpicie"
         follow: "Dołącz"
         followed: "Dołączył"
-        mobile_notification_level: "Mobilne powiadomienia push"
         mute: "Wycisz kanał"
         threading_enabled: "Włączona"
         threading_disabled: "Wyłączone"
@@ -517,6 +522,7 @@ pl_PL:
           title: "Eksportuj wiadomości czatu"
           description: "Spowoduje to wyeksportowanie wszystkich wiadomości ze wszystkich kanałów."
           create_export: "Utwórz eksport"
+          confirm_export: "Eksportuje wszystkie wiadomości ze wszystkich kanałów i wysyła wynik do Ciebie w wiadomości prywatnej. Czy na pewno chcesz eksportować?"
           export_has_started: "Eksport rozpoczął się. Otrzymasz wiadomość prywatną, gdy będzie gotowy."
       my_threads:
         title: Moje wątki
@@ -535,6 +541,7 @@ pl_PL:
       incoming_webhooks:
         back: "Poprzednia"
         channel_placeholder: "Wybierz kanał"
+        channel: "Kanał"
         confirm_destroy: "Czy na pewno chcesz usunąć tego przychodzącego webhooka? Tego nie można cofnąć."
         current_emoji: "Aktualne emoji"
         description: "Opis"
@@ -558,10 +565,13 @@ pl_PL:
         username: "Nazwa użytkownika"
         username_instructions: "Nazwa użytkownika bota, który publikuje na kanale. Domyślnie \"system\" gdy pozostanie puste."
         instructions: "Przychodzące webhooki mogą być używane przez systemy zewnętrzne do publikowania wiadomości na wyznaczonym kanale czatu jako użytkownik bota za pośrednictwem punktu końcowego <code>/hooks/:key</code>. Ładunek składa się z pojedynczego parametru <code>text</code>, który jest ograniczony do 2000 znaków.<br><br>Obsługujemy również ograniczone parametry <code>tekstu</code> w formacie Slack, wyodrębnianie linków i wzmianek na podstawie formatu <a href=\"https://api.slack.com/reference/surfaces/formatting\">https://api.slack.com/reference/surfaces/formatting</a>, ale w tym celu należy użyć punktu końcowego <code>/hooks/:key/slack</code>."
+        saved: "Zmiany w webhooku zostały zapisane"
+        created: "Utworzono webhook"
       selection:
         cancel: "Anuluj"
         quote_selection: "Cytat w temacie"
         copy: "Kopiuj"
+        delete: "Usuń (%{selectionCount}/%{totalCount})"
         move_selection_to_channel: "Przejdź do kanału"
         error: "Wystąpił błąd podczas przenoszenia wiadomości czatu"
         title: "Przenieś czat do tematu"
@@ -648,10 +658,13 @@ pl_PL:
         notifications:
           regular:
             title: "Normalny"
-            description: "Otrzymasz powiadomienie, jeśli ktoś wspomni Twoją @nazwę w tym wątku."
+            description: "Otrzymuj powiadomienia, gdy ktoś wspomni o Tobie w tym wątku."
           tracking:
             title: "Śledzona"
-            description: "Liczba nowych odpowiedzi w tym wątku zostanie wyświetlona na liście wątków i na kanale. Otrzymasz powiadomienie, jeśli ktoś wspomni Twoją @nazwę w tym wątku."
+            description: "Otrzymuj powiadomienia, gdy ktoś wspomni o Tobie w tym wątku i zobacz liczbę nowych odpowiedzi na liście wątków."
+          watching:
+            title: "Obserwowane"
+            description: "Otrzymuj powiadomienia o wszystkich odpowiedziach w tym wątku i zobacz liczbę nowych odpowiedzi na liście wątków."
         participants_other_count:
           one: "+%{count}"
           few: "+%{count}"
@@ -659,10 +672,14 @@ pl_PL:
           other: "+%{count}"
       thread_title_toast:
         title: "Ustaw tytuł wątku"
+        message: "Pomóż innym odkryć tę konwersację."
         dismiss_action: "Nie pokazuj ponownie"
         primary_action: "Ustaw tytuł"
       thread_title_modal:
         title: "Ustaw tytuł wątku"
+        input_placeholder: "Powiedz innym, o czym jest ta rozmowa..."
+        discourse_ai:
+          title: "Automatycznie generuj tytuły wątków"
       threads:
         open: "Otwórz wątek"
         list: "Wątki"
@@ -691,6 +708,7 @@ pl_PL:
         chat_mention: "Wzmianka na czacie"
         chat_invitation: "Zaproszenie do czatu"
         chat_quoted: "Cytowany czat"
+        chat_watched_thread: "Obserwowany wątek czatu"
     action_codes:
       chat:
         enabled: '%{who} włączone <button class="btn-link open-chat">czat</button> %{when}'

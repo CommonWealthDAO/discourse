@@ -1,4 +1,4 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { click, render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
@@ -20,14 +20,14 @@ module("Integration | Component | Widget | topic-status", function (hooks) {
       hbs`<MountWidget @widget="topic-status" @args={{this.args}} />`
     );
 
-    assert.ok(exists(".topic-status .d-icon-lock"));
+    assert.dom(".topic-status .d-icon-lock").exists();
   });
 
   test("extendability", async function (assert) {
     const store = getOwner(this).lookup("service:store");
     TopicStatusIcons.addObject([
       "has_accepted_answer",
-      "far-check-square",
+      "far-square-check",
       "solved",
     ]);
     this.set("args", {
@@ -41,7 +41,7 @@ module("Integration | Component | Widget | topic-status", function (hooks) {
       hbs`<MountWidget @widget="topic-status" @args={{this.args}} />`
     );
 
-    assert.ok(exists(".topic-status .d-icon-far-check-square"));
+    assert.dom(".topic-status .d-icon-far-square-check").exists();
   });
 
   test("toggling pin status", async function (assert) {
@@ -55,10 +55,9 @@ module("Integration | Component | Widget | topic-status", function (hooks) {
     );
 
     assert.ok(exists(".topic-statuses .pinned"), "pinned icon is shown");
-    assert.ok(
-      !exists(".topic-statuses .unpinned"),
-      "unpinned icon is not shown"
-    );
+    assert
+      .dom(".topic-statuses .unpinned")
+      .doesNotExist("unpinned icon is not shown");
 
     await click(".topic-statuses .pin-toggle-button");
 
@@ -68,9 +67,8 @@ module("Integration | Component | Widget | topic-status", function (hooks) {
     await click(".topic-statuses .pin-toggle-button");
 
     assert.ok(exists(".topic-statuses .pinned"), "pinned icon is shown");
-    assert.ok(
-      !exists(".topic-statuses .unpinned"),
-      "unpinned icon is not shown"
-    );
+    assert
+      .dom(".topic-statuses .unpinned")
+      .doesNotExist("unpinned icon is not shown");
   });
 });

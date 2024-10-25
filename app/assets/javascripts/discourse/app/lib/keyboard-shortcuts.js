@@ -1,4 +1,4 @@
-import { getOwner, setOwner } from "@ember/application";
+import { getOwner, setOwner } from "@ember/owner";
 import { run, throttle } from "@ember/runloop";
 import { ajax } from "discourse/lib/ajax";
 import { headerOffset } from "discourse/lib/offset-calculator";
@@ -12,6 +12,15 @@ import { capabilities } from "discourse/services/capabilities";
 import { INPUT_DELAY } from "discourse-common/config/environment";
 import discourseLater from "discourse-common/lib/later";
 import domUtils from "discourse-common/utils/dom-utils";
+
+let disabledBindings = [];
+export function disableDefaultKeyboardShortcuts(bindings) {
+  disabledBindings = disabledBindings.concat(bindings);
+}
+
+export function clearDisabledDefaultKeyboardBindings() {
+  disabledBindings = [];
+}
 
 let extraKeyboardShortcutsHelp = {};
 function addExtraKeyboardShortcutHelp(help) {
@@ -156,6 +165,10 @@ export default {
     // Disable the shortcut if private messages are disabled
     if (!this.currentUser?.can_send_private_messages) {
       delete DEFAULT_BINDINGS["g m"];
+    }
+
+    if (disabledBindings.length) {
+      disabledBindings.forEach((binding) => delete DEFAULT_BINDINGS[binding]);
     }
   },
 
@@ -679,7 +692,7 @@ export default {
     );
     if (!selected) {
       selected = articles.find(
-        (element) => element.dataset.islastviewedtopic === "true"
+        (element) => element.dataset.isLastViewedTopic === "true"
       );
     }
 

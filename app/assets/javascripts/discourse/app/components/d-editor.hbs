@@ -64,9 +64,10 @@
           @aria-label={{this.placeholderTranslated}}
           @disabled={{this.disabled}}
           @input={{this.change}}
-          @focusIn={{action "focusIn"}}
-          @focusOut={{action "focusOut"}}
+          @focusIn={{this.handleFocusIn}}
+          @focusOut={{this.handleFocusOut}}
           class="d-editor-input"
+          @id={{this.textAreaId}}
         />
         <PopupInputTip @validation={{this.validation}} />
         <PluginOutlet
@@ -100,6 +101,6 @@
   @isActive={{this.emojiPickerIsActive}}
   @isEditorFocused={{this.isEditorFocused}}
   @initialFilter={{this.emojiFilter}}
-  @emojiSelected={{action "emojiSelected"}}
+  @emojiSelected={{this.textManipulation.emojiSelected}}
   @onEmojiPickerClose={{this.onEmojiPickerClose}}
 />

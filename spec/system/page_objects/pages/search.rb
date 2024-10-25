@@ -30,12 +30,12 @@ module PageObjects
         find(".search-cta").click
       end
 
-      def click_home_logo
-        find(".d-header .logo-mobile").click
-      end
-
       def click_search_icon
         find(".d-header #search-button").click
+      end
+
+      def click_in_posts_by_user
+        find(".search-menu-container .search-menu-assistant-item").click
       end
 
       def click_first_topic
@@ -66,6 +66,14 @@ module PageObjects
 
       def has_warning_message?
         page.has_selector?(".search-results .warning")
+      end
+
+      def has_found_no_results?
+        page.has_css?(".search-menu-container .results .no-results")
+      end
+
+      def search_term
+        page.find("#search-term").value
       end
 
       SEARCH_PAGE_SELECTOR = "body.search-page"

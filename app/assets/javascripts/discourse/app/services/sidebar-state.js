@@ -7,11 +7,13 @@ import {
   currentPanelKey,
   customPanels as panels,
 } from "discourse/lib/sidebar/custom-sections";
+import { getCollapsedSidebarSectionKey } from "discourse/lib/sidebar/helpers";
 import {
   COMBINED_MODE,
   MAIN_PANEL,
   SEPARATED_MODE,
 } from "discourse/lib/sidebar/panels";
+import escapeRegExp from "discourse-common/utils/escape-regexp";
 
 @disableImplicitInjections
 export default class SidebarState extends Service {
@@ -26,6 +28,7 @@ export default class SidebarState extends Service {
   @tracked isForcingAdminSidebar = false;
 
   panels = panels;
+  activeExpandedSections = new TrackedSet();
   collapsedSections = new TrackedSet();
   previousState = {};
   #hiders = new TrackedSet();
@@ -81,15 +84,21 @@ export default class SidebarState extends Service {
   }
 
   collapseSection(sectionKey) {
-    const collapsedSidebarSectionKey = `sidebar-section-${sectionKey}-collapsed`;
+    const collapsedSidebarSectionKey =
+      getCollapsedSidebarSectionKey(sectionKey);
     this.keyValueStore.setItem(collapsedSidebarSectionKey, true);
     this.collapsedSections.add(collapsedSidebarSectionKey);
+    // remove the section from the active expanded list if collapsed later
+    this.activeExpandedSections.delete(sectionKey);
   }
 
   expandSection(sectionKey) {
-    const collapsedSidebarSectionKey = `sidebar-section-${sectionKey}-collapsed`;
+    const collapsedSidebarSectionKey =
+      getCollapsedSidebarSectionKey(sectionKey);
     this.keyValueStore.setItem(collapsedSidebarSectionKey, false);
     this.collapsedSections.delete(collapsedSidebarSectionKey);
+    // remove the section from the active expanded list if expanded later
+    this.activeExpandedSections.delete(sectionKey);
   }
 
   isCurrentPanel(panel) {
@@ -135,7 +144,7 @@ export default class SidebarState extends Service {
   }
 
   get sanitizedFilter() {
-    return this.filter.toLowerCase().trim();
+    return escapeRegExp(this.filter.toLowerCase().trim());
   }
 
   clearFilter() {

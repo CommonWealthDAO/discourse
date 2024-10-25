@@ -99,6 +99,7 @@ RSpec.describe SessionController do
           expect(response_body_parsed["can_login"]).to eq(true)
           expect(response_body_parsed["second_factor_required"]).to eq(true)
           expect(response_body_parsed["backup_codes_enabled"]).to eq(true)
+          expect(response_body_parsed["totp_enabled"]).to eq(true)
         end
       end
 
@@ -135,8 +136,6 @@ RSpec.describe SessionController do
     before { SiteSetting.enable_local_logins_via_email = true }
 
     context "when in staff writes only mode" do
-      use_redis_snapshotting
-
       before { Discourse.enable_readonly_mode(Discourse::STAFF_WRITES_ONLY_MODE_KEY) }
 
       it "allows admins to login" do
@@ -579,8 +578,6 @@ RSpec.describe SessionController do
     end
 
     context "when in staff writes only mode" do
-      use_redis_snapshotting
-
       before { Discourse.enable_readonly_mode(Discourse::STAFF_WRITES_ONLY_MODE_KEY) }
 
       it "allows staff to login" do
@@ -945,7 +942,7 @@ RSpec.describe SessionController do
           get "/session/sso_login", params: Rack::Utils.parse_query(sso.payload), headers: headers
 
           expect(response.status).to eq(403)
-          expect(response.parsed_body).to include(I18n.t("discourse_connect.account_not_approved"))
+          expect(response.body).to include(I18n.t("discourse_connect.account_not_approved"))
         end.to change { User.count }.by(1)
 
         logged_on_user = Discourse.current_user_provider.new(request.env).current_user
@@ -1123,7 +1120,7 @@ RSpec.describe SessionController do
         login_with_sso_and_invite
 
         expect(response.status).to eq(403)
-        expect(response.parsed_body).to include(I18n.t("discourse_connect.account_not_approved"))
+        expect(response.body).to include(I18n.t("discourse_connect.account_not_approved"))
         expect(invite.reload.redeemed?).to eq(true)
 
         user = User.find_by_email("bob@bob.com")
@@ -1365,8 +1362,6 @@ RSpec.describe SessionController do
     end
 
     context "when in readonly mode" do
-      use_redis_snapshotting
-
       before { Discourse.enable_readonly_mode }
 
       it "disallows requests" do
@@ -1801,7 +1796,7 @@ RSpec.describe SessionController do
                },
                xhr: true,
                headers: headers
-          expect(response.status).to eq(204)
+          expect(response.status).to eq(200)
           # the frontend will take care of actually redirecting the user
           redirect_url = response.cookies["sso_destination_url"]
           expect(redirect_url).to start_with("http://somewhere.over.rainbow/sso?sso=")
@@ -1839,8 +1834,6 @@ RSpec.describe SessionController do
 
   describe "#create" do
     context "when read only mode" do
-      use_redis_snapshotting
-
       before do
         Discourse.enable_readonly_mode
         EmailToken.confirm(email_token.token)
@@ -1859,8 +1852,6 @@ RSpec.describe SessionController do
     end
 
     context "when in staff writes only mode" do
-      use_redis_snapshotting
-
       before do
         Discourse.enable_readonly_mode(Discourse::STAFF_WRITES_ONLY_MODE_KEY)
         EmailToken.confirm(email_token.token)
@@ -2009,6 +2000,7 @@ RSpec.describe SessionController do
 
           expect(session[:current_user_id]).to eq(user.id)
           expect(user.user_auth_tokens.count).to eq(1)
+          expect(user.user_auth_tokens.last.authenticated_with_oauth).to be false
           unhashed_token = decrypt_auth_cookie(cookies[:_t])[:token]
           expect(UserAuthToken.hash_token(unhashed_token)).to eq(
             user.user_auth_tokens.first.auth_token,
@@ -2031,21 +2023,10 @@ RSpec.describe SessionController do
       end
 
       describe "when user's password has been marked as expired" do
-        let!(:expired_user_password) do
-          Fabricate(
-            :expired_user_password,
-            user:,
-            password: "myawesomepassword",
-            password_salt: user.salt,
-            password_algorithm: user.password_algorithm,
-          )
-        end
-
         before { RateLimiter.enable }
 
-        use_redis_snapshotting
-
         it "should return an error response code with the right error message" do
+          UserPasswordExpirer.expire_user_password(user)
           post "/session.json", params: { login: user.username, password: "myawesomepassword" }
 
           expect(response.status).to eq(200)
@@ -2443,8 +2424,6 @@ RSpec.describe SessionController do
     context "when rate limited" do
       before { RateLimiter.enable }
 
-      use_redis_snapshotting
-
       it "rate limits login" do
         SiteSetting.max_logins_per_ip_per_hour = 2
         EmailToken.confirm(email_token.token)
@@ -2735,8 +2714,6 @@ RSpec.describe SessionController do
     describe "rate limiting" do
       before { RateLimiter.enable }
 
-      use_redis_snapshotting
-
       it "should correctly rate limits" do
         user = Fabricate(:user)
 
@@ -2861,6 +2838,23 @@ RSpec.describe SessionController do
 
       it "enqueues no email" do
         post "/session/forgot_password.json", params: { login: staged.username }
+        expect(Jobs::CriticalUserEmail.jobs.size).to eq(0)
+      end
+    end
+
+    context "when in staff writes only mode" do
+      before { Discourse.enable_readonly_mode(Discourse::STAFF_WRITES_ONLY_MODE_KEY) }
+
+      it "allows staff to forget their password" do
+        post "/session/forgot_password.json", params: { login: admin.username }
+        expect(response.status).to eq(200)
+        expect(response.parsed_body["error"]).not_to be_present
+        expect(Jobs::CriticalUserEmail.jobs.size).to eq(1)
+      end
+
+      it "doesn't allow non-staff to forget their password" do
+        post "/session/forgot_password.json", params: { login: user.username }
+        expect(response.status).to eq(503)
         expect(Jobs::CriticalUserEmail.jobs.size).to eq(0)
       end
     end
@@ -3249,6 +3243,43 @@ RSpec.describe SessionController do
           expect(response.parsed_body["error"]).not_to be_present
 
           expect(session[:current_user_id]).to eq(user.id)
+        end
+
+        context "with a valid discourse connect provider" do
+          before do
+            sso = DiscourseConnectBase.new
+            sso.nonce = "mynonce"
+            sso.sso_secret = "topsecret"
+            sso.return_sso_url = "http://somewhere.over.rainbow/sso"
+            cookies[:sso_payload] = sso.payload
+
+            provider_uid = 12_345
+            UserAssociatedAccount.create!(
+              provider_name: "google_oauth2",
+              provider_uid: provider_uid,
+              user: user,
+            )
+
+            SiteSetting.enable_discourse_connect_provider = true
+            SiteSetting.discourse_connect_secret = sso.sso_secret
+            SiteSetting.discourse_connect_provider_secrets =
+              "somewhere.over.rainbow|#{sso.sso_secret}"
+          end
+
+          it "logs the user in" do
+            simulate_localhost_passkey_challenge
+            user.activate
+            user.create_or_fetch_secure_identifier
+            post "/session/passkey/auth.json",
+                 params: {
+                   publicKeyCredential:
+                     valid_passkey_auth_data.merge(
+                       { userHandle: Base64.strict_encode64(user.secure_identifier) },
+                     ),
+                 }
+            expect(response.status).to eq(302)
+            expect(response.location).to start_with("http://somewhere.over.rainbow/sso")
+          end
         end
       end
     end

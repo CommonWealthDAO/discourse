@@ -18,15 +18,16 @@
   },
   "devDependencies": {
     "clean-base-url": "^1.0.0",
-    "express": "^4.19.2",
-    "glob": "^10.4.1",
+    "express": "^4.21.1",
+    "glob": "^10.4.3",
     "html-entities": "^2.5.2",
     "html-rewriter-wasm": "^0.4.1",
     "node-fetch": "^3.3.2"
   },
   "engines": {
     "node": ">= 18",
-    "npm": "please-use-yarn",
-    "yarn": ">= 1.21.1"
+    "npm": "please-use-pnpm",
+    "yarn": "please-use-pnpm",
+    "pnpm": ">= 9"
   }
 }

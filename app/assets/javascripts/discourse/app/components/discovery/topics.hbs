@@ -34,6 +34,7 @@
   @model={{@model}}
   @incomingCount={{this.topicTrackingState.incomingCount}}
   @bulkSelectHelper={{@bulkSelectHelper}}
+  @class={{if this.footerEducation "--no-topics-education"}}
 >
   {{#if this.top}}
     <div class="top-lists">
@@ -140,11 +141,16 @@
     {{/if}}
   {{/if}}
 
-  <span>
+  <span class="after-topic-list-plugin-outlet-wrapper">
     <PluginOutlet
       @name="after-topic-list"
       @connectorTagName="div"
-      @outletArgs={{hash category=@category tag=@tag}}
+      @outletArgs={{hash
+        category=@category
+        tag=@tag
+        loadingMore=@model.loadingMore
+        canLoadMore=@model.canLoadMore
+      }}
     />
   </span>
 </DiscoveryTopicsList>

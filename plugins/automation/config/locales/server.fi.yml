@@ -14,6 +14,8 @@ fi:
         invalid_field: Kentän komponenttia "%{component}" ei voi käyttää kohteessa "%{target}:%{target_name}".
         invalid_metadata: Kentän "%{field}" tiedot ovat virheellisiä, tai komponentti "%{component}" on tuntematon.
     triggerables:
+      errors:
+        custom_fields_or_user_profile_required: "Vähintään yksi \"custom_fields\" tai \"user_profile\" on annettava."
       user_badge_granted:
         title: Käyttäjän kunniamerkki myönnetty
         doc: Käynnistää automaation, kun käyttäjälle myönnetään kunniamerkki.
@@ -54,18 +56,25 @@ fi:
       pm_created:
         title: Yksityisviesti luotu
         description: Kun kelvollinen yksityisviesti luodaan, automaatio käynnistyy
+      topic_tags_changed:
+        title: Ketjun tunnisteita muutettu
+        description: Kun ketjun tunnisteet muuttuvat, automaatio käynnistyy
       topic:
         title: Ketju
         description: Tähän liittyvää skriptiä käytetään vain tietyssä ketjussa; tämä on hyödyllistä esimerkiksi validointia suorittavissa skripteissä
       after_post_cook:
         title: Viestin kirjoittamisen jälkeen
         description: Kun viestin sisältö luodaan, automaatio käynnistyy
+      user_updated:
+        title: Käyttäjän päivityksen jälkeen
+        description: Kun käyttäjä päivittää tietoja, automaatio laukaistaan
     scriptables:
       post:
         title: Luo viesti
         description: Luo viesti tietyssä ketjussa
       topic:
         title: Aloita aihe
+        description: Luo ketju tiettynä käyttäjänä
       flag_post_on_words:
         title: Liputa viesti sanojen perusteella
         description: Liputtaa viestin, jos se sisältää tiettyjä sanoja

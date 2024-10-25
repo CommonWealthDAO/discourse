@@ -79,6 +79,13 @@ module Onebox
                     iframe.remove_attribute("src")
                   end
                 end,
+                lambda do |env|
+                  next if env[:node_name] != "svg"
+                  env[:node].traverse do |node|
+                    next if node.element? && %w[svg path use].include?(node.name)
+                    node.remove
+                  end
+                end,
               ],
           protocols: {
             "embed" => {
@@ -100,7 +107,7 @@ module Onebox
         ),
       )
 
-    DISCOURSE_ONEBOX ||=
+    DISCOURSE_ONEBOX =
       Sanitize::Config.freeze_config(
         Sanitize::Config.merge(
           ONEBOX,

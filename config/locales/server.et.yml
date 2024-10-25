@@ -252,6 +252,8 @@ et:
         raw: "Sisu"
       user_profile:
         bio_raw: "Minust"
+      user:
+        password: "Parool"
     errors:
       models:
         topic:
@@ -262,6 +264,14 @@ et:
             featured_link:
               invalid: "on vigane. URL peab sisaldama http:// või https://."
         user:
+          attributes:
+            password:
+              common: "on üks 10000 enim kasutatud salasõnast. Palun kasuta turvalisemat parooli."
+              same_as_username: "on sama mis su kasutajanimi. Palun kasuta turvalisemat parooli."
+              same_as_email: "on sama mis su meiliaadress. Palun kasuta turvalisemat parooli."
+              same_as_current: "ühtib sinu hetkel kehtiva parooliga."
+              unique_characters: "sisaldab liiga palju korduvaid tähemärke. Palun kasuta turvalisemat parooli."
+        user_password:
           attributes:
             password:
               common: "on üks 10000 enim kasutatud salasõnast. Palun kasuta turvalisemat parooli."
@@ -422,11 +432,7 @@ et:
     error_staged: "Sinu meiliaadressi muutmisel esines tõrge. Ettevalmistamisel olev kasutaja juba kasutab seda."
     already_done: "Vabandust, see kinnitamise link ei kehti enam. Äkki on teie meiliaadress juba muudetud?"
   activation:
-    action: "Oma konto aktiveerimiseks kliki siia"
     already_done: "Vabandust, see konto kinnitamise link ei kehti enam. Äkki on Teie konto juba aktiveeritud?"
-    please_continue: "Teie uus konto on kinnitatud; Teid suunatakse nüüd avalehele."
-    continue_button: "Edasi saidile %{site_name}"
-    welcome_to: "Tere tulemast %{site_name}!"
     approval_required: "Enne, kui saate foorumit kasutada, peab moderaator Teie uue konto käsitsi kinnitama. Konto kinnitamise kohta tuleb teade meilile."
     missing_session: "Me ei saa kontrollida kas Teie konto on loodud, palun kontrolli et brauseris oleks küpsised lubatud."
   reviewable_score_types:
@@ -560,6 +566,8 @@ et:
       yaxis: "Päev"
     consolidated_page_views_browser_detection:
       yaxis: "Päev"
+    site_traffic:
+      yaxis: "Päev"
     dau_by_mau:
       xaxis: "Päev"
     daily_engaged_users:
@@ -671,6 +679,8 @@ et:
     page_view_total_reqs:
       title: "Lehekülje vaatamisi"
       xaxis: "Päev"
+    page_view_legacy_total_reqs:
+      xaxis: "Päev"
     page_view_logged_in_mobile_reqs:
       xaxis: "Päev"
     page_view_anon_mobile_reqs:
@@ -707,6 +717,8 @@ et:
     web_crawlers:
       labels:
         page_views: "Lehekülje vaatamisi"
+    web_hook_events_daily_aggregate:
+      xaxis: "Päev"
     suspicious_logins:
       labels:
         user: Kasutaja
@@ -731,6 +743,12 @@ et:
       labels:
         user: Kasutaja
         qtt_like: Meeldimisi saadud
+    topic_view_stats:
+      labels:
+        topic: Teema
+        logged_in_views: Sisse logitud
+        anon_views: Anonüümne
+        total_views: Kokku
   dashboard:
     problem:
       host_names: "Sinu config/database.yml fail kasutab vaikimisi hostinime localhost. Kirjuta sinna oma saidi hostinimi."
@@ -880,6 +898,8 @@ et:
     boolean_yes: "Jah"
     boolean_no: "Ei"
     rate_limit_error: "Postitusi saab alla laadida üks kord ööpäevas. Palun proovi homme uuesti."
+  guidelines_topic:
+    guidelines_title: "Juhised"
   tos_topic:
     title: "Teenuse tingimused"
   privacy_topic:
@@ -1024,7 +1044,12 @@ et:
       privacy:
         fields:
           login_required:
-            placeholder: "Privaatne"
+            label: "Nähtavus"
+            choices:
+              public:
+                label: "Avalik"
+              private:
+                label: "Privaatne"
       styling:
         fields:
           styling_preview:

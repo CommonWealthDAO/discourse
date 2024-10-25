@@ -70,12 +70,12 @@ class DiscourseIpInfo
     dir = "#{Dir.tmpdir}/#{SecureRandom.hex}"
 
     Discourse::Utils.execute_command("mkdir", "-p", dir)
-
     Discourse::Utils.execute_command("cp", gz_file.path, "#{dir}/#{filename}")
-
     Discourse::Utils.execute_command("tar", "-xzvf", "#{dir}/#{filename}", chdir: dir)
 
     Dir["#{dir}/**/*.mmdb"].each { |f| FileUtils.mv(f, mmdb_path(name)) }
+  rescue => e
+    Discourse.warn_exception(e, message: "MaxMind database #{name} download failed.")
   ensure
     FileUtils.rm_r(dir, force: true) if dir
     gz_file&.close!

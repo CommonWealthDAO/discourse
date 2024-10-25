@@ -16,7 +16,7 @@
       {{#if this.customDatetimeSelected}}
         <div class="control-group custom-date-time-wrap custom-input-wrap">
           <div class="tap-tile-date-input">
-            {{d-icon "calendar-alt"}}
+            {{d-icon "calendar-days"}}
             <DatePickerFuture
               @value={{this.customDate}}
               @defaultDate={{this.defaultCustomDate}}
@@ -40,9 +40,9 @@
             {{i18n "relative_time_picker.relative"}}
           </label>
           <RelativeTimePicker
-            @id="bookmark-relative-time-picker"
             @durationMinutes={{this.selectedDurationMins}}
-            @onChange={{action "relativeTimeChanged"}}
+            @onChange={{this.relativeTimeChanged}}
+            id="bookmark-relative-time-picker"
           />
         </div>
       {{/if}}

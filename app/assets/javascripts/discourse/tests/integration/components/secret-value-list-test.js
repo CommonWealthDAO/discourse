@@ -2,14 +2,21 @@ import { blur, click, fillIn, render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { count, exists, query } from "discourse/tests/helpers/qunit-helpers";
+import { count, query } from "discourse/tests/helpers/qunit-helpers";
 import I18n from "discourse-i18n";
 
 module("Integration | Component | secret-value-list", function (hooks) {
   setupRenderingTest(hooks);
 
   test("adding a value", async function (assert) {
-    await render(hbs`<SecretValueList @values={{this.values}} />`);
+    this.set("setValidationMessage", () => {});
+
+    await render(hbs`
+      <SecretValueList
+        @values={{this.values}}
+        @setValidationMessage={{this.setValidationMessage}}
+      />
+    `);
 
     this.set("values", "firstKey|FirstValue\nsecondKey|secondValue");
 
@@ -50,16 +57,25 @@ module("Integration | Component | secret-value-list", function (hooks) {
   });
 
   test("adding an invalid value", async function (assert) {
-    await render(hbs`<SecretValueList @values={{this.values}} />`);
+    let setValidationMessage = (message) => {
+      this.set("message", message);
+    };
+    this.set("setValidationMessage", setValidationMessage);
+
+    await render(hbs`
+      <SecretValueList
+        @values={{this.values}}
+        @setValidationMessage={{this.setValidationMessage}}
+      />
+    `);
 
     await fillIn(".new-value-input.key", "someString");
     await fillIn(".new-value-input.secret", "keyWithAPipe|Hidden");
     await click(".add-value-btn");
 
-    assert.ok(
-      !exists(".values .value"),
-      "it doesn't add the value to the list of values"
-    );
+    assert
+      .dom(".values .value")
+      .doesNotExist("it doesn't add the value to the list of values");
 
     assert.deepEqual(
       this.values,
@@ -67,16 +83,22 @@ module("Integration | Component | secret-value-list", function (hooks) {
       "it doesn't add the value to the list of values"
     );
 
-    assert.ok(
-      query(".validation-error").innerText.includes(
-        I18n.t("admin.site_settings.secret_list.invalid_input")
-      ),
+    assert.strictEqual(
+      this.message,
+      I18n.t("admin.site_settings.secret_list.invalid_input"),
       "it shows validation error"
     );
   });
 
   test("changing a value", async function (assert) {
-    await render(hbs`<SecretValueList @values={{this.values}} />`);
+    this.set("setValidationMessage", () => {});
+
+    await render(hbs`
+      <SecretValueList
+        @values={{this.values}}
+        @setValidationMessage={{this.setValidationMessage}}
+      />
+    `);
 
     this.set("values", "firstKey|FirstValue\nsecondKey|secondValue");
 
@@ -109,7 +131,14 @@ module("Integration | Component | secret-value-list", function (hooks) {
   });
 
   test("removing a value", async function (assert) {
-    await render(hbs`<SecretValueList @values={{this.values}} />`);
+    this.set("setValidationMessage", () => {});
+
+    await render(hbs`
+      <SecretValueList
+        @values={{this.values}}
+        @setValidationMessage={{this.setValidationMessage}}
+      />
+    `);
 
     this.set("values", "firstKey|FirstValue\nsecondKey|secondValue");
 

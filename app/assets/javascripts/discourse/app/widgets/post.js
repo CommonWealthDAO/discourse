@@ -1,4 +1,4 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { hbs } from "ember-cli-htmlbars";
 import { Promise } from "rsvp";
 import { h } from "virtual-dom";
@@ -31,9 +31,13 @@ import getURL, {
 import { iconNode } from "discourse-common/lib/icon-library";
 import I18n from "discourse-i18n";
 
-function transformWithCallbacks(post) {
+function transformWithCallbacks(post, topicUrl, store) {
   let transformed = transformBasicPost(post);
   postTransformCallbacks(transformed);
+
+  transformed.customShare = `${topicUrl}/${post.post_number}`;
+  transformed.asPost = store.createRecord("post", post);
+
   return transformed;
 }
 
@@ -162,12 +166,10 @@ createWidget("reply-to-tab", {
       tabindex: "0",
     };
 
-    if (!this.attrs.mobileView) {
+    if (!attrs.mobileView) {
       result["role"] = "button";
       result["aria-controls"] = `embedded-posts__top--${attrs.post_number}`;
-      result["aria-expanded"] = this.attrs.repliesAbove.length
-        ? "true"
-        : "false";
+      result["aria-expanded"] = (attrs.repliesAbove.length > 0).toString();
     }
 
     return result;
@@ -221,7 +223,7 @@ createWidget("post-avatar", {
     let hideFromAnonUser =
       this.siteSettings.hide_user_profiles_from_public && !this.currentUser;
     if (!attrs.user_id) {
-      body = iconNode("far-trash-alt", { class: "deleted-user-avatar" });
+      body = iconNode("trash-can", { class: "deleted-user-avatar" });
     } else {
       body = avatarFor.call(
         this,
@@ -526,7 +528,7 @@ createWidget("post-contents", {
 
     const extraState = {
       state: {
-        repliesShown: !!state.repliesBelow.length,
+        repliesShown: state.repliesBelow.length > 0,
         filteredRepliesShown: state.filteredRepliesShown,
       },
     };
@@ -534,31 +536,49 @@ createWidget("post-contents", {
 
     const repliesBelow = state.repliesBelow;
     if (repliesBelow.length) {
+      let children = [];
+
+      repliesBelow.forEach((p) => {
+        children.push(
+          this.attach("embedded-post", p, {
+            model: p.asPost,
+            state: {
+              role: "region",
+              "aria-label": I18n.t("post.sr_embedded_reply_description", {
+                post_number: attrs.post_number,
+                username: p.username,
+              }),
+            },
+          })
+        );
+      });
+
+      children.push(
+        this.attach("button", {
+          title: "post.collapse",
+          icon: "chevron-up",
+          action: "toggleRepliesBelow",
+          actionParam: true,
+          className: "btn collapse-up",
+          translatedAriaLabel: I18n.t("post.sr_collapse_replies"),
+        })
+      );
+
+      if (repliesBelow.length < this.attrs.replyCount) {
+        children.push(
+          this.attach("button", {
+            label: "post.load_more_replies",
+            action: "loadMoreReplies",
+            actionParam: repliesBelow[repliesBelow.length - 1]?.post_number,
+            className: "btn load-more-replies",
+          })
+        );
+      }
+
       result.push(
         h(
           `section.embedded-posts.bottom#embedded-posts__bottom--${this.attrs.post_number}`,
-          [
-            repliesBelow.map((p) => {
-              return this.attach("embedded-post", p, {
-                model: p.asPost,
-                state: {
-                  role: "region",
-                  "aria-label": I18n.t("post.sr_embedded_reply_description", {
-                    post_number: attrs.post_number,
-                    username: p.username,
-                  }),
-                },
-              });
-            }),
-            this.attach("button", {
-              title: "post.collapse",
-              icon: "chevron-up",
-              action: "toggleRepliesBelow",
-              actionParam: "true",
-              className: "btn collapse-up",
-              translatedAriaLabel: I18n.t("post.sr_collapse_replies"),
-            }),
-          ]
+          children
         )
       );
     }
@@ -599,38 +619,28 @@ createWidget("post-contents", {
     }
   },
 
-  toggleRepliesBelow(goToPost = "false") {
-    if (this.state.repliesBelow.length) {
-      this.state.repliesBelow = [];
-      if (goToPost === "true") {
-        DiscourseURL.routeTo(
-          `${this.attrs.topicUrl}/${this.attrs.post_number}`
-        );
-      }
-      return;
-    }
-
-    const post = this.findAncestorModel();
-    const topicUrl = post ? post.get("topic.url") : null;
+  loadMoreReplies(after = 1) {
     return this.store
-      .find("post-reply", { postId: this.attrs.id })
-      .then((posts) => {
-        this.state.repliesBelow = posts.map((p) => {
-          let result = transformWithCallbacks(p);
-
-          // these would conflict with computed properties with identical names
-          // in the post model if we kept them.
-          delete result.new_user;
-          delete result.deleted;
-          delete result.shareUrl;
-          delete result.firstPost;
-          delete result.usernameUrl;
-
-          result.customShare = `${topicUrl}/${p.post_number}`;
-          result.asPost = this.store.createRecord("post", result);
-          return result;
+      .find("post-reply", { postId: this.attrs.id, after })
+      .then((replies) => {
+        replies.forEach((reply) => {
+          this.state.repliesBelow.push(
+            transformWithCallbacks(reply, this.attrs.topicUrl, this.store)
+          );
         });
       });
+  },
+
+  toggleRepliesBelow(goToPost = false) {
+    if (this.state.repliesBelow.length) {
+      this.state.repliesBelow = [];
+      if (goToPost === true) {
+        const { topicUrl, post_number } = this.attrs;
+        DiscourseURL.routeTo(`${topicUrl}/${post_number}`);
+      }
+    } else {
+      return this.loadMoreReplies();
+    }
   },
 
   expandFirstPost() {
@@ -715,7 +725,7 @@ createWidget("post-notice", {
 
     if (attrs.notice.type === "new_user") {
       return [
-        iconNode("hands-helping"),
+        iconNode("handshake-angle"),
         h("p", I18n.t("post.notice.new_user", { user })),
       ];
     }
@@ -724,7 +734,7 @@ createWidget("post-notice", {
       const timeAgo = (new Date() - new Date(attrs.notice.lastPostedAt)) / 1000;
       const time = relativeAgeMediumSpan(timeAgo, true);
       return [
-        iconNode("far-smile"),
+        iconNode("far-face-smile"),
         h("p", I18n.t("post.notice.returning_user", { user, time })),
       ];
     }
@@ -743,46 +753,8 @@ createWidget("post-body", {
     result.push(postContents);
     result.push(this.attach("actions-summary", attrs));
     result.push(this.attach("post-links", attrs));
-    if (attrs.showTopicMap) {
-      result.push(this.buildTopicMap(attrs));
-    }
 
     return result;
-  },
-
-  buildTopicMap(attrs) {
-    return new RenderGlimmer(
-      this,
-      "div.topic-map",
-      hbs`<TopicMap
-        @model={{@data.model}}
-        @topicDetails={{@data.topicDetails}}
-        @postStream={{@data.postStream}}
-        @showPMMap={{@data.showPMMap}}
-        @cancelFilter={{@data.cancelFilter}}
-        @showTopReplies={{@data.showTopReplies}}
-        @collapseSummary={{@data.collapseSummary}}
-        @showSummary={{@data.showSummary}}
-        @showInvite={{@data.showInvite}}
-        @removeAllowedGroup={{@data.removeAllowedGroup}}
-        @removeAllowedUser={{@data.removeAllowedUser}}
-      />`,
-      {
-        model: attrs.topic,
-        topicDetails: attrs.topic.get("details"),
-        postStream: attrs.topic.postStream,
-        showPMMap: attrs.showPMMap,
-        cancelFilter: () => this.sendWidgetAction("cancelFilter"),
-        showTopReplies: () => this.sendWidgetAction("showTopReplies"),
-        collapseSummary: () => this.sendWidgetAction("collapseSummary"),
-        showSummary: () => this.sendWidgetAction("showSummary"),
-        showInvite: () => this.sendWidgetAction("showInvite"),
-        removeAllowedGroup: (group) =>
-          this.sendWidgetAction("removeAllowedGroup", group),
-        removeAllowedUser: (user) =>
-          this.sendWidgetAction("removeAllowedUser", user),
-      }
-    );
   },
 });
 
@@ -845,7 +817,7 @@ createWidget("post-article", {
                 title: "post.collapse",
                 icon: "chevron-down",
                 action: "toggleReplyAbove",
-                actionParam: "true",
+                actionParam: true,
                 className: "btn collapse-down",
               }),
               replies,
@@ -868,6 +840,11 @@ createWidget("post-article", {
         }),
       ])
     );
+
+    if (this.shouldShowTopicMap(attrs)) {
+      rows.push(this.buildTopicMap(attrs));
+    }
+
     return rows;
   },
 
@@ -876,7 +853,7 @@ createWidget("post-article", {
     return post ? post.get("topic.url") : null;
   },
 
-  toggleReplyAbove(goToPost = "false") {
+  toggleReplyAbove(goToPost = false) {
     const replyPostNumber = this.attrs.reply_to_post_number;
 
     if (this.siteSettings.enable_filtered_replies_view) {
@@ -901,10 +878,9 @@ createWidget("post-article", {
 
     if (this.state.repliesAbove.length) {
       this.state.repliesAbove = [];
-      if (goToPost === "true") {
-        DiscourseURL.routeTo(
-          `${this.attrs.topicUrl}/${this.attrs.post_number}`
-        );
+      if (goToPost === true) {
+        const { topicUrl, post_number } = this.attrs;
+        DiscourseURL.routeTo(`${topicUrl}/${post_number}`);
       }
       return Promise.resolve();
     } else {
@@ -912,25 +888,56 @@ createWidget("post-article", {
       return this.store
         .find("post-reply-history", { postId: this.attrs.id })
         .then((posts) => {
-          this.state.repliesAbove = posts.map((p) => {
-            let result = transformWithCallbacks(p);
-
-            // We don't want to overwrite CPs - we are doing something a bit weird
-            // here by creating a post object from a transformed post. They aren't
-            // 100% the same.
-            delete result.new_user;
-            delete result.deleted;
-            delete result.shareUrl;
-            delete result.firstPost;
-            delete result.usernameUrl;
-            delete result.topicNotificationLevel;
-
-            result.customShare = `${topicUrl}/${p.post_number}`;
-            result.asPost = this.store.createRecord("post", result);
-            return result;
+          posts.forEach((post) => {
+            this.state.repliesAbove.push(
+              transformWithCallbacks(post, topicUrl, this.store)
+            );
           });
         });
     }
+  },
+
+  shouldShowTopicMap(attrs) {
+    if (attrs.post_number !== 1) {
+      return false;
+    }
+    const isPM = attrs.topic.archetype === "private_message";
+    const isRegular = attrs.topic.archetype === "regular";
+    const showWithoutReplies =
+      this.siteSettings.show_topic_map_in_topics_without_replies;
+
+    return (
+      attrs.topicMap ||
+      isPM ||
+      (isRegular && (attrs.topic.posts_count > 1 || showWithoutReplies))
+    );
+  },
+
+  buildTopicMap(attrs) {
+    return new RenderGlimmer(
+      this,
+      "div.topic-map.--op",
+      hbs`<TopicMap
+        @model={{@data.model}}
+        @topicDetails={{@data.topicDetails}}
+        @postStream={{@data.postStream}}
+        @showPMMap={{@data.showPMMap}}
+        @showInvite={{@data.showInvite}}
+        @removeAllowedGroup={{@data.removeAllowedGroup}}
+        @removeAllowedUser={{@data.removeAllowedUser}}
+      />`,
+      {
+        model: attrs.topic,
+        topicDetails: attrs.topic.get("details"),
+        postStream: attrs.topic.postStream,
+        showPMMap: attrs.topic.archetype === "private_message",
+        showInvite: () => this.sendWidgetAction("showInvite"),
+        removeAllowedGroup: (group) =>
+          this.sendWidgetAction("removeAllowedGroup", group),
+        removeAllowedUser: (user) =>
+          this.sendWidgetAction("removeAllowedUser", user),
+      }
+    );
   },
 });
 

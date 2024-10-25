@@ -1,4 +1,4 @@
-import { setOwner } from "@ember/application";
+import { setOwner } from "@ember/owner";
 import { service } from "@ember/service";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import getURL from "discourse-common/lib/get-url";
@@ -37,7 +37,7 @@ export default class ChatMessageFlag {
         "description",
         I18n.t(`chat.flags.${flag.name_key}`, {
           basePath: getURL(""),
-          defaultValue: "",
+          defaultValue: flag.description,
         })
       );
       return flag;
@@ -48,8 +48,9 @@ export default class ChatMessageFlag {
     let flagsAvailable = flagModal.site.flagTypes;
 
     flagsAvailable = flagsAvailable.filter((flag) => {
-      return flagModal.args.model.flagModel.availableFlags.includes(
-        flag.name_key
+      return (
+        flagModal.args.model.flagModel.availableFlags.includes(flag.name_key) &&
+        flag.applies_to.includes("Chat::Message")
       );
     });
 

@@ -1,4 +1,4 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
 
@@ -11,7 +11,6 @@ module("Discourse Chat | Unit | chat-emoji-reaction-store", function (hooks) {
       "service:chat-emoji-reaction-store"
     );
 
-    this.chatEmojiReactionStore.siteSettings = this.siteSettings;
     this.chatEmojiReactionStore.reset();
   });
 

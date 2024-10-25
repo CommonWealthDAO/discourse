@@ -7,7 +7,6 @@ class Admin::DashboardController < Admin::StaffController
     if SiteSetting.version_checks?
       data.merge!(version_check: DiscourseUpdates.check_version.as_json)
     end
-    data.merge!(has_unseen_features: DiscourseUpdates.has_unseen_features?(current_user.id))
 
     render json: data
   end
@@ -47,6 +46,18 @@ class Admin::DashboardController < Admin::StaffController
     mark_new_features_as_seen
 
     render json: data
+  end
+
+  def toggle_feature
+    Experiments::Toggle.call(service_params) do
+      on_success { render(json: success_json) }
+      on_failure { render(json: failed_json, status: 422) }
+      on_failed_policy(:current_user_is_admin) { raise Discourse::InvalidAccess }
+      on_failed_policy(:setting_is_available) { raise Discourse::InvalidAccess }
+      on_failed_contract do |contract|
+        render(json: failed_json.merge(errors: contract.errors.full_messages), status: 400)
+      end
+    end
   end
 
   private

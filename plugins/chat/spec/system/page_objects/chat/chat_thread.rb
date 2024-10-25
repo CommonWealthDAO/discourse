@@ -17,7 +17,7 @@ module PageObjects
       end
 
       def header
-        @header ||= PageObjects::Components::Chat::ThreadHeader.new(".c-routes-channel-thread")
+        @header ||= PageObjects::Components::Chat::ThreadHeader.new(".c-routes.--channel-thread")
       end
 
       def notifications_button
@@ -80,7 +80,7 @@ module PageObjects
       end
 
       def has_no_loading_skeleton?
-        has_no_css?(".chat-thread__messages .chat-skeleton")
+        has_no_css?(".chat-thread .chat-skeleton")
       end
 
       def type_in_composer(input)
@@ -94,7 +94,9 @@ module PageObjects
       end
 
       def click_composer
-        find(".chat-thread .chat-composer__input").click # ensures autocomplete is closed and not masking anything
+        if has_no_css?(".dialog-overlay", wait: 0) # we can't click composer if a dialog is open, in case of error for exampel
+          find(".chat-thread .chat-composer__input").click # ensures autocomplete is closed and not masking anything
+        end
       end
 
       def send_message(text = nil)

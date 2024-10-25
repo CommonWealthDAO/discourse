@@ -8,6 +8,16 @@ module PageObjects
         self
       end
 
+      def form
+        PageObjects::Components::FormKit.new(".user-field .form-kit")
+      end
+
+      def choose_requirement(requirement)
+        form = page.find(".user-field")
+
+        form.choose(I18n.t("admin_js.admin.user_fields.requirement.#{requirement}.title"))
+      end
+
       def add_field(name: nil, description: nil, requirement: nil, preferences: [])
         page.find(".user-fields .btn-primary").click
 

@@ -14,7 +14,6 @@ sr:
     chat:
       dates:
         yesterday: "Juče"
-        time_tiny: "h:mm"
       cancel: "Odustani"
       channel_settings:
         edit: "Izmeni"
@@ -115,6 +114,8 @@ sr:
             title: "Normalno"
           tracking:
             title: "Praćeno"
+          watching:
+            title: "Posmatram"
       draft_channel_screen:
         header: "Nova privatna poruka"
         cancel: "Odustani"

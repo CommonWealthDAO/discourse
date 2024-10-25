@@ -1,7 +1,7 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { getOwner } from "@ember/application";
 import { action } from "@ember/object";
+import { getOwner } from "@ember/owner";
 import { cancel, next } from "@ember/runloop";
 import { service } from "@ember/service";
 import { isPresent } from "@ember/utils";
@@ -26,7 +26,6 @@ import {
 import { cloneJSON } from "discourse-common/lib/object";
 import { findRawTemplate } from "discourse-common/lib/raw-templates";
 import I18n from "discourse-i18n";
-import ChatModalChannelSummary from "discourse/plugins/chat/discourse/components/chat/modal/channel-summary";
 import { chatComposerButtons } from "discourse/plugins/chat/discourse/lib/chat-composer-buttons";
 import ChatMessageInteractor from "discourse/plugins/chat/discourse/lib/chat-message-interactor";
 import TextareaInteractor from "discourse/plugins/chat/discourse/lib/textarea-interactor";
@@ -394,13 +393,6 @@ export default class ChatComposer extends Component {
     } else {
       this.chatComposerWarningsTracker.reset();
     }
-  }
-
-  @action
-  showChannelSummaryModal() {
-    this.modal.show(ChatModalChannelSummary, {
-      model: { channelId: this.args.channel.id },
-    });
   }
 
   #addMentionedUser(userData) {

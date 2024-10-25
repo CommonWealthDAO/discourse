@@ -4,7 +4,9 @@ RSpec.describe ProblemCheck do
   around do |example|
     ScheduledCheck = Class.new(described_class) { self.perform_every = 30.minutes }
     RealtimeCheck = Class.new(described_class)
+    InlineCheck = Class.new(described_class) { self.inline = true }
     PluginCheck = Class.new(described_class)
+    DisabledCheck = Class.new(described_class) { self.enabled = false }
     FailingCheck =
       Class.new(described_class) do
         def call
@@ -29,12 +31,14 @@ RSpec.describe ProblemCheck do
     stub_const(
       described_class,
       "CORE_PROBLEM_CHECKS",
-      [ScheduledCheck, RealtimeCheck, FailingCheck, PassingCheck],
+      [ScheduledCheck, RealtimeCheck, InlineCheck, DisabledCheck, FailingCheck, PassingCheck],
       &example
     )
 
     Object.send(:remove_const, ScheduledCheck.name)
     Object.send(:remove_const, RealtimeCheck.name)
+    Object.send(:remove_const, InlineCheck.name)
+    Object.send(:remove_const, DisabledCheck.name)
     Object.send(:remove_const, PluginCheck.name)
     Object.send(:remove_const, FailingCheck.name)
     Object.send(:remove_const, PassingCheck.name)
@@ -42,6 +46,9 @@ RSpec.describe ProblemCheck do
 
   let(:scheduled_check) { ScheduledCheck }
   let(:realtime_check) { RealtimeCheck }
+  let(:inline_check) { InlineCheck }
+  let(:enabled_check) { RealtimeCheck }
+  let(:disabled_check) { DisabledCheck }
   let(:plugin_check) { PluginCheck }
   let(:failing_check) { FailingCheck }
   let(:passing_check) { PassingCheck }
@@ -56,27 +63,42 @@ RSpec.describe ProblemCheck do
   end
 
   describe ".checks" do
-    it { expect(described_class.checks).to include(scheduled_check, realtime_check) }
+    it { expect(described_class.checks).to include(scheduled_check, realtime_check, inline_check) }
   end
 
   describe ".scheduled" do
     it { expect(described_class.scheduled).to include(scheduled_check) }
     it { expect(described_class.scheduled).not_to include(realtime_check) }
+    it { expect(described_class.scheduled).not_to include(inline_check) }
   end
 
   describe ".realtime" do
     it { expect(described_class.realtime).to include(realtime_check) }
     it { expect(described_class.realtime).not_to include(scheduled_check) }
+    it { expect(described_class.realtime).not_to include(inline_check) }
   end
 
   describe ".scheduled?" do
     it { expect(scheduled_check).to be_scheduled }
     it { expect(realtime_check).to_not be_scheduled }
+    it { expect(inline_check).to_not be_scheduled }
   end
 
   describe ".realtime?" do
     it { expect(realtime_check).to be_realtime }
     it { expect(scheduled_check).to_not be_realtime }
+    it { expect(inline_check).to_not be_realtime }
+  end
+
+  describe ".inline?" do
+    it { expect(inline_check).to be_inline }
+    it { expect(realtime_check).to_not be_inline }
+    it { expect(scheduled_check).to_not be_inline }
+  end
+
+  describe ".enabled?" do
+    it { expect(enabled_check).to be_enabled }
+    it { expect(disabled_check).not_to be_enabled }
   end
 
   describe "plugin problem check registration" do

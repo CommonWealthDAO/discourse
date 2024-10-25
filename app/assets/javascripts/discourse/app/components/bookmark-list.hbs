@@ -12,7 +12,7 @@
                 <FlatButton
                   @action={{this.toggleBulkSelect}}
                   @class="bulk-select"
-                  @icon="tasks"
+                  @icon="list-check"
                   @title="bookmarks.bulk.toggle"
                 />
               </th>
@@ -50,7 +50,7 @@
                 <FlatButton
                   @action={{this.toggleBulkSelect}}
                   @class="bulk-select"
-                  @icon="tasks"
+                  @icon="list-check"
                   @title="bookmarks.bulk.toggle"
                 />
                 {{i18n "topic.title"}}
@@ -80,7 +80,12 @@
                 </label>
               </td>
             {{/if}}
-            <th scope="row" class="main-link topic-list-data">
+            <td class="main-link topic-list-data">
+              <PluginOutlet
+                @name="bookmark-list-before-link"
+                @outletArgs={{hash bookmark=bookmark}}
+              />
+
               <span class="link-top-line">
                 <div class="bookmark-metadata">
                   {{#if bookmark.reminder_at}}
@@ -96,7 +101,7 @@
                   {{/if}}
                   {{#if bookmark.name}}
                     <span class="bookmark-metadata-item">
-                      {{d-icon "info-circle"}}<span>{{bookmark.name}}</span>
+                      {{d-icon "circle-info"}}<span>{{bookmark.name}}</span>
                     </span>
                   {{/if}}
                 </div>
@@ -157,7 +162,7 @@
                 class="post-excerpt"
                 {{on "click" this.screenExcerptForExternalLink}}
               >{{html-safe bookmark.excerpt}}</p>
-            </th>
+            </td>
             {{#if this.site.desktopView}}
               <td class="author-avatar topic-list-data">
                 {{#if bookmark.user.avatar_template}}

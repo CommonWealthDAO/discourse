@@ -1,21 +1,39 @@
+.admin-flags {
+  table.d-admin-table {
+    td:first-child {
+      width: 70%;
+
+      @include breakpoint("tablet") {
+        width: auto;
+      }
+    }
+  }
+}
+
 .admin-flag-item {
-  &__name {
-    font-weight: bold;
-    color: var(--tertiary);
-    padding-bottom: 0;
-    margin-bottom: 0;
+  &__delete.btn,
+  &__delete.btn:hover {
+    border-top: 1px solid var(--primary-low);
+    color: var(--danger);
+    svg {
+      color: var(--danger);
+    }
   }
-  &__description {
-    margin-top: 0.5em;
+}
+
+.admin-flags__header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+
+  .btn-primary {
+    align-self: center;
   }
-  &__options {
-    display: flex;
-    align-items: center;
-  }
-  .d-toggle-switch--label {
-    margin-bottom: 0;
-  }
-  .flag-menu-trigger {
-    padding: 0.25em 0.325em;
+
+  h3 {
+    margin-top: 1em;
+    font-size: var(--font-0);
+    font-weight: normal;
+    flex-basis: 100%;
   }
 }

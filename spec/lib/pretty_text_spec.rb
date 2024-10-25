@@ -1062,11 +1062,27 @@ RSpec.describe PrettyText do
     it "does not extract links from hotlinked images" do
       html = <<~HTML
         <p>
-        <a href="https://example.com">example</a>
+          <a href="https://example.com">example</a>
+        </p>
 
-        <a href="https://images.pexels.com/photos/1525041/pexels-photo-1525041.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1260&amp;h=750&amp;dpr=2" target="_blank" rel="noopener" class="onebox">
-        <img src="https://images.pexels.com/photos/1525041/pexels-photo-1525041.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1260&amp;h=750&amp;dpr=2" width="690" height="459">
-        </a>
+        <p>
+          <a href="https://images.pexels.com/photos/1525041/pexels-photo-1525041.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1260&amp;h=750&amp;dpr=2" target="_blank" rel="noopener" class="onebox">
+            <img src="https://images.pexels.com/photos/1525041/pexels-photo-1525041.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1260&amp;h=750&amp;dpr=2" width="690" height="459">
+          </a>
+        </p>
+
+        <p>
+          <div class="lightbox-wrapper">
+            <a class="lightbox" href="//localhost:3000/uploads/default/original/1X/fb7ecffe57b3bc54321635c4f810c5a9396c802c.png" data-download-href="//localhost:3000/uploads/default/fb7ecffe57b3bc54321635c4f810c5a9396c802c" title="image">
+              <img src="//localhost:3000/uploads/default/optimized/1X/fb7ecffe57b3bc54321635c4f810c5a9396c802c_2_545x500.png" alt="image" data-base62-sha1="zSPxs3tDdPBuq4dK3uJ1K3Sv8kI" width="545" height="500" data-dominant-color="F9F9F9" />
+              <div class="meta">
+                <svg class="fa d-icon d-icon-far-image svg-icon" aria-hidden="true"><use href="#far-image"></use></svg>
+                <span class="filename">image</span>
+                <span class="informations">808×740 24.8 KB</span>
+                <svg class="fa d-icon d-icon-discourse-expand svg-icon" aria-hidden="true"><use href="#discourse-expand"></use></svg>
+              </div>
+            </a>
+          </div>
         </p>
       HTML
 
@@ -2513,17 +2529,17 @@ HTML
   end
 
   it "can properly allowlist iframes" do
-    SiteSetting.allowed_iframes = "https://bob.com/a|http://silly.com?EMBED="
+    SiteSetting.allowed_iframes = "https://bob.com/a|http://silly.com/?EMBED="
     raw = <<~HTML
       <iframe src='https://www.google.com/maps/Embed?testing'></iframe>
       <iframe src='https://bob.com/a?testing'></iframe>
-      <iframe src='HTTP://SILLY.COM?EMBED=111'></iframe>
+      <iframe src='HTTP://SILLY.COM/?EMBED=111'></iframe>
     HTML
 
     # we require explicit HTTPS here
     html = <<~HTML
       <iframe src="https://bob.com/a?testing"></iframe>
-      <iframe src="HTTP://SILLY.COM?EMBED=111"></iframe>
+      <iframe src="HTTP://SILLY.COM/?EMBED=111"></iframe>
     HTML
 
     cooked = PrettyText.cook(raw).strip
@@ -2633,7 +2649,7 @@ HTML
       cooked = PrettyText.cook("Hello [wrap=toc id=1]taco[/wrap] world")
 
       html = <<~HTML
-        <p>Hello <span class="d-wrap" data-wrap="toc" data-id="1">taco</span> world</p>
+        <p>Hello <span class="d-wrap" data-id="1" data-wrap="toc">taco</span> world</p>
       HTML
 
       expect(cooked).to eq(html.strip)
@@ -2644,7 +2660,7 @@ HTML
       SiteSetting.enable_markdown_typographer = true
 
       md = <<~MD
-        [wrap=toc id="a” aa='b"' bb="f'"]
+        [wrap=toc id=“a” aa='b"' bb="f'"]
         taco1
         [/wrap]
       MD
@@ -2652,7 +2668,7 @@ HTML
       cooked = PrettyText.cook(md)
 
       html = <<~HTML
-        <div class="d-wrap" data-wrap="toc" data-id="a" data-aa="b&amp;quot;" data-bb="f'">
+        <div class="d-wrap" data-aa="b&amp;quot;" data-bb="f'" data-id="a" data-wrap="toc">
         <p>taco1</p>
         </div>
       HTML
@@ -2679,7 +2695,7 @@ HTML
       cooked = PrettyText.cook("[wrap=toc name=\"single quote's\" id='1\"2']taco[/wrap]")
 
       html = <<~HTML
-        <div class="d-wrap" data-wrap="toc" data-name="single quote's" data-id="1&amp;quot;2">
+        <div class="d-wrap" data-id="1&amp;quot;2" data-name="single quote's" data-wrap="toc">
         <p>taco</p>
         </div>
       HTML
@@ -2691,7 +2707,7 @@ HTML
       cooked = PrettyText.cook('[wrap=toc foo="<script>console.log(1)</script>"]taco[/wrap]')
 
       html = <<~HTML
-        <div class="d-wrap" data-wrap="toc" data-foo="&amp;lt;script&amp;gt;console.log(1)&amp;lt;/script&amp;gt;">
+        <div class="d-wrap" data-foo="&amp;lt;script&amp;gt;console.log(1)&amp;lt;/script&amp;gt;" data-wrap="toc">
         <p>taco</p>
         </div>
       HTML
@@ -2703,9 +2719,7 @@ HTML
       cooked = PrettyText.cook('[wrap=toc fo@"èk-"!io=bar]taco[/wrap]')
 
       html = <<~HTML
-        <div class=\"d-wrap\" data-wrap=\"toc\" data-io=\"bar\">
-        <p>taco</p>
-        </div>
+        <p>[wrap=toc fo@"èk-"!io=bar]taco[/wrap]</p>
       HTML
 
       expect(cooked).to eq(html.strip)
@@ -2779,5 +2793,43 @@ HTML
     PrettyText.v8.eval <<~JS
       require("discourse-common/lib/deprecated").default("Some deprecation message");
     JS
+  end
+
+  describe "video thumbnails" do
+    before do
+      SiteSetting.authorized_extensions = "mp4|png"
+      @video_upload = Fabricate(:upload, original_filename: "video.mp4", extension: "mp4")
+    end
+
+    after { Upload.where(original_filename: ["404.png", "#{@video_upload.sha1}.png"]).destroy_all }
+
+    it "does not link to a thumbnail image if the video source is missing" do
+      Fabricate(:upload, original_filename: "404.png", extension: "png")
+
+      html = <<~HTML
+          <p></p><div class="video-placeholder-container" data-video-src="/404"></div><p></p>
+        HTML
+      doc = Nokogiri::HTML5.fragment(html)
+      described_class.add_video_placeholder_image(doc)
+
+      expect(doc.to_html).to eq(html)
+    end
+
+    it "links to a thumbnail image if the video source is valid" do
+      thumbnail =
+        Fabricate(:upload, original_filename: "#{@video_upload.sha1}.png", extension: "png")
+
+      html = <<~HTML
+        <p></p><div class="video-placeholder-container" data-video-src="#{@video_upload.url}"></div><p></p>
+      HTML
+      doc = Nokogiri::HTML5.fragment(html)
+      described_class.add_video_placeholder_image(doc)
+
+      html_with_thumbnail = <<~HTML
+        <p></p><div class="video-placeholder-container" data-video-src="#{@video_upload.url}" data-thumbnail-src="http://test.localhost#{thumbnail.url}"></div><p></p>
+      HTML
+
+      expect(doc.to_html).to eq(html_with_thumbnail)
+    end
   end
 end

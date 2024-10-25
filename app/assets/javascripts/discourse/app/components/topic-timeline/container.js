@@ -193,6 +193,7 @@ export default class TopicTimelineScrollArea extends Component {
 
   get nowDateOptions() {
     return {
+      customTitle: I18n.t("topic_entrance.jump_bottom_button_title"),
       addAgo: true,
       defaultFormat: timelineDate,
     };
@@ -307,8 +308,10 @@ export default class TopicTimelineScrollArea extends Component {
     });
   }
 
-  @bind
+  @action
   updatePercentage(e) {
+    e.preventDefault();
+
     const currentCursorY = e.pageY || e.touches[0].pageY;
 
     const desiredScrollerCentre = currentCursorY - this.dragOffset;

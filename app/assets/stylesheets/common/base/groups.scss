@@ -47,8 +47,6 @@
     color: var(--primary);
 
     .discourse-no-touch & {
-      transition: all 0.25s;
-
       &:hover {
         box-shadow: var(--shadow-card);
         border-color: var(--primary-low-mid-or-secondary-high);
@@ -178,6 +176,22 @@
       // flip the icon order for the remove button
       order: 2;
       margin: 0 0 0 0.45em;
+    }
+  }
+}
+
+.admin-group-automatic-tooltip {
+  align-items: center;
+  font-size: var(--font-down-2);
+  padding: 0.2em 1em;
+  background-color: var(--primary-low);
+  border-radius: var(--d-button-border-radius);
+
+  .fk-d-tooltip__trigger-container {
+    align-items: center;
+
+    .d-icon {
+      margin-right: 0.25em;
     }
   }
 }

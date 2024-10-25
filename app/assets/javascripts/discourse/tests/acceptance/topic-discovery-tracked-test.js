@@ -5,7 +5,6 @@ import Site from "discourse/models/site";
 import topicFixtures from "discourse/tests/fixtures/discovery-fixtures";
 import {
   acceptance,
-  exists,
   publishToMessageBus,
   query,
 } from "discourse/tests/helpers/qunit-helpers";
@@ -64,24 +63,27 @@ acceptance("Topic Discovery Tracked", function (needs) {
 
     await visit("/");
 
-    assert.ok(
-      exists("#navigation-bar li.categories"),
-      "the categories nav item is displayed when tracked filter is not present"
-    );
+    assert
+      .dom("#navigation-bar li.categories")
+      .exists(
+        "the categories nav item is displayed when tracked filter is not present"
+      );
 
     await visit("/categories");
 
-    assert.ok(
-      exists("#navigation-bar li.categories"),
-      "the categories nav item is displayed on categories route when tracked filter is not present"
-    );
+    assert
+      .dom("#navigation-bar li.categories")
+      .exists(
+        "the categories nav item is displayed on categories route when tracked filter is not present"
+      );
 
     await visit("/?f=tracked");
 
-    assert.ok(
-      !exists("#navigation-bar li.categories"),
-      "the categories nav item is not displayed when tracked filter is present"
-    );
+    assert
+      .dom("#navigation-bar li.categories")
+      .doesNotExist(
+        "the categories nav item is not displayed when tracked filter is present"
+      );
 
     assert.ok(
       query("#navigation-bar li.unread a").href.endsWith("/unread?f=tracked"),
@@ -94,8 +96,8 @@ acceptance("Topic Discovery Tracked", function (needs) {
     );
 
     assert.ok(
-      query("#navigation-bar li.top a").href.endsWith("/top?f=tracked"),
-      "top link has tracked filter"
+      query("#navigation-bar li.hot a").href.endsWith("/hot?f=tracked"),
+      "hot link has tracked filter"
     );
 
     assert.ok(

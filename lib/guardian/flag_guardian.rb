@@ -5,6 +5,10 @@ module FlagGuardian
     @user.admin? && !flag.system? && !flag.used?
   end
 
+  def can_create_flag?
+    @user.admin? && Flag.custom.count < SiteSetting.custom_flags_limit
+  end
+
   def can_toggle_flag?
     @user.admin?
   end

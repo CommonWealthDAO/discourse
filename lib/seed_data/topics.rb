@@ -90,7 +90,14 @@ module SeedData
       # FAQ/Guidelines
       topics << {
         site_setting_name: "guidelines_topic_id",
-        title: I18n.t("guidelines_topic.title"),
+        title:
+          (
+            if SiteSetting.experimental_rename_faq_to_guidelines
+              I18n.t("guidelines_topic.guidelines_title")
+            else
+              I18n.t("guidelines_topic.title")
+            end
+          ),
         raw:
           I18n.t(
             "guidelines_topic.body",
@@ -256,7 +263,9 @@ module SeedData
         quick_start_filename = File.join(Rails.root, "docs", "ADMIN-QUICK-START-GUIDE.md")
       end
 
-      File.read(quick_start_filename)
+      content = File.read(quick_start_filename)
+      content.gsub!("%{base_url}", Discourse.base_url)
+      content
     end
   end
 end

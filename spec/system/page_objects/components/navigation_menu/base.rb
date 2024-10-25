@@ -19,7 +19,11 @@ module PageObjects
         end
 
         def find_section(name)
-          find(".sidebar-section[data-section-name='#{name}']")
+          find(sidebar_section_selector(name))
+        end
+
+        def click_section_header(name)
+          find("#{sidebar_section_selector(name)} .sidebar-section-header").click
         end
 
         def click_section_link(name)
@@ -57,6 +61,14 @@ module PageObjects
 
         def has_no_section?(name)
           has_no_css?(".sidebar-sections [data-section-name='#{name.parameterize}']")
+        end
+
+        def has_section_expanded?(name)
+          has_css?("#{sidebar_section_selector(name)}.sidebar-section--expanded")
+        end
+
+        def has_section_collapsed?(name)
+          has_css?("#{sidebar_section_selector(name)}.sidebar-section--collapsed")
         end
 
         def switch_to_chat
@@ -120,6 +132,10 @@ module PageObjects
           expect(section_link["title"]).to eq(title)
         end
 
+        def find_section_link(name)
+          find(".#{SIDEBAR_SECTION_LINK_SELECTOR}[data-link-name='#{name}']")
+        end
+
         def primary_section_links(slug)
           all("[data-section-name='#{slug}'] .sidebar-section-link-wrapper").map(&:text)
         end
@@ -174,14 +190,24 @@ module PageObjects
         def edit_custom_section(name)
           name = name.parameterize
 
-          find(".sidebar-section[data-section-name='#{name}']").hover
-
-          find(
-            ".sidebar-section[data-section-name='#{name}'] button.sidebar-section-header-button",
-          ).click
+          if page.has_css?("html.mobile-view", wait: 0)
+            find(
+              ".sidebar-section[data-section-name='#{name}'] button.sidebar-section-header-button",
+              visible: false,
+            ).click
+          else
+            find(".sidebar-section[data-section-name='#{name}']").hover
+            find(
+              ".sidebar-section[data-section-name='#{name}'] button.sidebar-section-header-button",
+            ).click
+          end
         end
 
         private
+
+        def sidebar_section_selector(name)
+          ".sidebar-section[data-section-name='#{name}']"
+        end
 
         def section_link_present?(name, href: nil, active: false, target: nil, count: 1, present:)
           attributes = { exact_text: name }

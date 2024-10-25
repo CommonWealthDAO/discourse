@@ -18,16 +18,6 @@ export default class AdminDashboardController extends Controller {
 
   @setting("version_checks") showVersionChecks;
 
-  @discourseComputed(
-    "lowPriorityProblems.length",
-    "highPriorityProblems.length"
-  )
-  foundProblems(lowPriorityProblemsLength, highPriorityProblemsLength) {
-    const problemsLength =
-      lowPriorityProblemsLength + highPriorityProblemsLength;
-    return this.currentUser.admin && problemsLength > 0;
-  }
-
   @computed("siteSettings.dashboard_visible_tabs")
   get visibleTabs() {
     return (this.siteSettings.dashboard_visible_tabs || "")
@@ -48,11 +38,6 @@ export default class AdminDashboardController extends Controller {
   @computed("visibleTabs")
   get isReportsTabVisible() {
     return this.visibleTabs.includes("reports");
-  }
-
-  @computed("visibleTabs")
-  get isNewFeaturesTabVisible() {
-    return this.visibleTabs.includes("features");
   }
 
   fetchProblems() {
@@ -91,7 +76,6 @@ export default class AdminDashboardController extends Controller {
           if (versionChecks) {
             properties.versionCheck = VersionCheck.create(model.version_check);
           }
-          properties.hasUnseenFeatures = model.hasUnseenFeatures;
 
           this.setProperties(properties);
         })
@@ -112,16 +96,7 @@ export default class AdminDashboardController extends Controller {
     });
 
     AdminDashboard.fetchProblems()
-      .then((model) => {
-        this.set(
-          "highPriorityProblems",
-          model.problems.filterBy("priority", "high")
-        );
-        this.set(
-          "lowPriorityProblems",
-          model.problems.filterBy("priority", "low")
-        );
-      })
+      .then((model) => this.set("problems", model.problems))
       .finally(() => this.set("loadingProblems", false));
   }
 

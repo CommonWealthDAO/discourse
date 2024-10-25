@@ -1,7 +1,7 @@
 import Component from "@glimmer/component";
 import { hash } from "@ember/helper";
 import { LinkTo } from "@ember/routing";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
 import icon from "discourse-common/helpers/d-icon";
 import i18n from "discourse-common/helpers/i18n";
 import {
@@ -43,12 +43,12 @@ export default class CategoryDropMoreCollection extends Component {
         {{#if @selectKit.options.parentCategory}}
           <LinkTo @route="discovery.subcategories" @model={{this.slugPath}}>
             {{i18n "categories.view_all"}}
-            {{icon "external-link-alt"}}
+            {{icon "up-right-from-square"}}
           </LinkTo>
         {{else}}
           <LinkTo @route="discovery.categories">
             {{i18n "categories.view_all"}}
-            {{icon "external-link-alt"}}
+            {{icon "up-right-from-square"}}
           </LinkTo>
         {{/if}}
       </div>

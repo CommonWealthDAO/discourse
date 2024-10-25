@@ -11,6 +11,7 @@
       <%= preload_script "discourse" %>
       <%= preload_script "test" %>
       <%= preload_script "locales/#{I18n.locale}" %>
+      <%= preload_script_url ExtraLocalesController.url("mf") %>
       <%= preload_script "admin" %>
       <%- Discourse.find_plugin_js_assets(include_disabled: true).each do |file| %>
         <%= preload_script file %>
@@ -27,7 +28,7 @@
       <meta name="discourse/config/environment" content="<%=u discourse_config_environment(testing: true) %>" />
 
       <style>
-        <%= File.read("#{Rails.root}/node_modules/qunit/qunit/qunit.css").html_safe %>
+        <%= File.read("#{Rails.root}/app/assets/javascripts/discourse/node_modules/qunit/qunit/qunit.css").html_safe %>
       </style>
 
       <%= discourse_stylesheet_link_tag(:desktop, theme_id: nil) %>
@@ -50,7 +51,7 @@
     <% elsif @suggested_themes %>
       <h2>Theme QUnit Test Runner</h2>
 
-      <%- if @suggested_themes.size == 0 %>
+      <%- if @suggested_themes.empty? %>
         <p>Cannot find any theme tests.</p>
       <%- else %>
         <h3>Select a theme/component: </h3>

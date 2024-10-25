@@ -10,6 +10,7 @@ import { isTesting } from "discourse-common/config/environment";
 // This route is used for retrieving a topic based on params
 export default class TopicFromParams extends DiscourseRoute {
   @service composer;
+  @service header;
 
   // Avoid default model hook
   model(params) {
@@ -38,12 +39,17 @@ export default class TopicFromParams extends DiscourseRoute {
       });
   }
 
-  afterModel() {
+  afterModel(model) {
     const topic = this.modelFor("topic");
 
     if (topic.isPrivateMessage && topic.suggested_topics) {
       this.pmTopicTrackingState.startTracking();
     }
+
+    const isLoadingFirstPost =
+      topic.postStream.firstPostPresent &&
+      !(model.nearPost && model.nearPost > 1);
+    this.header.enterTopic(topic, isLoadingFirstPost);
   }
 
   deactivate() {
@@ -118,8 +124,14 @@ export default class TopicFromParams extends DiscourseRoute {
   }
 
   @action
-  willTransition() {
+  willTransition(transition) {
     this.controllerFor("topic").set("previousURL", document.location.pathname);
+
+    transition.followRedirects().finally(() => {
+      if (!this.router.currentRouteName.startsWith("topic.")) {
+        this.header.clearTopic();
+      }
+    });
 
     // NOTE: omitting this return can break the back button when transitioning quickly between
     // topics and the latest page.

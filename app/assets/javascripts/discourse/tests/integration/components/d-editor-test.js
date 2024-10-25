@@ -1,16 +1,19 @@
 import { next } from "@ember/runloop";
-import { click, fillIn, focus, render, settled } from "@ember/test-helpers";
+import {
+  click,
+  fillIn,
+  focus,
+  render,
+  settled,
+  triggerEvent,
+} from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { withPluginApi } from "discourse/lib/plugin-api";
+import { setCaretPosition } from "discourse/lib/utilities";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import formatTextWithSelection from "discourse/tests/helpers/d-editor-helper";
-import {
-  exists,
-  paste,
-  query,
-  queryAll,
-} from "discourse/tests/helpers/qunit-helpers";
+import { paste, query, queryAll } from "discourse/tests/helpers/qunit-helpers";
 import {
   getTextareaSelection,
   setTextareaSelection,
@@ -23,7 +26,7 @@ module("Integration | Component | d-editor", function (hooks) {
   test("preview updates with markdown", async function (assert) {
     await render(hbs`<DEditor @value={{this.value}} />`);
 
-    assert.ok(exists(".d-editor-button-bar"));
+    assert.dom(".d-editor-button-bar").exists();
     await fillIn(".d-editor-input", "hello **world**");
 
     assert.strictEqual(this.value, "hello **world**");
@@ -638,6 +641,29 @@ third line`
     assert.strictEqual(textarea.getAttribute("dir"), "rtl");
   });
 
+  test("toolbar event supports replaceText", async function (assert) {
+    withPluginApi("0.1", (api) => {
+      api.onToolbarCreate((toolbar) => {
+        toolbar.addButton({
+          id: "replace-text",
+          icon: "xmark",
+          group: "extras",
+          action: () => {
+            toolbar.context.newToolbarEvent().replaceText("hello", "goodbye");
+          },
+          condition: () => true,
+        });
+      });
+    });
+
+    this.value = "hello";
+
+    await render(hbs`<DEditor @value={{this.value}} />`);
+    await click("button.replace-text");
+
+    assert.strictEqual(this.value, "goodbye");
+  });
+
   testCase(
     `doesn't jump to bottom with long text`,
     async function (assert, textarea) {
@@ -659,7 +685,7 @@ third line`
         toolbar.addButton({
           id: "emoji",
           group: "extras",
-          icon: "far-smile",
+          icon: "far-face-smile",
           action: () => toolbar.context.send("emoji"),
         });
       });
@@ -701,7 +727,7 @@ third line`
         toolbar.addButton({
           id: "shown",
           group: "extras",
-          icon: "far-smile",
+          icon: "far-face-smile",
           action: () => {},
           condition: () => true,
         });
@@ -709,7 +735,7 @@ third line`
         toolbar.addButton({
           id: "not-shown",
           group: "extras",
-          icon: "far-frown",
+          icon: "far-face-frown",
           action: () => {},
           condition: () => false,
         });
@@ -718,8 +744,8 @@ third line`
 
     await render(hbs`<DEditor/>`);
 
-    assert.ok(exists(".d-editor-button-bar button.shown"));
-    assert.notOk(exists(".d-editor-button-bar button.not-shown"));
+    assert.dom(".d-editor-button-bar button.shown").exists();
+    assert.dom(".d-editor-button-bar button.not-shown").doesNotExist();
   });
 
   test("toolbar buttons tabindex", async function (assert) {
@@ -972,6 +998,141 @@ third line`
       // Synthetic paste events do not manipulate document content.
       assert.strictEqual(this.value, "hello [url=foobar]foobar[/url]");
       assert.strictEqual(event.defaultPrevented, false);
+    }
+  );
+
+  // Smart list functionality relies on beforeinput, which QUnit does not send with
+  // `typeIn` synthetic events. We need to send it ourselves manually along with `input`.
+  // Not ideal, but gets the job done.
+  //
+  // c.f. https://github.com/emberjs/ember-test-helpers/blob/master/API.md#typein and
+  // https://github.com/emberjs/ember-test-helpers/issues/1336
+  async function triggerEnter(textarea) {
+    await triggerEvent(textarea, "beforeinput", {
+      inputType: "insertLineBreak",
+    });
+    await triggerEvent(textarea, "input", {
+      inputType: "insertText",
+      data: "\n",
+    });
+  }
+
+  testCase(
+    "smart lists - pressing enter on a line with a list item starting with *",
+    async function (assert, textarea) {
+      const initialValue = "* first item in list\n";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, initialValue.length);
+      await triggerEnter(textarea);
+
+      assert.strictEqual(
+        this.value,
+        initialValue + "* ",
+        "it creates a list item on the next line"
+      );
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter on a line with a list item inside a codefence",
+    async function (assert, textarea) {
+      const initialValue = "```\n* first item in list\n";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, initialValue.length);
+      await triggerEnter(textarea);
+
+      assert.strictEqual(
+        this.value,
+        initialValue + "",
+        "it doesn’t continue the list"
+      );
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter on a line with a list item after a codefence",
+    async function (assert, textarea) {
+      const initialValue = "```\ndef test\n```\n* first item in list\n";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, initialValue.length);
+      await triggerEnter(textarea);
+
+      assert.strictEqual(
+        this.value,
+        initialValue + "* ",
+        "it continues the list"
+      );
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter on a line with a list item starting with - creates a list item on the next line",
+    async function (assert, textarea) {
+      const initialValue = "- first item in list\n";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, initialValue.length);
+      await triggerEnter(textarea);
+      assert.strictEqual(this.value, initialValue + "- ");
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter on a line with a list item starting with a number (e.g. 1.) in a list",
+    async function (assert, textarea) {
+      const initialValue = "1. first item in list\n";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, initialValue.length);
+      await triggerEnter(textarea);
+      assert.strictEqual(
+        this.value,
+        initialValue + "2. ",
+        "it creates a list item on the next line with an auto-incremented number"
+      );
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter inside a list",
+    async function (assert, textarea) {
+      const initialValue = "* first item in list\n\n* second item in list";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, 21);
+      await triggerEnter(textarea);
+      assert.strictEqual(
+        this.value,
+        "* first item in list\n* \n* second item in list",
+        "it inserts a new list item on the next line"
+      );
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter inside a list with numbers",
+    async function (assert, textarea) {
+      const initialValue = "1. first item in list\n\n2. second item in list";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, 22);
+      await triggerEnter(textarea);
+      assert.strictEqual(
+        this.value,
+        "1. first item in list\n2. \n3. second item in list",
+        "it inserts a new list item on the next line and renumbers the rest of the list"
+      );
+    }
+  );
+
+  testCase(
+    "smart lists - pressing enter again on an empty list item",
+    async function (assert, textarea) {
+      const initialValue = "* first item in list with empty line\n* \n";
+      this.set("value", initialValue);
+      setCaretPosition(textarea, initialValue.length);
+      await triggerEnter(textarea);
+      assert.strictEqual(
+        this.value,
+        "* first item in list with empty line\n",
+        "it removes the list item"
+      );
     }
   );
 

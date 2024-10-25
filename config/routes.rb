@@ -161,6 +161,8 @@ Discourse::Application.routes.draw do
         post "reset-bounce-score"
         put "disable_second_factor"
         delete "sso_record"
+        get "similar-users.json" => "users#similar_users"
+        put "delete_associated_accounts"
       end
       get "users/:id.json" => "users#show", :defaults => { format: "json" }
       get "users/:id/:username" => "users#show",
@@ -324,6 +326,7 @@ Discourse::Application.routes.draw do
       get "dashboard/reports" => "dashboard#reports"
       get "dashboard/whats-new" => "dashboard#new_features"
       get "/whats-new" => "dashboard#new_features"
+      post "/toggle-feature" => "dashboard#toggle_feature"
 
       resources :dashboard, only: [:index] do
         collection { get "problems" }
@@ -344,6 +347,7 @@ Discourse::Application.routes.draw do
           get "web_hook_events/:id" => "web_hooks#list_events", :as => :web_hook_events
           get "web_hooks/:id/events/bulk" => "web_hooks#bulk_events"
           post "web_hooks/:web_hook_id/events/:event_id/redeliver" => "web_hooks#redeliver_event"
+          post "web_hooks/:id/events/failed_redeliver" => "web_hooks#redeliver_failed_events"
           post "web_hooks/:id/ping" => "web_hooks#ping"
         end
       end
@@ -364,6 +368,7 @@ Discourse::Application.routes.draw do
                :format => :json
 
           get "logs" => "backups#logs"
+          get "settings" => "backups#index"
           get "status" => "backups#status"
           delete "cancel" => "backups#cancel"
           post "rollback" => "backups#rollback"
@@ -386,15 +391,28 @@ Discourse::Application.routes.draw do
         end
       end
       namespace :config, constraints: StaffConstraint.new do
-        resources :flags, only: %i[index] do
+        resources :site_settings, only: %i[index]
+
+        resources :flags, only: %i[index new create update destroy] do
           put "toggle"
           put "reorder/:direction" => "flags#reorder"
+          member { get "/" => "flags#edit" }
         end
 
         resources :about, constraints: AdminConstraint.new, only: %i[index] do
           collection { put "/" => "about#update" }
         end
+
+        resources :look_and_feel,
+                  path: "look-and-feel",
+                  constraints: AdminConstraint.new,
+                  only: %i[index] do
+          collection { get "/themes" => "look_and_feel#themes" }
+        end
       end
+
+      get "section/:section_id" => "section#show", :constraints => AdminConstraint.new
+      resources :admin_notices, only: %i[destroy], constraints: AdminConstraint.new
     end # admin namespace
 
     get "email/unsubscribe/:key" => "email#unsubscribe", :as => "email_unsubscribe"
@@ -1105,7 +1123,7 @@ Discourse::Application.routes.draw do
 
     put "bookmarks/bulk"
 
-    resources :posts, only: %i[show update create destroy] do
+    resources :posts, only: %i[show update create destroy], defaults: { format: "json" } do
       delete "bookmark", to: "posts#destroy_bookmark"
       put "wiki"
       put "post_type"
@@ -1174,6 +1192,7 @@ Discourse::Application.routes.draw do
     post "categories/reorder" => "categories#reorder"
     get "categories/find" => "categories#find"
     post "categories/search" => "categories#search"
+    get "categories/hierarchical_search" => "categories#hierarchical_search"
     get "categories/:parent_category_id" => "categories#index"
 
     scope path: "category/:category_id" do
@@ -1357,11 +1376,6 @@ Discourse::Application.routes.draw do
           topic_id: /\d+/,
         }
     get "t/:topic_id/summary" => "topics#show", :constraints => { topic_id: /\d+/ }
-    get "t/:topic_id/strategy-summary" => "topics#summary",
-        :constraints => {
-          topic_id: /\d+/,
-        },
-        :format => :json
     put "t/:slug/:topic_id" => "topics#update", :constraints => { topic_id: /\d+/ }
     put "t/:slug/:topic_id/status" => "topics#status", :constraints => { topic_id: /\d+/ }
     put "t/:topic_id/status" => "topics#status", :constraints => { topic_id: /\d+/ }
@@ -1597,7 +1611,11 @@ Discourse::Application.routes.draw do
          constraints: HomePageConstraint.new("finish_installation"),
          as: "installation_redirect"
 
-    root to: "custom#index", constraints: HomePageConstraint.new("custom"), as: "custom_index"
+    root to: "custom_homepage#index",
+         constraints: HomePageConstraint.new("custom"),
+         as: "custom_index"
+
+    get "/custom" => "custom_homepage#index"
 
     get "/user-api-key/new" => "user_api_keys#new"
     post "/user-api-key" => "user_api_keys#create"
@@ -1610,6 +1628,7 @@ Discourse::Application.routes.draw do
     post "/safe-mode" => "safe_mode#enter", :as => "safe_mode_enter"
 
     get "/theme-qunit" => "qunit#theme"
+    get "/theme-tests", to: redirect("/theme-qunit")
 
     # This is a special route that is used when theme QUnit tests are run through testem which appends a testem_id to the
     # path. Unfortunately, testem's proxy support does not allow us to easily remove this from the path, so we have to
@@ -1647,5 +1666,10 @@ Discourse::Application.routes.draw do
 
     get "/form-templates/:id" => "form_templates#show"
     get "/form-templates" => "form_templates#index"
+
+    if Rails.env.test?
+      # Routes that are only used for testing
+      get "/test_net_http_timeouts" => "test_requests#test_net_http_timeouts"
+    end
   end
 end

@@ -1,16 +1,32 @@
 import Component from "@glimmer/component";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
+import getURL from "discourse-common/lib/get-url";
 
 export default class DBreadcrumbsItem extends Component {
-  @service breadcrumbsService;
+  @service breadcrumbs;
+  @service router;
 
-  <template>
-    {{#each this.breadcrumbsService.containers as |container|}}
-      {{#in-element container.element insertBefore=null}}
-        <li class={{container.itemClass}} ...attributes>
-          {{yield container.linkClass}}
-        </li>
-      {{/in-element}}
-    {{/each}}
-  </template>
+  constructor() {
+    super(...arguments);
+    this.breadcrumbs.items.add(this);
+  }
+
+  willDestroy() {
+    super.willDestroy(...arguments);
+    this.breadcrumbs.items.delete(this);
+  }
+
+  // @cached
+  get templateForContainer() {
+    // Those are evaluated in a different context than the `@linkClass`
+    const { label, path } = this.args;
+
+    return <template>
+      <li ...attributes>
+        <a href={{getURL path}} class={{@linkClass}}>
+          {{label}}
+        </a>
+      </li>
+    </template>;
+  }
 }

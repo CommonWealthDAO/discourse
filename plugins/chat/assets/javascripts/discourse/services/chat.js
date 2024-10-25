@@ -129,7 +129,7 @@ export default class Chat extends Service {
               if (!channel) {
                 return;
               }
-              // TODO (martin) We need to do something here for thread tracking
+              // NOTE: We need to do something here for thread tracking
               // state as well on presence change, otherwise we will be back in
               // the same place as the channels were.
               //
@@ -144,6 +144,8 @@ export default class Chat extends Service {
               const state = channelsView.tracking.channel_tracking[channel.id];
               channel.tracking.unreadCount = state.unread_count;
               channel.tracking.mentionCount = state.mention_count;
+              channel.tracking.watchedThreadsUnreadCount =
+                state.watched_threads_unread_count;
 
               channel.currentUserMembership =
                 channelObject.current_user_membership;
@@ -391,7 +393,8 @@ export default class Chat extends Service {
 
   addToolbarButton() {
     deprecated(
-      "Use the new chat API `api.registerChatComposerButton` instead of `chat.addToolbarButton`"
+      "Use the new chat API `api.registerChatComposerButton` instead of `chat.addToolbarButton`",
+      { id: "discourse.chat.addToolbarButton" }
     );
   }
 

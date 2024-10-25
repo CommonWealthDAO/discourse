@@ -21,7 +21,7 @@ module("Integration | Component | Widget | post-menu", function (hooks) {
       api.addPostMenuButton("coffee", () => {
         return {
           action: "drinkCoffee",
-          icon: "coffee",
+          icon: "mug-saucer",
           className: "hot-coffee",
           title: "coffee.title",
           position: "first",
@@ -50,7 +50,7 @@ module("Integration | Component | Widget | post-menu", function (hooks) {
             testPost = post;
             showFeedback("coffee.drink");
           },
-          icon: "coffee",
+          icon: "mug-saucer",
           className: "hot-coffee",
           title: "coffee.title",
           position: "first",
@@ -173,10 +173,9 @@ module("Integration | Component | Widget | post-menu", function (hooks) {
 
     await render(hbs`<MountWidget @widget="post-menu" @args={{this.args}} />`);
 
-    assert.ok(
-      !exists("h1.post-menu-replacement"),
-      "replacement is not rendered"
-    );
+    assert
+      .dom("h1.post-menu-replacement")
+      .doesNotExist("replacement is not rendered");
     assert.ok(exists(".actions .reply"), "reply button is present");
   });
 });

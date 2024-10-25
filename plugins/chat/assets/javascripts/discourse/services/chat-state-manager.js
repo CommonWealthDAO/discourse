@@ -5,6 +5,7 @@ import { withPluginApi } from "discourse/lib/plugin-api";
 import { MAIN_PANEL } from "discourse/lib/sidebar/panels";
 import { defaultHomepage } from "discourse/lib/utilities";
 import { getUserChatSeparateSidebarMode } from "discourse/plugins/chat/discourse/lib/get-user-chat-separate-sidebar-mode";
+import { CHAT_PANEL } from "discourse/plugins/chat/discourse/lib/init-sidebar-state";
 
 const PREFERRED_MODE_KEY = "preferred_mode";
 const PREFERRED_MODE_STORE_NAMESPACE = "discourse_chat_";
@@ -26,6 +27,7 @@ export default class ChatStateManager extends Service {
   @service chatHistory;
   @service router;
   @service site;
+  @service chatDrawerRouter;
 
   @tracked isSidePanelExpanded = false;
   @tracked isDrawerExpanded = false;
@@ -61,13 +63,9 @@ export default class ChatStateManager extends Service {
 
   didOpenDrawer(url = null) {
     withPluginApi("1.8.0", (api) => {
-      const adminSidebarStateManager = api.container.lookup(
-        "service:admin-sidebar-state-manager"
-      );
-
       if (
-        adminSidebarStateManager === undefined ||
-        !adminSidebarStateManager.maybeForceAdminSidebar()
+        api.getSidebarPanel()?.key === MAIN_PANEL ||
+        api.getSidebarPanel()?.key === CHAT_PANEL
       ) {
         if (getUserChatSeparateSidebarMode(this.currentUser).always) {
           api.setSeparatedSidebarMode();
@@ -91,18 +89,14 @@ export default class ChatStateManager extends Service {
 
   didCloseDrawer() {
     withPluginApi("1.8.0", (api) => {
-      const adminSidebarStateManager = api.container.lookup(
-        "service:admin-sidebar-state-manager"
-      );
-
-      const chatSeparateSidebarMode = getUserChatSeparateSidebarMode(
-        this.currentUser
-      );
-
       if (
-        adminSidebarStateManager === undefined ||
-        !adminSidebarStateManager.maybeForceAdminSidebar()
+        api.getSidebarPanel()?.key === MAIN_PANEL ||
+        api.getSidebarPanel()?.key === CHAT_PANEL
       ) {
+        const chatSeparateSidebarMode = getUserChatSeparateSidebarMode(
+          this.currentUser
+        );
+
         api.setSidebarPanel(MAIN_PANEL);
 
         if (chatSeparateSidebarMode.fullscreen) {
@@ -118,6 +112,7 @@ export default class ChatStateManager extends Service {
       }
     });
 
+    this.chatDrawerRouter.currentRouteName = null;
     this.isDrawerActive = false;
     this.isDrawerExpanded = false;
     this.chat.updatePresence();

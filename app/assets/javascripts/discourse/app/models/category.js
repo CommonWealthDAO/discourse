@@ -3,6 +3,7 @@ import { computed, get } from "@ember/object";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { NotificationLevels } from "discourse/lib/notification-levels";
+import { applyValueTransformer } from "discourse/lib/transformer";
 import PermissionType from "discourse/models/permission-type";
 import RestModel from "discourse/models/rest";
 import Site from "discourse/models/site";
@@ -14,6 +15,7 @@ import { MultiCache } from "discourse-common/utils/multi-cache";
 
 const STAFF_GROUP_NAME = "staff";
 const CATEGORY_ASYNC_SEARCH_CACHE = {};
+const CATEGORY_ASYNC_HIERARCHICAL_SEARCH_CACHE = {};
 
 export default class Category extends RestModel {
   // Sort subcategories directly under parents
@@ -385,6 +387,32 @@ export default class Category extends RestModel {
     return data.sortBy("read_restricted");
   }
 
+  static async asyncHierarchicalSearch(term, opts) {
+    opts ||= {};
+
+    const data = {
+      term,
+      parent_category_id: opts.parentCategoryId,
+      limit: opts.limit,
+      only: opts.only,
+      except: opts.except,
+      page: opts.page,
+      offset: opts.offset,
+      include_uncategorized: opts.includeUncategorized,
+    };
+
+    const result = (CATEGORY_ASYNC_HIERARCHICAL_SEARCH_CACHE[
+      JSON.stringify(data)
+    ] ||= await ajax("/categories/hierarchical_search", {
+      method: "GET",
+      data,
+    }));
+
+    return result["categories"].map((category) =>
+      Site.current().updateCategory(category)
+    );
+  }
+
   static async asyncSearch(term, opts) {
     opts ||= {};
 
@@ -448,6 +476,22 @@ export default class Category extends RestModel {
     }
   }
 
+  get descriptionText() {
+    return applyValueTransformer(
+      "category-description-text",
+      this.get("description_text"),
+      {
+        category: this,
+      }
+    );
+  }
+
+  get displayName() {
+    return applyValueTransformer("category-display-name", this.get("name"), {
+      category: this,
+    });
+  }
+
   @computed("parent_category_id", "site.categories.[]")
   get parentCategory() {
     if (this.parent_category_id) {
@@ -462,6 +506,11 @@ export default class Category extends RestModel {
   @computed("site.categories.[]")
   get subcategories() {
     return this.site.categories.filterBy("parent_category_id", this.id);
+  }
+
+  @computed("subcategories")
+  get unloadedSubcategoryCount() {
+    return this.subcategory_count - this.subcategories.length;
   }
 
   @computed("subcategory_list")
@@ -712,7 +761,7 @@ export default class Category extends RestModel {
           "navigate_to_first_post_after_read"
         ),
         search_priority: this.search_priority,
-        reviewable_by_group_name: this.reviewable_by_group_name,
+        moderating_group_ids: this.moderating_group_ids,
         read_only_banner: this.read_only_banner,
         default_list_filter: this.default_list_filter,
       }),

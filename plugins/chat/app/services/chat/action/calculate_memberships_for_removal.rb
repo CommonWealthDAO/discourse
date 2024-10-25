@@ -18,9 +18,55 @@ module Chat
     # Here, we can efficiently query the channel category permissions and figure
     # out which of the users provided should have their [Chat::UserChatChannelMembership]
     # records removed based on those security cases.
-    class CalculateMembershipsForRemoval
-      def self.call(scoped_users:, channel_ids: nil)
-        channel_permissions_map =
+    class CalculateMembershipsForRemoval < Service::ActionBase
+      option :scoped_users_query
+      option :channel_ids, [], optional: true
+
+      def call
+        memberships_to_remove = []
+        scoped_memberships.find_each do |membership|
+          channel_permission =
+            channel_permissions_map.find { |cpm| cpm.channel_id == membership.chat_channel_id }
+
+          # If there is no channel in the map, this means there are no
+          # category_groups for the channel.
+          #
+          # This in turn means the Everyone group with full permission
+          # is the only group that can access the channel (no category_group
+          # record is created in this case), we do not need to remove any users.
+          next if channel_permission.blank?
+
+          group_ids_with_write_permission =
+            channel_permission.groups_with_write_permissions.to_s.split(",").map(&:to_i)
+          group_ids_with_read_permission =
+            channel_permission.groups_with_readonly_permissions.to_s.split(",").map(&:to_i)
+
+          # None of the groups on the channel have permission to do anything
+          # more than read only, remove the membership.
+          if group_ids_with_write_permission.empty? && group_ids_with_read_permission.any?
+            memberships_to_remove << membership.id
+            next
+          end
+
+          # At least one of the groups on the channel can create_post or
+          # has full permission, remove the membership if the user is in none
+          # of these groups.
+          if group_ids_with_write_permission.any?
+            scoped_user = scoped_users_query.where(id: membership.user_id).first
+
+            if !scoped_user&.in_any_groups?(group_ids_with_write_permission)
+              memberships_to_remove << membership.id
+            end
+          end
+        end
+
+        memberships_to_remove
+      end
+
+      private
+
+      def channel_permissions_map
+        @channel_permissions_map ||=
           DB.query(<<~SQL, readonly: CategoryGroup.permission_types[:readonly])
           WITH category_group_channel_map AS (
             SELECT category_groups.group_id,
@@ -55,49 +101,14 @@ module Chat
             GROUP BY chat_channels.id, chat_channels.chatable_id, categories.read_restricted
             ORDER BY channel_id
           SQL
+      end
 
-        scoped_memberships =
+      def scoped_memberships
+        @scoped_memberships ||=
           Chat::UserChatChannelMembership
             .joins(:chat_channel)
-            .where(user: scoped_users)
+            .where(user_id: scoped_users_query.select(:id))
             .where(chat_channel_id: channel_permissions_map.map(&:channel_id))
-
-        memberships_to_remove = []
-        scoped_memberships.find_each do |membership|
-          scoped_user = scoped_users.find { |su| su.id == membership.user_id }
-          channel_permission =
-            channel_permissions_map.find { |cpm| cpm.channel_id == membership.chat_channel_id }
-
-          # If there is no channel in the map, this means there are no
-          # category_groups for the channel.
-          #
-          # This in turn means the Everyone group with full permission
-          # is the only group that can access the channel (no category_group
-          # record is created in this case), we do not need to remove any users.
-          next if channel_permission.blank?
-
-          group_ids_with_write_permission =
-            channel_permission.groups_with_write_permissions.to_s.split(",").map(&:to_i)
-          group_ids_with_read_permission =
-            channel_permission.groups_with_readonly_permissions.to_s.split(",").map(&:to_i)
-
-          # None of the groups on the channel have permission to do anything
-          # more than read only, remove the membership.
-          if group_ids_with_write_permission.empty? && group_ids_with_read_permission.any?
-            memberships_to_remove << membership.id
-            next
-          end
-
-          # At least one of the groups on the channel can create_post or
-          # has full permission, remove the membership if the user is in none
-          # of these groups.
-          if group_ids_with_write_permission.any? &&
-               !scoped_user.in_any_groups?(group_ids_with_write_permission)
-            memberships_to_remove << membership.id
-          end
-        end
-
-        memberships_to_remove
       end
     end
   end

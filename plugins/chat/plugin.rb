@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # name: chat
-# about: Adds chat functionality.
+# about: Adds chat functionality to your site so it can natively support both long-form and short-form communication needs of your online community.
 # meta_topic_id: 230881
 # version: 0.4
 # authors: Kane York, Mark VanLandingham, Martin Brennan, Joffrey Jaffeux
@@ -18,6 +18,7 @@ register_asset "stylesheets/mobile/index.scss", :mobile
 
 register_svg_icon "comments"
 register_svg_icon "comment-slash"
+register_svg_icon "comment-dots"
 register_svg_icon "lock"
 register_svg_icon "clipboard"
 register_svg_icon "file-audio"
@@ -26,7 +27,7 @@ register_svg_icon "file-image"
 register_svg_icon "stop-circle"
 
 # route: /admin/plugins/chat
-add_admin_route "chat.admin.title", "chat"
+add_admin_route "chat.admin.title", "chat", use_new_show_route: true
 
 GlobalSetting.add_default(:allow_unsecure_chat_uploads, false)
 
@@ -49,6 +50,7 @@ after_initialize do
 
   register_user_custom_field_type(Chat::LAST_CHAT_CHANNEL_ID, :integer)
   DiscoursePluginRegistry.serialized_current_user_fields << Chat::LAST_CHAT_CHANNEL_ID
+  DiscoursePluginRegistry.register_flag_applies_to_type("Chat::Message", self)
 
   UserUpdater::OPTION_ATTR.push(:chat_enabled)
   UserUpdater::OPTION_ATTR.push(:only_chat_push_notifications)
@@ -66,13 +68,13 @@ after_initialize do
 
     Guardian.prepend Chat::GuardianExtensions
     UserNotifications.prepend Chat::UserNotificationsExtension
+    Notifications::ConsolidationPlan.prepend Chat::NotificationConsolidationExtension
     UserOption.prepend Chat::UserOptionExtension
     Category.prepend Chat::CategoryExtension
     Reviewable.prepend Chat::ReviewableExtension
     Bookmark.prepend Chat::BookmarkExtension
     User.prepend Chat::UserExtension
     Group.prepend Chat::GroupExtension
-    Jobs::UserEmail.prepend Chat::UserEmailExtension
     Plugin::Instance.prepend Chat::PluginInstanceExtension
     Jobs::ExportCsvFile.prepend Chat::MessagesExporter
     WebHook.prepend Chat::OutgoingWebHookExtension
@@ -132,19 +134,17 @@ after_initialize do
     end
   end
 
-  add_to_serializer(
-    :admin_plugin,
-    :incoming_chat_webhooks,
-    include_condition: -> { self.name == "chat" },
-  ) { Chat::IncomingWebhook.includes(:chat_channel).all }
-
-  add_to_serializer(:admin_plugin, :chat_channels, include_condition: -> { self.name == "chat" }) do
-    Chat::Channel.public_channels
-  end
-
   add_to_serializer(:user_card, :can_chat_user) do
     return false if !SiteSetting.chat_enabled
-    return false if scope.user.blank? || scope.user.id == object.id
+    return false if scope.user.blank?
+    return false if !scope.user.user_option.chat_enabled || !object.user_option.chat_enabled
+
+    scope.can_direct_message? && Guardian.new(object).can_chat?
+  end
+
+  add_to_serializer(:hidden_profile, :can_chat_user) do
+    return false if !SiteSetting.chat_enabled
+    return false if scope.user.blank?
     return false if !scope.user.user_option.chat_enabled || !object.user_option.chat_enabled
 
     scope.can_direct_message? && Guardian.new(object).can_chat?
@@ -271,12 +271,6 @@ after_initialize do
   add_to_serializer(:current_user_option, :chat_separate_sidebar_mode) do
     object.chat_separate_sidebar_mode
   end
-
-  add_to_serializer(
-    :upload,
-    :thumbnail,
-    include_condition: -> { SiteSetting.chat_enabled && SiteSetting.create_thumbnails },
-  ) { object.thumbnail }
 
   on(:site_setting_changed) do |name, old_value, new_value|
     user_option_field = Chat::RETENTION_SETTINGS_TO_USER_OPTION_FIELDS[name.to_sym]
@@ -436,12 +430,17 @@ after_initialize do
   Discourse::Application.routes.append do
     mount ::Chat::Engine, at: "/chat"
 
-    get "/admin/plugins/chat" => "chat/admin/incoming_webhooks#index",
+    get "/admin/plugins/chat/hooks" => "chat/admin/incoming_webhooks#index",
         :constraints => StaffConstraint.new
     post "/admin/plugins/chat/hooks" => "chat/admin/incoming_webhooks#create",
          :constraints => StaffConstraint.new
     put "/admin/plugins/chat/hooks/:incoming_chat_webhook_id" =>
           "chat/admin/incoming_webhooks#update",
+        :constraints => StaffConstraint.new
+    get "/admin/plugins/chat/hooks/new" => "chat/admin/incoming_webhooks#new",
+        :constraints => StaffConstraint.new
+    get "/admin/plugins/chat/hooks/:incoming_chat_webhook_id" =>
+          "chat/admin/incoming_webhooks#show",
         :constraints => StaffConstraint.new
     delete "/admin/plugins/chat/hooks/:incoming_chat_webhook_id" =>
              "chat/admin/incoming_webhooks#destroy",
@@ -452,32 +451,36 @@ after_initialize do
         }
   end
 
-  if defined?(DiscourseAutomation)
-    add_automation_scriptable("send_chat_message") do
-      field :chat_channel_id, component: :text, required: true
-      field :message, component: :message, required: true, accepts_placeholders: true
-      field :sender, component: :user
+  add_automation_scriptable("send_chat_message") do
+    field :chat_channel_id, component: :text, required: true
+    field :message, component: :message, required: true, accepts_placeholders: true
+    field :sender, component: :user
 
-      placeholder :channel_name
+    placeholder :channel_name
+    placeholder :post_quote, triggerable: :post_created_edited
 
-      triggerables [:recurring]
+    triggerables %i[recurring topic_tags_changed post_created_edited]
 
-      script do |context, fields, automation|
-        sender = User.find_by(username: fields.dig("sender", "value")) || Discourse.system_user
-        channel = Chat::Channel.find_by(id: fields.dig("chat_channel_id", "value"))
+    script do |context, fields, automation|
+      sender = User.find_by(username: fields.dig("sender", "value")) || Discourse.system_user
+      channel = Chat::Channel.find_by(id: fields.dig("chat_channel_id", "value"))
+      placeholders = { channel_name: channel.title(sender) }.merge(context["placeholders"] || {})
 
-        placeholders = { channel_name: channel.title(sender) }.merge(context["placeholders"] || {})
+      if context["kind"] == "post_created_edited"
+        placeholders[:post_quote] = utils.build_quote(context["post"])
+      end
 
-        creator =
-          ::Chat::CreateMessage.call(
+      creator =
+        ::Chat::CreateMessage.call(
+          guardian: sender.guardian,
+          params: {
             chat_channel_id: channel.id,
-            guardian: sender.guardian,
             message: utils.apply_placeholders(fields.dig("message", "value"), placeholders),
-          )
+          },
+        )
 
-        if creator.failure?
-          Rails.logger.warn "[discourse-automation] Chat message failed to send:\n#{creator.inspect_steps.inspect}\n#{creator.inspect_steps.error}"
-        end
+      if creator.failure?
+        Rails.logger.warn "[discourse-automation] Chat message failed to send:\n#{creator.inspect_steps.inspect}\n#{creator.inspect_steps.error}"
       end
     end
   end
@@ -500,9 +503,7 @@ after_initialize do
 
   register_email_unsubscriber("chat_summary", EmailControllerHelper::ChatSummaryUnsubscriber)
 
-  register_stat("chat_messages", show_in_ui: true, expose_via_api: true) do
-    Chat::Statistics.about_messages
-  end
+  register_stat("chat_messages", expose_via_api: true) { Chat::Statistics.about_messages }
   register_stat("chat_users", expose_via_api: true) { Chat::Statistics.about_users }
   register_stat("chat_channels", expose_via_api: true) { Chat::Statistics.about_channels }
 
@@ -532,6 +533,10 @@ after_initialize do
 
   register_user_destroyer_on_content_deletion_callback(
     Proc.new { |user| Jobs.enqueue(Jobs::Chat::DeleteUserMessages, user_id: user.id) },
+  )
+
+  register_notification_consolidation_plan(
+    Chat::NotificationConsolidationExtension.watched_thread_message_plan,
   )
 
   register_bookmarkable(Chat::MessageBookmarkable)

@@ -6,12 +6,13 @@ require "json_schemer"
 class Theme < ActiveRecord::Base
   include GlobalPath
 
-  BASE_COMPILER_VERSION = 81
+  BASE_COMPILER_VERSION = 84
 
   class SettingsMigrationError < StandardError
   end
 
   attr_accessor :child_components
+  attr_accessor :skip_child_components_update
 
   def self.cache
     @cache ||= DistributedCache.new("theme:compiler:#{BASE_COMPILER_VERSION}")
@@ -152,7 +153,7 @@ class Theme < ActiveRecord::Base
   end
 
   def update_child_components
-    if !component? && child_components.present?
+    if !component? && child_components.present? && !skip_child_components_update
       child_components.each do |url|
         url = ThemeStore::GitImporter.new(url.strip).url
         theme = RemoteTheme.find_by(remote_url: url)&.theme
@@ -714,17 +715,21 @@ class Theme < ActiveRecord::Base
 
   def build_theme_uploads_hash
     hash = {}
-    upload_fields.each do |field|
-      hash[field.name] = Discourse.store.cdn_url(field.upload.url) if field.upload&.url
-    end
+    upload_fields
+      .includes(:javascript_cache, :upload)
+      .each do |field|
+        hash[field.name] = Discourse.store.cdn_url(field.upload.url) if field.upload&.url
+      end
     hash
   end
 
   def build_local_theme_uploads_hash
     hash = {}
-    upload_fields.each do |field|
-      hash[field.name] = field.javascript_cache.local_url if field.javascript_cache
-    end
+    upload_fields
+      .includes(:javascript_cache, :upload)
+      .each do |field|
+        hash[field.name] = field.javascript_cache.local_url if field.javascript_cache
+      end
     hash
   end
 
@@ -751,9 +756,7 @@ class Theme < ActiveRecord::Base
   def update_setting(setting_name, new_value)
     target_setting = settings[setting_name.to_sym]
     raise Discourse::NotFound unless target_setting
-
     target_setting.value = new_value
-
     self.theme_setting_requests_refresh = true if target_setting.requests_refresh?
   end
 
@@ -843,6 +846,8 @@ class Theme < ActiveRecord::Base
         if upload = field.upload
           url = upload_cdn_path(upload.url)
           contents << "$#{field.name}: unquote(\"#{url}\");"
+        else
+          contents << "$#{field.name}: unquote(\"\");"
         end
       else
         contents << to_scss_variable(field.name, field.value)

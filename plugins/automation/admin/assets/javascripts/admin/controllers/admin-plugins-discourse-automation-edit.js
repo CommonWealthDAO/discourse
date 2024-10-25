@@ -2,13 +2,14 @@ import Controller from "@ember/controller";
 import { action, computed, set } from "@ember/object";
 import { filterBy, reads } from "@ember/object/computed";
 import { schedule } from "@ember/runloop";
-import { inject as service } from "@ember/service";
+import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 
 export default class AutomationEdit extends Controller {
   @service dialog;
+  @service router;
   error = null;
   isUpdatingAutomation = false;
   isTriggeringAutomation = false;
@@ -26,7 +27,7 @@ export default class AutomationEdit extends Controller {
   }
 
   @action
-  saveAutomation() {
+  saveAutomation(routeToIndex = false) {
     this.setProperties({ error: null, isUpdatingAutomation: true });
 
     return ajax(
@@ -40,6 +41,9 @@ export default class AutomationEdit extends Controller {
     )
       .then(() => {
         this.send("refreshRoute");
+        if (routeToIndex) {
+          this.router.transitionTo("adminPlugins.discourse-automation.index");
+        }
       })
       .catch((e) => this._showError(e))
       .finally(() => {

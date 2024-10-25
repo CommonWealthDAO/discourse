@@ -3,8 +3,8 @@
 module PageObjects
   module Pages
     class AdminWatchedWords < PageObjects::Pages::Base
-      def visit
-        page.visit "admin/customize/watched_words"
+      def visit(action: "block")
+        page.visit "admin/customize/watched_words/action/#{action}"
         self
       end
 
@@ -19,6 +19,10 @@ module PageObjects
 
       def has_word?
         has_css?(".watched-words-detail .show-words-checkbox")
+      end
+
+      def has_error?(error)
+        has_css?(".dialog-container .dialog-body", text: error)
       end
     end
   end

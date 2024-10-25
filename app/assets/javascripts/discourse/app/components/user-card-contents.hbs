@@ -27,7 +27,7 @@
       </div>
     {{else}}
       <div class="card-row first-row">
-        <div class="user-card-avatar">
+        <div class="user-card-avatar" aria-hidden="true">
           {{#if this.contentHidden}}
             <span class="card-huge-avatar">{{bound-avatar
                 this.user
@@ -35,9 +35,10 @@
               }}</span>
           {{else}}
             <a
+              {{on "click" this.handleShowUser}}
               href={{this.user.path}}
-              {{on "click" (fn this.handleShowUser this.user)}}
               class="card-huge-avatar"
+              tabindex="-1"
             >{{bound-avatar this.user "huge"}}</a>
           {{/if}}
 
@@ -52,16 +53,14 @@
           </div>
         </div>
         <div class="names">
-          <h1
-            class="{{this.staff}}
+          <div
+            class="names__primary
+              {{this.staff}}
               {{this.newUser}}
               {{if this.nameFirst 'full-name' 'username'}}"
           >
             {{#if this.contentHidden}}
-              <span
-                id="discourse-user-card-title"
-                class="name-username-wrapper"
-              >
+              <span class="name-username-wrapper">
                 {{if
                   this.nameFirst
                   this.user.name
@@ -70,14 +69,15 @@
               </span>
             {{else}}
               <a
+                {{on "click" this.handleShowUser}}
                 href={{this.user.path}}
-                {{on "click" (fn this.handleShowUser this.user)}}
                 class="user-profile-link"
+                aria-label={{i18n
+                  "user.profile_link"
+                  username=this.user.username
+                }}
               >
-                <span
-                  id="discourse-user-card-title"
-                  class="name-username-wrapper"
-                >
+                <span class="name-username-wrapper">
                   {{if
                     this.nameFirst
                     this.user.name
@@ -87,36 +87,33 @@
                 {{user-status this.user currentUser=this.currentUser}}
               </a>
             {{/if}}
-          </h1>
+          </div>
           <PluginOutlet
             @name="user-card-after-username"
             @connectorTagName="div"
-            @outletArgs={{hash
-              user=this.user
-              showUser=(fn this.handleShowUser this.user)
-            }}
+            @outletArgs={{hash user=this.user showUser=this.handleShowUser}}
           />
           {{#if this.nameFirst}}
-            <h2 class="username">{{this.user.username}}</h2>
+            <div class="names__secondary username">{{this.user.username}}</div>
           {{else}}
             {{#if this.user.name}}
-              <h2 class="full-name">{{this.user.name}}</h2>
+              <div class="names__secondary full-name">{{this.user.name}}</div>
             {{/if}}
           {{/if}}
           {{#if this.user.title}}
-            <h2>{{this.user.title}}</h2>
+            <div class="names__secondary">{{this.user.title}}</div>
           {{/if}}
           {{#if this.user.staged}}
-            <h2 class="staged">{{i18n "user.staged"}}</h2>
+            <div class="names__secondary staged">{{i18n "user.staged"}}</div>
           {{/if}}
           {{#if this.hasStatus}}
-            <h3 class="user-status">
+            <div class="user-status">
               {{html-safe this.userStatusEmoji}}
               <span class="user-status__description">
                 {{this.user.status.description}}
               </span>
               {{format-date this.user.status.ends_at format="tiny"}}
-            </h3>
+            </div>
           {{/if}}
           <div>
             <PluginOutlet
@@ -145,7 +142,7 @@
           {{#if this.showFilter}}
             <li>
               <DButton
-                @action={{fn (action "filterPosts") this.user}}
+                @action={{fn this.handleFilterPosts this.user}}
                 @icon="filter"
                 @translatedLabel={{this.filterPostsLabel}}
                 class="btn-default"
@@ -156,7 +153,7 @@
             <li>
               <DButton
                 @action={{action "cancelFilter"}}
-                @icon="times"
+                @icon="xmark"
                 @label="topic.filters.cancel"
               />
             </li>
@@ -165,7 +162,7 @@
             <li>
               <DButton
                 @action={{fn (action "deleteUser") this.user}}
-                @icon="exclamation-triangle"
+                @icon="triangle-exclamation"
                 @label="admin.user.delete"
                 class="btn-danger"
               />
@@ -187,13 +184,13 @@
       {{#if this.user.profile_hidden}}
         <div class="card-row second-row">
           <div class="profile-hidden">
-            <span>{{i18n "user.profile_hidden"}}</span>
+            <span role="alert">{{i18n "user.profile_hidden"}}</span>
           </div>
         </div>
       {{else if this.user.inactive}}
         <div class="card-row second-row">
           <div class="inactive-user">
-            <span>{{i18n "user.inactive_user"}}</span>
+            <span role="alert">{{i18n "user.inactive_user"}}</span>
           </div>
         </div>
       {{/if}}
@@ -274,7 +271,7 @@
             {{/if}}
             {{#if this.user.location}}
               <span class="location">
-                {{d-icon "map-marker-alt"}}
+                {{d-icon "location-dot"}}
                 <span>{{this.user.location}}</span>
               </span>
             {{/if}}
@@ -299,25 +296,29 @@
         {{#unless this.contentHidden}}
           <div class="metadata">
             {{#if this.user.last_posted_at}}
-              <h3><span class="desc">{{i18n "last_post"}}</span>
-                {{format-date this.user.last_posted_at leaveAgo="true"}}</h3>
+              <div class="metadata__last-posted">
+                <span class="desc">{{i18n "last_post"}}</span>
+                {{format-date this.user.last_posted_at leaveAgo="true"}}</div>
             {{/if}}
-            <h3><span class="desc">{{i18n "joined"}}</span>
-              {{format-date this.user.created_at leaveAgo="true"}}</h3>
+            <div class="metadata__user-created">
+              <span class="desc">{{i18n "joined"}}</span>
+              {{format-date this.user.created_at leaveAgo="true"}}</div>
             {{#if this.user.time_read}}
-              <h3 title={{this.timeReadTooltip}}>
+              <div class="metadata__time-read" title={{this.timeReadTooltip}}>
                 <span class="desc">{{i18n "time_read"}}</span>
                 {{format-duration this.user.time_read}}
                 {{#if this.showRecentTimeRead}}
-                  <span>({{i18n
+                  <span>
+                    ({{i18n
                       "time_read_recently"
                       time_read=this.recentTimeRead
-                    }})</span>
+                    }})
+                  </span>
                 {{/if}}
-              </h3>
+              </div>
             {{/if}}
             {{#if this.showCheckEmail}}
-              <h3 class="email">
+              <div class="metadata__email">
                 {{d-icon "envelope" title="user.email.title"}}
                 {{#if this.user.email}}
                   {{this.user.email}}
@@ -329,7 +330,7 @@
                     class="btn-primary"
                   />
                 {{/if}}
-              </h3>
+              </div>
             {{/if}}
             <PluginOutlet
               @name="user-card-metadata"

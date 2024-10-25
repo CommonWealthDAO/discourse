@@ -21,6 +21,7 @@ et:
             kb: KB
             mb: MB
             tb: TB
+      percent: "%{count}%"
       short:
         thousands: "%{number}k"
         millions: "%{number}M"
@@ -122,7 +123,6 @@ et:
     share:
       topic_html: 'Teema: <span class="topic-title">%{topicTitle}</span>'
       close: "Sulge"
-      twitter: "Jaga Twitteris"
       facebook: "Jaga Facebookis"
       email: "Jaga e-mailiga"
       url: "Kopeeri ja jaga link"
@@ -242,6 +242,7 @@ et:
       pill: "Soovitatud"
       pm_title: "Soovitatud sõnumid"
     about:
+      edit: "Muuda seda lehekülge"
       simple_title: "Teave"
       title: "Teave %{title} kohta"
       stats: "Statistika"
@@ -259,7 +260,17 @@ et:
       user_count: "Registreerumised"
       active_user_count: "Aktiivsed kasutajad"
       contact: "Võta meiega ühendust"
-      contact_info: "Kriitilise vea või edasilükkamatu probleemi korral võta palun meiega ühendust aadressil %{contact_info}."
+      activities:
+        topics:
+          one: "%{formatted_number} teema"
+          other: "%{formatted_number} teemat"
+        posts:
+          one: "%{formatted_number} postitus"
+          other: "%{formatted_number} postitust"
+        periods:
+          last_7_days: "viimase 7 päeva jooksul"
+          today: "täna"
+          all_time: "kogu aeg"
     bookmarked:
       title: "Järjehoidja"
       clear_bookmarks: "Kustuta järjehoidjad"
@@ -542,6 +553,8 @@ et:
           last_updated_by: "autor"
           prefill:
             gmail: "Gmail"
+          ssl_modes:
+            none: "Pole"
           credentials:
             username: "Kasutajanimi"
             password: "Parool"
@@ -759,6 +772,7 @@ et:
       copied: "kopeeritud"
     user_fields:
       none: "(vali võimalus)"
+      optional: (valikuline)
     user:
       said: "%{username}:"
       profile: "Profiil"
@@ -785,7 +799,8 @@ et:
         to: "kellele"
       activity_stream: "Tegevused"
       read: "Loetud"
-      preferences: "Eelistused"
+      preferences:
+        title: "Eelistused"
       feature_topic_on_profile:
         save: "Salvesta"
         clear:
@@ -927,6 +942,7 @@ et:
         set_password: "Määra parool"
         choose_new: "Vali uus parool"
         choose: "Vali parool"
+        title: "Parooli uuendamine"
       second_factor_backup:
         title: "Kahefaktorilise autentimise varukoodid"
         regenerate: "Genereeri uus"
@@ -994,7 +1010,7 @@ et:
         resent_label: "meil saadetud"
         update_email: "Muuda meiliaadressi"
         no_secondary: "Teist e-posti pole"
-        instructions: "Ei näidata avalikult."
+        instructions: "Ei näidata avalikult"
         ok: "Saadame sulle kinnituseks meili"
         invalid: "Sisesta palun korrektne meiliaadress"
         authenticated: "Sinu meil on autenditud %{provider} poolt"
@@ -1007,10 +1023,17 @@ et:
         revoke: "Tühista"
         cancel: "Tühista"
         not_connected: "(pole ühendatud)"
+      activate_account:
+        action: "Oma konto aktiveerimiseks kliki siia"
+        already_done: "Vabandust, see konto kinnitamise link ei kehti enam. Äkki on Teie konto juba aktiveeritud?"
+        please_continue: "Teie uus konto on kinnitatud; Teid suunatakse nüüd avalehele."
+        continue_button: "Edasi saidile %{site_name}"
+        welcome_to: "Tere tulemast lehele %{site_name}!"
+        approval_required: "Enne, kui saate foorumit kasutada, peab moderaator Teie uue konto käsitsi kinnitama. Konto kinnitamise kohta tuleb teade meilile."
       name:
         title: "Nimi"
-        instructions: "Sinu täisnimi (mittekohustuslik)."
-        instructions_required: "Sinu täisnimi."
+        instructions: "Sinu täisnimi (mittekohustuslik)"
+        instructions_required: "Sinu täisnimi"
         too_short: "Sinu antud nimi on liiga lühike"
         ok: "Paistab, et nimega on asjad korras"
       username:
@@ -1127,11 +1150,13 @@ et:
         valid_for: "Kutse link kehtib vaid meiliaadressile: %{email}"
         invite_link:
           success: "Kutse link edukalt genereeritud!"
+        invite:
+          save_invite: "Salvesta"
+          cancel: "Tühista"
         bulk_invite:
           error: "Vabandust, fail peab olema CSV vormingus."
       password:
         title: "Parool"
-        too_short: "Parool on liiga lühike."
         common: "See parool on liiga tavaline."
         same_as_username: "Parool ühtib sinu kasutajanimega."
         same_as_email: "Parool ühtib sinu meiliaadressiga."
@@ -1227,6 +1252,11 @@ et:
         fixed: "Lae lehekülg"
     modal:
       close: "Sulge"
+    form_kit:
+      reset: Lähtesta
+      optional: valikuline
+      errors:
+        required: "Nõutud"
     close: "Sulge"
     logout: "Sind logiti välja."
     refresh: "Värskenda"
@@ -1247,7 +1277,10 @@ et:
       sign_up: "Liitu"
       hide_forever: "tänan, ei"
     summary:
+      buttons:
+        regenerate: "Genereeri uus"
       disable: "Näita kõiki postitusi"
+      show_all_label: "Näita kõiki"
     deleted_filter:
       enabled_description: "See teema sisaldab kustutatud postitusi, mis on peidetud."
       disabled_description: "Selle teema kustutatud postitused on nähtaval."
@@ -1270,8 +1303,13 @@ et:
     search_hint: "kasutajanimi, meil või IP-aadress"
     create_account:
       header_title: "Tere tulemast!"
+      title: "Liitu"
       failed: "Miski läks valesti - võimalik, et see meiliaadress on juba registreeritud. Proovi viidet unustatud parooli lehele"
       activation_title: "Aktiveeri oma konto"
+      progress_bar:
+        signup: "Liitu"
+        approve: "Kinnita"
+        login: "Logi sisse"
     forgot_password:
       title: "Parooli uuendamine"
       action: "Unustasin oma parooli"
@@ -1290,6 +1328,7 @@ et:
       complete_email_not_found: "Meiliaadressile <b>%{email}</b> ei vasta ükski konto"
       confirm_title: Edasi saidile %{site_name}
     login:
+      title: "Logi sisse"
       username: "Kasutaja"
       password: "Parool"
       show_password: "Näita"
@@ -1305,6 +1344,7 @@ et:
       not_activated: "Sa ei saa veel sisse logida. Saatsime sulle aktiveerimise meili aadressile <b>%{sentTo}</b>. Järgi palun selles meilis olevaid juhiseid oma konto aktiveerimiseks."
       admin_not_allowed_from_ip_address: "Sellelt IP-aadressilt ei saa adminina sisse logida."
       resend_activation_email: "Selleks, et aktiveerimise meili uuesti saata, klikka siia."
+      activate_account: "Aktiveeri konto"
       resend_title: "Saada aktiveerimismeil uuesti"
       change_email: "Muuda e-posti aadressi"
       submit_new_email: "Uuenda e-posti aadressi"
@@ -1437,7 +1477,6 @@ et:
       toggle_direction: "Muuda suunda"
       help: "Markdown-i redaktori spikker"
       modal_ok: "OK"
-      modal_cancel: "Tühista"
       cant_send_pm: "Kahjuks ei saa sa kasutajale %{username} sõnumit saata."
       yourself_confirm:
         title: "Kas unustasid saajad lisada?"
@@ -2218,7 +2257,6 @@ et:
         moderation: "Modereerimine"
         email: "E-post"
     flagging:
-      title: "Täname, et aitad meie kogukonna viisakust säilitada!"
       action: "Tähista postitus"
       take_action_options:
         default:
@@ -2250,7 +2288,6 @@ et:
           one: "%{count} jäänud"
           other: "%{count} jäänud"
     flagging_topic:
-      title: "Täname, et aitad meie kogukonna viisakust säilitada!"
       action: "Tähista teema"
       notify_action: "Sõnum"
     topic_map:
@@ -2260,6 +2297,9 @@ et:
       clicks:
         one: "%{count} klikk"
         other: "%{count} klikki"
+      views: "Vaatamisi"
+      read: lugemine
+      minutes: miinumum
     post_links:
       about: "laienda veel selles postuses olevaid viiteid"
       title:
@@ -2289,6 +2329,7 @@ et:
     pending_posts:
       label: "Ootel"
       label_with_count: "Ootel (%{count})"
+    posters: "Postitajad"
     original_post: "Algne postitus"
     views: "Vaatamisi"
     views_lowercase:
@@ -2473,7 +2514,6 @@ et:
     tagging:
       other_tags: "Muud sildid"
       selector_tags: "sildid"
-      selector_all_tags: "kõik sildid"
       selector_no_tags: "sildid puuduvad"
       selector_remove_filter: "eemalda filter"
       tags: "Sildid"
@@ -2596,6 +2636,8 @@ et:
               content: "Teemasid"
             faq:
               content: "KKK"
+            guidelines:
+              content: "Juhised"
             groups:
               content: "Grupid"
             users:
@@ -2626,6 +2668,7 @@ et:
         show: "Näita"
         about: "Teave"
   admin_js:
+    settings: "Sätted"
     admin:
       title: "Discourse Admin"
       moderator: "Moderaator"
@@ -2647,6 +2690,7 @@ et:
         stale_data: "Uuenduste kontrolli pole ammu tehtud. Kontrolli, et sidekiq töötab."
         installed_version: "Paigaldatud"
         latest_version: "Viimased"
+        dismiss_notice: "Ignoreeri"
         new_features:
           learn_more: "Uuri veel..."
         last_checked: "Viimati kontrollitud"
@@ -2815,6 +2859,8 @@ et:
           timestamp: "Loaded"
           completion: "Soorituse aeg"
           actions: "Tegevused"
+          filter_status:
+            failed: "Ebaõnnestunud"
       home:
         title: "Avaleht"
       account:
@@ -2857,11 +2903,34 @@ et:
           screened_ips: "Varjestatud IP-aadressid"
           screened_urls: "Varjestatud URL-d"
           search_logs: "Otsingu logid"
-          security: "Turve"
-          spam: "Spämm"
+      section_landing_pages:
+        account:
+          title: "Konto"
+          backups:
+            title: "Varukoopiad"
+      config_areas:
+        about:
+          contact_url_placeholder: "https://johnny-smith.com/contact"
+          optional: "(valikuline)"
+          saved: "salvestatud!"
+        flags:
+          description: "Kirjeldus"
+          enabled: "Sisse lülitatud?"
+          edit: "Muuda"
+          delete: "Kustuta"
+          flags_tab: "Tähised"
+          form:
+            save: "Salvesta"
+            name: "Nimi"
+            description: "Kirjeldus"
+            invalid_applies_to: "Nõutud"
+            topic: "teemasid"
+            post: "postitused"
+        look_and_feel:
+          themes:
+            title: "Kujundused"
       plugins:
         title: "Plugin"
-        installed: "Paigaldatud pluginad"
         name: "Nimi"
         none_installed: "Ühtegi pluginat ei ole paigaldatud."
         version: "Versioon"
@@ -2890,7 +2959,7 @@ et:
         menu:
           backups: "Varukoopiad"
           logs: "Logid"
-        none: "Ühtegi varukoopiat pole."
+        none: "Ühtegi varukoopiat pole"
         read_only:
           enable:
             title: "Lülita kirjutuskaitstud režiim sisse"
@@ -2924,7 +2993,6 @@ et:
             title: "Eemalda varukoopia"
             confirm: "Oled kindel, et soovid selle varukoopia hävitada?"
           restore:
-            is_disabled: "Taastamine on saidi sätetes välja lülitatud."
             label: "Taasta"
             title: "Taasta varukoopia"
             confirm: "Oled Sa kindel, et soovid taastada seda varukoopiat?"
@@ -3053,7 +3121,6 @@ et:
             description: "Viited, mõned nupud, teavitused ja rõhuvärv."
           quaternary:
             name: "neljanda astme"
-            description: "Navigatsiooniviited"
           header_background:
             name: "päise taust"
             description: "Saidi päise taustavärv."
@@ -3579,6 +3646,7 @@ et:
         file_types_list:
           add_image_types: "Pildid"
       badges:
+        status: Staatus
         title: Märgised
         new_badge: Uus märgis
         new: Uus
@@ -3586,8 +3654,6 @@ et:
         badge: Märgis
         display_name: Kuvatav nimi
         description: Kirjeldus
-        long_description: Pikk kirjeldus
-        badge_type: Märgise tüüp
         badge_grouping: Grupp
         badge_groupings:
           modal_title: Märgiste grupeeringud
@@ -3615,6 +3681,8 @@ et:
         disabled: välja lülitatud
         icon: Ikoon
         image: Pilt
+        select_an_icon: "Vali ikoon"
+        upload_an_image: "Lae pilt üles"
         query: Märgise päring (SQL)
         target_posts: Päri sihtmärkide postitusi
         auto_revoke: Jooksuta tühistamispäringut igapäevaselt

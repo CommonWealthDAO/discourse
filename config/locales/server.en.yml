@@ -245,6 +245,7 @@ en:
       maximum_staged_user_per_email_reached: "Reached maximum number of staged users created per email."
       no_subject: "(no subject)"
       no_body: "(no body)"
+      attachments: "(attachments)"
       missing_attachment: "(Attachment %{filename} is missing)"
       continuing_old_discussion:
         one: "Continuing the discussion from [%{title}](%{url}), because it was created more than %{count} day ago."
@@ -323,6 +324,7 @@ en:
         other: is the wrong length (should be %{count} characters)
       other_than: "must be other than %{count}"
       auth_overrides_username: "Username needs to be updated on authentication provider side, since `auth_overrides_username` setting is enabled."
+      required: "must exist"
     template:
       body: ! "There were problems with the following fields:"
       header:
@@ -333,6 +335,8 @@ en:
     site_settings:
       invalid_site_setting: "No setting named '%{name}' exists"
       invalid_category_id: "You specified a category that does not exist"
+      site_setting_is_hidden: "You are not allowed to change hidden settings"
+      site_setting_is_unconfigurable: "You are not allowed to change unconfigurable settings"
       invalid_choice:
         one: "'%{name}' is an invalid choice."
         other: "'%{name}' are invalid choices."
@@ -346,7 +350,6 @@ en:
       secure_uploads_requirements: "S3 uploads and S3 ACLs must be enabled before enabling secure uploads."
       s3_use_acls_requirements: "You must have S3 ACLs enabled when secure uploads are enabled."
       share_quote_facebook_requirements: "You must set a Facebook app id to enable quote sharing for Facebook."
-      second_factor_cannot_enforce_with_socials: "You cannot enforce 2FA with social logins enabled. You must first disable login via: %{auth_provider_names}"
       second_factor_cannot_be_enforced_with_disabled_local_login: "You cannot enforce 2FA if local logins are disabled."
       second_factor_cannot_be_enforced_with_discourse_connect_enabled: "You cannot enforce 2FA if DiscourseConnect is enabled."
       local_login_cannot_be_disabled_if_second_factor_enforced: "You cannot disable local login if 2FA is enforced. Disable enforced 2FA before disabling local logins."
@@ -609,6 +612,9 @@ en:
         one: "%{count} user has been added to the group."
         other: "%{count} users have been added to the group."
     errors:
+      default_notification_level_users_limit:
+        one: "Default notification level can't be set on groups larger than %{count} user. Incorrect group: %{group_name}"
+        other: "Default notification level can't be set on groups larger than %{count} users. Incorrect group: %{group_name}"
       grant_trust_level_not_valid: "'%{trust_level}' is not a valid trust level."
       can_not_modify_automatic: "You cannot modify an automatic group"
       member_already_exist:
@@ -636,6 +642,20 @@ en:
       trust_level_2: "trust_level_2"
       trust_level_3: "trust_level_3"
       trust_level_4: "trust_level_4"
+    default_descriptions:
+      everyone: "Automatic group including all members"
+      staff: "Automatic group including admins and moderators"
+      admins: "Responsible for configuring and maintaining this site, with access to all member and activity data"
+      moderators: "Responsible for responding to flags, moderating discussions, and helping members with their accounts"
+      trust_level_0: "New members with limited abilities, who are learning community norms and functionality"
+
+      trust_level_1: "Members with more trust, who have shown initial engagement by reading hand can now access more functions. All members of this group are also members of the trust_level_0 group."
+
+      trust_level_2: "Active members who have consistently contributed overtime and gained full citizenship privileges. All members of this group are also members of the trust_level_1 and trust_level_0 groups."
+
+      trust_level_3: "Highly engaged, long-term contributors, who form the backbone of the community and have gained limited moderation privileges. All members of this group are also members of the trust_level_2, trust_level_1 and trust_level_0 groups."
+
+      trust_level_4: "Manually promoted members, recognized by their exemplary contributions and entrusted with additional moderation privileges. All members of this group are also members of the trust_level_3, trust_level_2, trust_level_1 and trust_level_0 groups."
     request_membership_pm:
       title: "Membership Request for @%{group_name}"
     request_accepted_pm:
@@ -737,6 +757,7 @@ en:
               reply_by_email_disabled: "Reply by email has been disabled."
               send_to_email_disabled: "Sorry, you cannot send personal messages to email."
               target_user_not_found: "One of the users you are sending this message to could not be found."
+              too_large_group: "The group: %{group_name}, has too many users to receive a message. Limit is %{limit}."
               unable_to_update: "There was an error updating that topic."
               unable_to_tag: "There was an error tagging the topic."
               unable_to_unlist: "Sorry, you cannot create an unlisted topic."
@@ -749,7 +770,6 @@ en:
               same_as_username: "is the same as your username. Please use a more secure password."
               same_as_email: "is the same as your email. Please use a more secure password."
               same_as_current: "is the same as your current password."
-              same_as_previous: "is the same as your previous password."
               same_as_name: "is the same as your name."
               unique_characters: "has too many repeated characters. Please use a more secure password."
             username:
@@ -759,6 +779,15 @@ en:
             ip_address:
               blocked: "New registrations are not allowed from your IP address."
               max_new_accounts_per_registration_ip: "New registrations are not allowed from your IP address (maximum limit reached). Contact a staff member."
+        user_password:
+          attributes:
+            password:
+              common: "is one of the 10000 most common passwords. Please use a more secure password."
+              same_as_username: "is the same as your username. Please use a more secure password."
+              same_as_email: "is the same as your email. Please use a more secure password."
+              same_as_current: "is the same as your current password."
+              same_as_name: "is the same as your name."
+              unique_characters: "has too many repeated characters. Please use a more secure password."
         user_profile:
           attributes:
             featured_topic_id:
@@ -1043,11 +1072,7 @@ en:
     connected: "(connected)"
 
   activation:
-    action: "Click here to activate your account"
     already_done: "Sorry, this account confirmation link is no longer valid. Perhaps your account is already active?"
-    please_continue: "Your new account is confirmed; you will be redirected to the home page."
-    continue_button: "Continue to %{site_name}"
-    welcome_to: "Welcome to %{site_name}!"
     approval_required: "A moderator must manually approve your new account before you can access this forum. You'll get an email when your account is approved!"
     missing_session: "We cannot detect if your account was created, please ensure you have cookies enabled."
     activated: "Sorry, this account has already been activated."
@@ -1120,8 +1145,7 @@ en:
     pop3_authentication_error: "There was an issue with the POP3 credentials provided, check the username and password and try again."
     imap_authentication_error: "There was an issue with the IMAP credentials provided, check the username and password and try again."
     imap_no_response_error: "An error occurred when communicating with the IMAP server. %{message}"
-    smtp_authentication_error: "There was an issue with the SMTP credentials provided, check the username and password and try again."
-    authentication_error_gmail_app_password: 'Application-specific password required. Learn more at <a target="_blank" href="https://support.google.com/accounts/answer/185833">this Google Help article</a>'
+    smtp_authentication_error: "There was an issue with the SMTP credentials provided, check the username and password and try again. %{message}"
     smtp_server_busy_error: "The SMTP server is currently busy, try again later."
     smtp_unhandled_error: "There was an unhandled error when communicating with the SMTP server. %{message}"
     imap_unhandled_error: "There was an unhandled error when communicating with the IMAP server. %{message}"
@@ -1252,6 +1276,9 @@ en:
     errors:
       already_handled: "Flag was already handled"
       wrong_move: "Flag cannot be moved"
+      system: "System flag cannot be updated or deleted."
+      used: "Flag cannot be updated or deleted because has already been used."
+      unique_name: "Flag name must be unique"
   reports:
     default:
       labels:
@@ -1326,13 +1353,15 @@ en:
       yaxis: "Day"
       description: "Number of users who increased their Trust Level during this period."
     consolidated_page_views:
-      title: "Consolidated Pageviews"
+      title: "Legacy Consolidated Pageviews"
+      title_legacy: "Consolidated Pageviews"
       xaxis:
         page_view_crawler: "Crawlers"
         page_view_anon: "Anonymous users"
         page_view_logged_in: "Logged in users"
       yaxis: "Day"
-      description: "Pageviews for logged in users, anonymous users and crawlers."
+      description: "Legacy report showing pageviews for logged in users, anonymous users and crawlers. This has been superseded by the 'Site traffic' report."
+      description_legacy: "Pageviews for logged in users, anonymous users and crawlers."
       labels:
         post: Post
         editor: Editor
@@ -1347,13 +1376,25 @@ en:
       description: "API requests for regular API keys and user API keys."
     consolidated_page_views_browser_detection:
       title: "Consolidated Pageviews with Browser Detection (Experimental)"
+      title_legacy: "Consolidated Pageviews with Browser Detection (Experimental)"
       xaxis:
         page_view_anon_browser: "Anonymous Browser"
         page_view_logged_in_browser: "Logged In Browser"
         page_view_crawler: "Known Crawler"
         page_view_other: "Other pageviews"
       yaxis: "Day"
-      description: "Pageviews for logged in users, anonymous users, known crawlers and other. This experimental report ensures logged-in/anon requests are coming from real browsers before counting them."
+      description: "Pageviews for logged in users, anonymous users, known crawlers and other. This experimental report ensures logged-in/anon requests are coming from real browsers before counting them. Historical data for this report is unavailable, for historical data see the 'Legacy Consolidated Pageviews' report."
+      description_legacy: "Pageviews for logged in users, anonymous users, known crawlers and other. This experimental report ensures logged-in/anon requests are coming from real browsers before counting them. Historical data for this report is unavailable, for historical data see the ‘Consolidated Pageviews' report."
+    site_traffic:
+      title: "Site traffic"
+      xaxis:
+        page_view_anon_browser: "Pageviews (anonymous)"
+        page_view_logged_in_browser: "Pageviews (logged in)"
+        page_view_crawler: "Known crawlers"
+        page_view_other: "Other traffic"
+      yaxis: "Day"
+      description: "Pageviews for logged in users, anonymous users, known crawlers and other traffic."
+      description_link: "https://meta.discourse.org/t/understanding-pageviews-and-the-site-traffic-report/324062"
     dau_by_mau:
       title: "DAU/MAU"
       xaxis: "Day"
@@ -1504,6 +1545,11 @@ en:
       xaxis: "Day"
       yaxis: "Total Pageviews"
       description: "Number of new pageviews from all visitors."
+    page_view_legacy_total_reqs:
+      title: "Legacy Pageviews"
+      xaxis: "Day"
+      yaxis: "Total Pageviews"
+      description: "Legacy report showing the number of new pageviews from all visitors."
     page_view_logged_in_mobile_reqs:
       title: "Logged In Pageviews"
       xaxis: "Day"
@@ -1569,6 +1615,11 @@ en:
         user_agent: "User Agent"
         page_views: "Pageviews"
       description: "List of web crawler user agents, sorted by pageviews."
+    web_hook_events_daily_aggregate:
+      title: "Web Hook Events"
+      xaxis: "Day"
+      yaxis: "Number of events"
+      description: "Number of web hook events triggered or their mean duration."
     suspicious_logins:
       title: "Suspicious Logins"
       labels:
@@ -1621,6 +1672,14 @@ en:
         user: User
         qtt_like: Likes Received
       description: "Top 10 users who have had likes from a wide range of people."
+    topic_view_stats:
+      title: "Topic View Stats"
+      labels:
+        topic: Topic
+        logged_in_views: Logged In
+        anon_views: Anonymous
+        total_views: Total
+      description: "The top 100 most viewed topics in a date range, combining logged in and anonymous views. Can be filtered by category."
 
   dashboard:
     problem:
@@ -1650,8 +1709,8 @@ en:
       poll_pop3_timeout: "Connection to the POP3 server is timing out. Incoming email could not be retrieved. Please check your <a href='%{base_path}/admin/site_settings/category/email'>POP3 settings</a> and service provider."
       poll_pop3_auth_error: "Connection to the POP3 server is failing with an authentication error. Please check your <a href='%{base_path}/admin/site_settings/category/email'>POP3 settings</a>."
       force_https: "Your website is using SSL. But `<a href='%{base_path}/admin/site_settings/category/all_results?filter=force_https'>force_https</a>` is not yet enabled in your site settings."
-      out_of_date_themes: "Updates are available for the following themes:"
-      unreachable_themes: "We were unable to check for updates on the following themes:"
+      out_of_date_themes: "Updates are available for the following themes:%{themes_list}"
+      unreachable_themes: "We were unable to check for updates on the following themes:%{themes_list}"
       watched_words: "The regular expression for %{action} watched words is invalid. Please check your <a href='%{base_path}/admin/customize/watched_words'>Watched Word settings</a>, or disable the 'watched words regular expressions' site setting."
       google_analytics_version: "Your Discourse is currently using Google Analytics 3, which will no longer be supported after July 2023. <a href='https://meta.discourse.org/t/260498'>Upgrade to Google Analytics 4</a> now to continue receiving valuable insights and analytics for your website's performance."
       category_style_deprecated: "Your Discourse is currently using a deprecated category style which will be removed before the final beta release of Discourse 3.2. Please refer to <a href='https://meta.discourse.org/t/282441'>Moving to a Single Category Style Site Setting</a> for instructions on how to keep your selected category style."
@@ -1740,6 +1799,7 @@ en:
     force_custom_user_agent_hosts: "Hosts for which to use the custom onebox user agent on all requests. (Especially useful for hosts that limit access by user agent)."
     max_oneboxes_per_post: "Set the maximum number of oneboxes that can be included in a single post. Oneboxes provide a preview of linked content within the post."
     facebook_app_access_token: "A token generated from your Facebook app ID and secret. Used to generate Instagram oneboxes."
+    github_onebox_access_tokens: "A mapping of a GitHub organisation or user to a GitHub access token which is used to generate GitHub oneboxes for private repos, commits, pull requests, issues, and file contents. Without this, only public GitHub URLs will be oneboxed."
 
     logo: "The logo image at the top left of your site. Use a wide rectangular image with a height of 120 and an aspect ratio greater than 3:1. If left blank, the site title text will be shown."
     logo_small: "The small logo image at the top left of your site, seen when scrolling down. Use a square 120 × 120 image. If left blank, a home glyph will be shown."
@@ -1760,7 +1820,8 @@ en:
     email_custom_headers: "A pipe-delimited list of custom email headers"
     email_subject: "Customizable subject format for standard emails. See <a href='https://meta.discourse.org/t/customize-subject-format-for-standard-emails/20801' target='_blank'>https://meta.discourse.org/t/customize-subject-format-for-standard-emails/20801</a>"
     detailed_404: "Provides more details to users about why they can’t access a particular topic. Note: This is less secure because users will know if a URL links to a valid topic."
-    enforce_second_factor: "Require users to enable two-factor authentication before they can access the Discourse UI. Select 'all' to enforce it to all users. Select 'staff' to enforce it to staff users only. This setting does not affect API or 'DiscourseConnect provider' authentication."
+    enforce_second_factor: "Require users to enable two-factor authentication before they can access the Discourse UI. This setting does not affect API or 'DiscourseConnect provider' authentication. If enforce_second_factor_on_external_auth is enabled, users will not be able to log in with external authentication providers after they set up two-factor authentication."
+    enforce_second_factor_on_external_auth: "Require users to use two-factor authentication at all times. When enabled this will prevent users logging in with external authentication methods like social logins if they have two-factor authentication enabled. When disabled users will only need to confirm their two-factor authentication when logging in with a username and password. Also see the `enforce_second_factor` setting."
     force_https: "Force your site to use HTTPS only. WARNING: do NOT enable this until you verify HTTPS is fully set up and working absolutely everywhere! Did you check your CDN, all social logins, and any external logos / dependencies to make sure they are all HTTPS compatible, too?"
 
     summary_score_threshold: "The minimum score required for a post to be included in 'Summarize This Topic'"
@@ -1819,6 +1880,7 @@ en:
     pending_users_reminder_delay_minutes: "Notify moderators if new users have been waiting for approval for longer than this many minutes. Set to -1 to disable notifications."
     persistent_sessions: "Users will remain logged in when the web browser is closed"
     maximum_session_age: "User will remain logged in for n hours since last visit"
+    experimental_full_page_login: "EXPERIMENTAL: Replace the login/signup modal with a full page login/signup form."
     ga_version: "Version of Google Universal Analytics to use: v3 (analytics.js), v4 (gtag)"
     ga_universal_tracking_code: "Google Universal Analytics tracking code ID, eg: UA-12345678-9; see <a href='https://google.com/analytics' target='_blank'>https://google.com/analytics</a>"
     ga_universal_domain_name: "Google Universal Analytics domain name, eg: mysite.com; see <a href='https://google.com/analytics' target='_blank'>https://google.com/analytics</a>"
@@ -1832,7 +1894,7 @@ en:
     blocked_ip_blocks: "A list of private IP blocks that should never be crawled by Discourse"
     allowed_internal_hosts: "A list of internal hosts that discourse can safely crawl for oneboxing and other purposes"
     allowed_onebox_iframes: "A list of iframe src domains which are allowed via Onebox embeds. `*` will allow all default Onebox engines."
-    allowed_iframes: "A list of iframe src domain prefixes that discourse can safely allow in posts"
+    allowed_iframes: "A list of iframe src URL prefixes that Discourse can safely allow in posts"
     allowed_crawler_user_agents: "User agents of web crawlers that should be allowed to access the site. WARNING! SETTING THIS WILL DISALLOW ALL CRAWLERS NOT LISTED HERE!"
     blocked_crawler_user_agents: "Unique case insensitive word in the user agent string identifying web crawlers that should not be allowed to access the site. Does not apply if allowlist is defined."
     slow_down_crawler_user_agents: 'User agents of web crawlers that should be rate limited as configured in the "slow down crawler rate" setting. Each value must be at least 3 characters long.'
@@ -1841,14 +1903,13 @@ en:
     content_security_policy_report_only: "Enable Content-Security-Policy-Report-Only (CSP)"
     content_security_policy_collect_reports: "Enable CSP violation report collection at /csp_reports"
     content_security_policy_frame_ancestors: "Restrict who can embed this site in iframes via CSP. Control allowed hosts on <a href='%{base_path}/admin/customize/embedding'>Embedding</a>"
-    content_security_policy_script_src: "Additional allowlisted script sources. The current host and CDN are included by default. See <a href='https://meta.discourse.org/t/mitigate-xss-attacks-with-content-security-policy/104243' target='_blank'>Mitigate XSS Attacks with Content Security Policy.</a> (CSP). Host sources will be ignored when content_security_policy_strict_dynamic is enabled."
-    content_security_policy_strict_dynamic: "Use a strict-dynamic content security policy to reduce the need for manual configuration. Check <a href='https://meta.discourse.org/t/298172' target='_blank'>the announcement</a> for more information. The ability to disable this setting will be removed soon."
+    content_security_policy_script_src: "Additional allowlisted script sources. The current host and CDN are included by default. See <a href='https://meta.discourse.org/t/mitigate-xss-attacks-with-content-security-policy/104243' target='_blank'>Mitigate XSS Attacks with Content Security Policy.</a> (CSP). Other host sources are ignored as strict-dynamic is enabled."
     invalidate_inactive_admin_email_after_days: "Admin accounts that have not visited the site in this number of days will need to re-validate their email address before logging in. Set to 0 to disable."
     include_secure_categories_in_tag_counts: "When enabled, count of topics for a tag will include topics that are in read restricted categories for all users. When disabled, normal users are only shown a count of topics for a tag where all the topics are in public categories."
     display_personal_messages_tag_counts: "When enabled, count of personal messages tagged with a given tag will be displayed."
     top_menu: "Determine which items appear in the homepage navigation, and in what order."
-    post_menu: "Determine which items appear on the post menu, and in what order."
-    post_menu_hidden_items: "The menu items to hide by default in the post menu unless an expansion ellipsis is clicked on."
+    post_menu: "Configure the visibility and order of default post menu items. Additional items added by plugins or themes are managed separately and won’t appear in this list."
+    post_menu_hidden_items: "The menu items to hide by default in the post menu unless an expansion ellipsis is clicked on. Additional items added by plugins or themes are managed separately and won’t appear in this list."
     share_links: "Determine which items appear on the share dialog, and in what order."
     allow_username_in_share_links: "Allow usernames to be included in share links. This is useful to reward badges based on unique visitors."
     site_contact_username: "A valid staff username to send all automated messages from. If left blank the default System account will be used."
@@ -1863,7 +1924,7 @@ en:
     max_reply_history: "Maximum number of replies to expand when expanding in-reply-to"
     topics_per_period_in_top_summary: "Number of top topics shown in the default top topics summary."
     topics_per_period_in_top_page: "Number of top topics shown on the expanded 'Show More' top topics."
-    redirect_users_to_top_page: "Automatically redirect new and long absent users to the top page."
+    redirect_users_to_top_page: "Automatically redirect new and long absent users to the top page. Only applies when 'top' is present in the 'top menu' site setting."
     top_page_default_timeframe: "Default top page time period for anonymous users (automatically adjusts for logged in users based on their last visit)."
     moderators_view_emails: "Allow moderators to view user email addresses."
     prioritize_username_in_ux: "Show username first on user page, user card and posts (when disabled name is shown first)"
@@ -1973,11 +2034,11 @@ en:
     s3_endpoint: "The endpoint can be modified to backup to an S3 compatible service like DigitalOcean Spaces or Minio. WARNING: Leave blank if using AWS S3."
     s3_configure_tombstone_policy: "Enable automatic deletion policy for tombstone uploads. IMPORTANT: If disabled, no space will be reclaimed after uploads are deleted."
     s3_disable_cleanup: "Prevent removal of old backups from S3 when there are more backups than the maximum allowed."
-    enable_s3_inventory: "Generate reports and verify uploads using Amazon S3 inventory. IMPORTANT: requires valid S3 credentials (both access key id & secret access key)."
     s3_use_acls: "AWS recommends not using ACLs on S3 buckets; if you are following this advice, uncheck this option. This must be enabled if you are using secure uploads."
+    enable_direct_s3_uploads: "Allows for direct multipart uploads to Amazon S3, see https://meta.discourse.org/t/a-new-era-for-file-uploads-in-discourse/210469 for more details."
     backup_time_of_day: "Time of day UTC when the backup should occur."
     backup_with_uploads: "Include uploads in scheduled backups. Disabling this will only backup the database."
-    backup_location: "Location where backups are stored. IMPORTANT: S3 requires valid S3 credentials entered in Files settings."
+    backup_location: "Location where backups are stored. IMPORTANT: S3 requires valid S3 credentials entered in Files settings. When changing this to S3 from Local, you must run the `s3:ensure_cors_rules` rake task."
     backup_gzip_compression_level_for_uploads: "Gzip compression level used for compressing uploads."
     include_thumbnails_in_backups: "Include generated thumbnails in backups. Disabling this will make backups smaller, but requires a rebake of all posts after a restore."
 
@@ -2112,7 +2173,7 @@ en:
     edit_post_allowed_groups: "Groups that are allowed to edit posts. Admins and moderators can always edit posts."
 
     min_trust_to_allow_self_wiki: "The minimum trust level required to make user's own post wiki."
-    self_wiki_allowed_groups: "Groups where users can make their own post wiki. Admins and moderators can always make their own post wiki."
+    self_wiki_allowed_groups: "Allow users in these groups to make their own posts wiki. Admins and moderators can always make their own posts wiki."
 
     min_trust_to_send_messages: "DEPRECATED, use the 'personal message enabled groups' setting instead. The minimum trust level required to create new personal messages."
     min_trust_to_send_email_messages: "The minimum trust level required to send personal messages via email."
@@ -2202,6 +2263,7 @@ en:
     tos_url: "If you have a Terms of Service document hosted elsewhere that you want to use, provide the full URL here."
     privacy_policy_url: "If you have a Privacy Policy document hosted elsewhere that you want to use, provide the full URL here."
     log_anonymizer_details: "Whether to keep a user's details in the log after being anonymized."
+    display_eu_visitor_stats: "Show number of global and EU visitors on the /about page. It may take a few minutes for the stats to appear after turning on this setting."
 
     newuser_spam_host_threshold: "How many times a new user can post a link to the same host within their `newuser_spam_host_threshold` posts before being considered spam."
 
@@ -2272,7 +2334,7 @@ en:
     blocked_attachment_content_types: "List of keywords used to blocklist attachments based on the content type."
     blocked_attachment_filenames: "List of keywords used to blocklist attachments based on the filename."
 
-    forwarded_emails_behaviour: "How to treat a forwarded email to Discourse"
+    forwarded_emails_behaviour: "How to treat a forwarded email to Discourse. <a href='https://meta.discourse.org/t/-/62977' target='_blank'>Learn more</a>"
     always_show_trimmed_content: "Always show trimmed part of incoming emails. WARNING: might reveal email addresses."
     trim_incoming_emails: "Trim part of the incoming emails that isn't relevant."
     private_email: "Don't include content from posts or topics in email title or email body. NOTE: also disables digest emails."
@@ -2361,6 +2423,8 @@ en:
     allow_users_to_hide_profile: "Allow users to hide their profile and presence"
     hide_user_activity_tab: "Hide the activity tab on user profiles except for Admin and self."
 
+    delete_associated_accounts_on_password_reset: "Delete user associated account when user changes the password."
+
     allow_featured_topic_on_user_profiles: "Allow users to feature a link to a topic on their user card and profile."
 
     show_inactive_accounts: "Allow logged in users to browse profiles of inactive accounts."
@@ -2438,7 +2502,7 @@ en:
     auto_handle_queued_age: "Automatically handle records that are waiting to be reviewed after this many days. Flags will be ignored. Queued posts and users will be rejected. Set to 0 to disable this feature."
     penalty_step_hours: "Default penalties for silencing or suspending users in hours. First offense defaults to the first value, second offense defaults to the second value, etc."
     penalty_include_post_message: "Automatically include offending post message in email message template when silencing or suspending a user"
-    svg_icon_subset: "Add additional FontAwesome 5 icons that you would like to include in your assets. Use prefix 'fa-' for solid icons, 'far-' for regular icons and 'fab-' for brand icons."
+    svg_icon_subset: "Add additional FontAwesome icons that you would like to include in your assets. Use prefix 'fa-' for solid icons, 'far-' for regular icons and 'fab-' for brand icons."
     max_prints_per_hour_per_user: "Maximum number of /print page impressions (set to 0 to disable printing)"
 
     full_name_required: "Full name is a required field of a user's profile."
@@ -2466,9 +2530,9 @@ en:
     notify_about_reviewable_item_after: "If there are reviewable items that haven’t been handled after this many hours, send a personal message to moderators. Set to 0 to disable."
 
     delete_drafts_older_than_n_days: "Delete drafts that have not been changed in more than (n) days."
-    delete_merged_stub_topics_after_days: "Number of days to wait before automatically deleting fully merged stub topics. Set to 0 to never delete stub topics."
+    delete_merged_stub_topics_after_days: "Number of days to wait before automatically deleting fully merged stub topics. Set to -1 to never delete. Set to 0 to immediately delete."
 
-    bootstrap_mode_min_users: "Minimum number of users required to disable bootstrap mode and remove Getting Started button (set to 0 to disable, can take up to 24 hours)"
+    bootstrap_mode_min_users: 'Minimum number of users required to disable bootstrap mode and remove Getting Started button (set to 0 to disable, can take up to 24 hours). See <a target="_blank" href="https://meta.discourse.org/t/-/322876">the bootstrap mode topic on Meta</a> for details.'
 
     prevent_anons_from_downloading_files: "Prevent anonymous users from downloading attachments."
     secure_uploads: 'Limits access to ALL uploads (images, video, audio, text, pdfs, zips, and others). If "login required” is enabled, only logged-in users can access uploads. Otherwise, access will be limited only for media uploads in private messages and private categories. WARNING: This setting is complex and requires deep administrative understanding. See <a target="_blank" href="https://meta.discourse.org/t/-/140017">the secure uploads topic on Meta</a> for details.'
@@ -2560,9 +2624,10 @@ en:
     enable_offline_indicator: "Display a message to users when it is detected that they have no network connection"
     default_sidebar_link_to_filtered_list: "Make navigation menu links link to filtered list by default."
     default_sidebar_show_count_of_new_items: "Make navigation menu links show count of new items instead of badges by default."
-    default_sidebar_switch_panel_position: "Position of sidebar switch panel buttons"
+    default_sidebar_switch_panel_position: "Position of button on sidebar to switch to chat"
 
     retain_web_hook_events_period_days: "Number of days to retain web hook event records."
+    retain_web_hook_events_aggregate_days: "Number of days to retain web hook event aggregate records."
     retry_web_hook_events: "Automatically retry failed web hook events for 4 times. Time gaps between the retries are 1, 5, 25 and 125 minutes."
     revoke_api_keys_unused_days: "Number of days since an API key was last used before it is automatically revoked (0 for never)"
     revoke_api_keys_maxlife_days: "Number of days before an API key is automatically revoked (0 for never)"
@@ -2643,6 +2708,8 @@ en:
     use_email_for_username_and_name_suggestions: "Use the first part of email addresses for username and name suggestions. Note that this makes it easier for the public to guess full user email addresses (because a large proportion of people share common services like `gmail.com`)."
     use_name_for_username_suggestions: "Use a user's full name when suggesting usernames."
     suggest_weekends_in_date_pickers: "Include weekends (Saturday and Sunday) in date picker suggestions (disable this if you use Discourse only on weekdays, Monday through Friday)."
+    show_bottom_topic_map: "Shows the topic map at the bottom of the topic when it has 10 replies or more."
+    show_topic_map_in_topics_without_replies: "Shows the topic map even if the topic has no replies."
 
     splash_screen: "Displays a temporary loading screen while site assets load"
     navigation_menu: "Specify sidebar or header dropdown as the main navigation menu for your site. Sidebar is recommended."
@@ -2653,16 +2720,18 @@ en:
     experimental_topics_filter: "EXPERIMENTAL: Enables the experimental topics filter route at /filter"
     enable_experimental_lightbox: "EXPERIMENTAL: Replace the default image lightbox with the revamped design."
     enable_experimental_bookmark_redesign_groups: "EXPERIMENTAL: Show a quick access menu for bookmarks on posts and a new redesigned modal"
-    glimmer_header_mode: "Control whether the new 'glimmer' header implementation is used. Defaults to 'auto', which will enable automatically once all your themes and plugins are ready. https://meta.discourse.org/t/296544"
+    experimental_redesigned_about_page_groups: "EXPERIMENTAL: Enable the redesigned /about page for specific groups."
     experimental_glimmer_topic_list_groups: "EXPERIMENTAL: Enable the new 'glimmer' topic list implementation. This implementation is under active development, and is not intended for production use. Do not develop themes/plugins against it until the implementation is finalized and announced."
     experimental_form_templates: "EXPERIMENTAL: Enable the form templates feature. <b>After enabled,</b> manage the templates at <a href='%{base_path}/admin/customize/form-templates'>Customize / Templates</a>."
     admin_sidebar_enabled_groups: "Enable sidebar navigation for the admin UI for the specified groups, which replaces the top-level admin navigation buttons."
     lazy_load_categories_groups: "EXPERIMENTAL: Lazy load category information only for users of these groups. This improves performance on sites with many categories."
-    experimental_topic_bulk_actions_enabled_groups: "EXPERIMENTAL: Enable the new bulk actions dropdown."
+    experimental_auto_grid_images: "EXPERIMENTAL: Automatically wraps images in [grid] tags when 3 or more images are uploaded in the composer."
 
     page_loading_indicator: "Configure the loading indicator which appears during page navigations within Discourse. 'Spinner' is a full page indicator. 'Slider' shows a narrow bar at the top of the screen."
     show_user_menu_avatars: "Show user avatars in the user menu"
+    about_page_hidden_groups: "Do not show members of specific groups on the /about page."
     view_raw_email_allowed_groups: "Groups which can view the raw email content of a post if it was created by an incoming email. This includes email headers and other technical information."
+    experimental_flags_admin_page_enabled_groups: "EXPERIMENTAL: Remove the Moderation Flags link from the admin sidebar."
 
     errors:
       invalid_css_color: "Invalid color. Enter a color name or hex value."
@@ -2688,6 +2757,8 @@ en:
       invalid_reply_by_email_address: "Value must contain '%{reply_key}' and be different from the notification email."
       invalid_alternative_reply_by_email_addresses: "All values must contain '%{reply_key}' and be different from the notification email."
       invalid_domain_hostname: "Must not include * or ? characters."
+      invalid_allowed_iframes_url: "Iframe urls must start with http:// or https:// and have at least one more additional '/'"
+      invalid_csp_script_src: "Value must be either 'unsafe-eval' or 'wasm-unsafe-eval', or in the form '<hash algorithm>-<base64 value>' where supported hash algorithms are sha256, sha384 or sha512. Ensure that your input is wrapped in single quotation marks."
       pop3_polling_host_is_empty: "You must set a 'pop3 polling host' before enabling POP3 polling."
       pop3_polling_username_is_empty: "You must set a 'pop3 polling username' before enabling POP3 polling."
       pop3_polling_password_is_empty: "You must set a 'pop3 polling password' before enabling POP3 polling."
@@ -2887,6 +2958,7 @@ en:
     autoclosed_disabled: "This topic is now opened. New replies are allowed."
     autoclosed_disabled_lastpost: "This topic is now opened. New replies are allowed."
     auto_deleted_by_timer: "Automatically deleted by timer."
+    auto_deleted_by_merge: "Automatically deleted by merge."
 
   login:
     invalid_second_factor_method: "The selected two-factor method is invalid."
@@ -2929,7 +3001,7 @@ en:
     email_too_long: "The email you provided is too long. Mailbox names must be no more than 254 characters, and domain names must be no more than 253 characters."
     wrong_invite_code: "The invite code you entered was incorrect."
     reserved_username: "That username is not allowed."
-    missing_user_field: "You have not completed all the user fields"
+    missing_user_field: "You have not completed all the required user fields"
     auth_complete: "Authentication is complete."
     click_to_continue: "Click here to continue."
     already_logged_in: "Sorry! This invitation is intended for new users, who do not already have an existing account."
@@ -4625,6 +4697,7 @@ en:
 
   guidelines_topic:
     title: "FAQ/Guidelines"
+    guidelines_title: "Guidelines"
     body: |
       <a name="civilized"></a>
 
@@ -4716,7 +4789,7 @@ en:
 
       ## [Powered by You](#power)
 
-      This site is operated by your [friendly local staff](%{base_path}/about) and *you*, the community. If you have any further questions about how things should work here, open a new topic in %{feedback_category} and let’s discuss! If there’s a critical or urgent issue that can’t be handled by a meta topic or flag, contact us via the [staff page](%{base_path}/about).
+      This site is operated by your [friendly moderator team](%{base_path}/about) and *you*, the community. If you have any further questions about how things should work here, open a new topic in %{feedback_category} and let’s discuss! If there’s a critical or urgent issue that can’t be handled by a meta topic or flag, [contact the moderators](%{base_path}/about).
 
   tos_topic:
     title: "Terms of Service"
@@ -5322,18 +5395,32 @@ en:
             label: "Language"
 
       privacy:
-        title: "Member experience"
+        title: "Member access"
 
         fields:
           login_required:
-            placeholder: "Private"
-            extra_description: "Only logged in users can access this community"
+            label: "Visibility"
+            description: "Is your community public or private?"
+            choices:
+              public:
+                label: "Public"
+              private:
+                label: "Private"
           invite_only:
-            placeholder: "Invite only"
-            extra_description: "Users must be invited by trusted users or staff, otherwise users can sign up on their own"
+            label: "Registration"
+            description: "How can members join this community?"
+            choices:
+              sign_up:
+                label: "Sign up"
+              invite_only:
+                label: "Invite only"
           must_approve_users:
-            placeholder: "Require approval"
-            extra_description: "Users must be approved by staff"
+            description: "Do you want to approve member accounts?"
+            choices:
+              "no":
+                label: "No, new members can join immediately"
+              "yes":
+                label: "Yes, new members must be approved by moderators"
           chat_enabled:
             placeholder: "Enable chat"
             extra_description: "Engage with your members in real time"
@@ -5444,6 +5531,7 @@ en:
       comment_by: "Comment by"
       review_by: "Review by"
       pr_summary: "%{commits} commits changed %{changed_files} files with %{additions} additions and %{deletions} deletions"
+      no_description: "Contribute to %{repo} development by creating an account on GitHub."
 
   discourse_push_notifications:
     popup:

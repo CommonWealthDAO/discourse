@@ -27,7 +27,7 @@
       title={{i18n "review.explain.why"}}
       class="explain"
     >
-      {{d-icon "question-circle"}}
+      {{d-icon "circle-question"}}
     </a>
   </div>
 
@@ -37,10 +37,7 @@
         {{#if this.reviewable.created_by}}
           <div class="editable-created-by">
             {{avatar this.reviewable.created_by imageSize="tiny"}}
-            <ReviewableCreatedByName
-              @user={{this.reviewable.created_by}}
-              @tagName=""
-            />
+            <ReviewableCreatedByName @user={{this.reviewable.created_by}} />
           </div>
         {{/if}}
 
@@ -73,24 +70,7 @@
   {{/if}}
 
   <div class="reviewable-actions">
-    {{#if this.reviewable.last_performing_username}}
-      <div class="stale-help">{{html-safe
-          (i18n
-            "review.stale_help"
-            username=this.reviewable.last_performing_username
-          )
-        }}</div>
-    {{else}}
-      {{#if this.claimEnabled}}
-        <div class="claimed-actions">
-          <span class="help">{{html-safe this.claimHelp}}</span>
-          <ReviewableClaimedTopic
-            @topicId={{this.topicId}}
-            @claimedBy={{this.reviewable.claimed_by}}
-          />
-        </div>
-      {{/if}}
-
+    {{#unless this.reviewable.last_performing_username}}
       {{#if this.canPerform}}
         {{#if this.editing}}
           <DButton
@@ -102,7 +82,7 @@
           />
           <DButton
             @disabled={{this.disabled}}
-            @icon="times"
+            @icon="xmark"
             @action={{action "cancelEdit"}}
             @label="review.cancel"
             class="btn-danger reviewable-action cancel-edit"
@@ -119,7 +99,7 @@
           {{#if this.reviewable.can_edit}}
             <DButton
               @disabled={{this.disabled}}
-              @icon="pencil-alt"
+              @icon="pencil"
               @action={{action "edit"}}
               @label="review.edit"
               class="reviewable-action btn-default edit"
@@ -127,7 +107,28 @@
           {{/if}}
         {{/if}}
       {{/if}}
+    {{/unless}}
+
+    {{#if this.reviewable.last_performing_username}}
+      <div class="stale-help">{{html-safe
+          (i18n
+            "review.stale_help"
+            username=this.reviewable.last_performing_username
+          )
+        }}</div>
+    {{else}}
+      {{#if this.claimEnabled}}
+        <div class="claimed-actions">
+          <span class="help">{{html-safe this.claimHelp}}</span>
+          <ReviewableClaimedTopic
+            @topicId={{this.topicId}}
+            @claimedBy={{this.reviewable.claimed_by}}
+            @onClaim={{fn (mut this.reviewable.claimed_by)}}
+          />
+        </div>
+      {{/if}}
     {{/if}}
+
     <PluginOutlet
       @name="reviewable-item-actions"
       @connectorTagName="div"

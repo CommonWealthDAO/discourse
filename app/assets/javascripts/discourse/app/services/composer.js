@@ -21,6 +21,7 @@ import prepareFormTemplateData, {
 } from "discourse/lib/form-template-validation";
 import { shortDate } from "discourse/lib/formatter";
 import { disableImplicitInjections } from "discourse/lib/implicit-injections";
+import { wantsNewWindow } from "discourse/lib/intercept-click";
 import { buildQuote } from "discourse/lib/quote";
 import renderTags from "discourse/lib/render-tags";
 import { emojiUnescape } from "discourse/lib/text";
@@ -29,7 +30,7 @@ import {
   uploadIcon,
 } from "discourse/lib/uploads";
 import DiscourseURL from "discourse/lib/url";
-import { escapeExpression, modKeysPressed } from "discourse/lib/utilities";
+import { escapeExpression } from "discourse/lib/utilities";
 import Category from "discourse/models/category";
 import Composer, {
   CREATE_TOPIC,
@@ -120,6 +121,8 @@ export default class ComposerService extends Service {
   lastValidatedAt = null;
   isUploading = false;
   isProcessingUpload = false;
+  isCancellable;
+  uploadProgress;
   topic = null;
   linkLookup = null;
   showPreview = true;
@@ -136,6 +139,10 @@ export default class ComposerService extends Service {
 
   get topicController() {
     return getOwnerWithFallback(this).lookup("controller:topic");
+  }
+
+  get isOpen() {
+    return this.model?.composeState === Composer.OPEN;
   }
 
   @on("init")
@@ -634,7 +641,7 @@ export default class ComposerService extends Service {
   @action
   cancelUpload(event) {
     event?.preventDefault();
-    this.set("model.uploadCancelled", true);
+    this.appEvents.trigger("composer:cancel-upload");
   }
 
   @action
@@ -645,10 +652,11 @@ export default class ComposerService extends Service {
 
   @action
   viewNewReply(event) {
-    if (event && modKeysPressed(event).length > 0) {
-      return false;
+    if (wantsNewWindow(event)) {
+      return;
     }
-    event?.preventDefault();
+
+    event.preventDefault();
     DiscourseURL.routeTo(this.get("model.createdPost.url"));
     this.close();
   }
@@ -659,7 +667,7 @@ export default class ComposerService extends Service {
   }
 
   @action
-  onPopupMenuAction(menuItem) {
+  onPopupMenuAction(menuItem, toolbarEvent) {
     // menuItem is an object with keys name & action like so: { name: "toggle-invisible, action: "toggleInvisible" }
     // `action` value can either be a string (to lookup action by) or a function to call
     this.appEvents.trigger(
@@ -667,7 +675,12 @@ export default class ComposerService extends Service {
       menuItem
     );
     if (typeof menuItem.action === "function") {
-      return menuItem.action(this.toolbarEvent);
+      // note due to the way args are passed to actions we need
+      // to treate the explicity toolbarEvent as a fallback for no
+      // event
+      // Long term we want to avoid needing this awkwardness and pass
+      // the event explicitly
+      return menuItem.action(this.toolbarEvent || toolbarEvent);
     } else {
       return (
         this.actions?.[menuItem.action]?.bind(this) || // Legacy-style contributions from themes/plugins
@@ -1394,6 +1407,8 @@ export default class ComposerService extends Service {
         composerModel.setProperties({ unlistTopic: false, whisper: false });
       }
 
+      await this._setModel(composerModel, opts);
+
       // we need a draft sequence for the composer to work
       if (opts.draftSequence === undefined) {
         let data = await Draft.get(opts.draftKey);
@@ -1406,8 +1421,6 @@ export default class ComposerService extends Service {
 
         opts.draft ||= data.draft;
         opts.draftSequence = data.draft_sequence;
-
-        await this._setModel(composerModel, opts);
         return;
       }
 
@@ -1422,8 +1435,6 @@ export default class ComposerService extends Service {
           await this.open(opts);
         }
       }
-
-      await this._setModel(composerModel, opts);
     } finally {
       this.skipAutoSave = false;
       this.appEvents.trigger("composer:open", { model: this.model });
@@ -1632,7 +1643,7 @@ export default class ComposerService extends Service {
           {
             label: I18n.t("drafts.abandon.yes_value"),
             class: "btn-danger",
-            icon: "far-trash-alt",
+            icon: "trash-can",
             action: () => {
               this.destroyDraft(data.draft_sequence).finally(() => {
                 data.draft = null;

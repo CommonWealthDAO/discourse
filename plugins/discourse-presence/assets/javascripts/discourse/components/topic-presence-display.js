@@ -1,63 +1,72 @@
-import Component from "@ember/component";
-import { gt, union } from "@ember/object/computed";
+import Component from "@glimmer/component";
+import { tracked } from "@glimmer/tracking";
+import { action } from "@ember/object";
 import { service } from "@ember/service";
-import discourseComputed, { on } from "discourse-common/utils/decorators";
 
-export default Component.extend({
-  topic: null,
-  presence: service(),
-  replyChannel: null,
-  whisperChannel: null,
+export default class TopicPresenceDisplayComponent extends Component {
+  @service presence;
+  @service currentUser;
 
-  @discourseComputed("replyChannel.users.[]")
-  replyUsers(users) {
-    return users?.filter((u) => u.id !== this.currentUser.id);
-  },
+  @tracked replyChannel;
+  @tracked whisperChannel;
 
-  @discourseComputed("whisperChannel.users.[]")
-  whisperUsers(users) {
-    return users?.filter((u) => u.id !== this.currentUser.id);
-  },
+  get replyChannelName() {
+    return `/discourse-presence/reply/${this.args.topic.id}`;
+  }
 
-  users: union("replyUsers", "whisperUsers"),
+  get whisperChannelName() {
+    return `/discourse-presence/whisper/${this.args.topic.id}`;
+  }
 
-  @discourseComputed("topic.id")
-  replyChannelName(id) {
-    return `/discourse-presence/reply/${id}`;
-  },
+  get replyUsers() {
+    return this.replyChannel?.users || [];
+  }
 
-  @discourseComputed("topic.id")
-  whisperChannelName(id) {
-    return `/discourse-presence/whisper/${id}`;
-  },
+  get whisperUsers() {
+    return this.whisperChannel?.users || [];
+  }
 
-  shouldDisplay: gt("users.length", 0),
+  get users() {
+    return [...this.replyUsers, ...this.whisperUsers].filter(
+      (u) => u.id !== this.currentUser.id
+    );
+  }
 
-  didReceiveAttrs() {
-    this._super(...arguments);
+  get shouldDisplay() {
+    return this.users.length > 0;
+  }
 
-    if (this.replyChannel?.name !== this.replyChannelName) {
-      this.replyChannel?.unsubscribe();
-      this.set("replyChannel", this.presence.getChannel(this.replyChannelName));
-      this.replyChannel.subscribe();
-    }
+  @action
+  setupChannels() {
+    this.setupReplyChannel();
+    this.setupWhisperChannel();
+  }
 
-    if (
-      this.currentUser.staff &&
-      this.whisperChannel?.name !== this.whisperChannelName
-    ) {
-      this.whisperChannel?.unsubscribe();
-      this.set(
-        "whisperChannel",
-        this.presence.getChannel(this.whisperChannelName)
-      );
-      this.whisperChannel.subscribe();
-    }
-  },
+  willDestroy() {
+    super.willDestroy(...arguments);
+    this.unsubscribeFromChannels();
+  }
 
-  @on("willDestroyElement")
-  _destroyed() {
+  unsubscribeFromChannels() {
     this.replyChannel?.unsubscribe();
     this.whisperChannel?.unsubscribe();
-  },
-});
+  }
+
+  setupReplyChannel() {
+    if (this.replyChannel?.name !== this.replyChannelName) {
+      this.replyChannel?.unsubscribe();
+      this.replyChannel = this.presence.getChannel(this.replyChannelName);
+      this.replyChannel.subscribe();
+    }
+  }
+
+  setupWhisperChannel() {
+    if (this.currentUser.staff) {
+      if (this.whisperChannel?.name !== this.whisperChannelName) {
+        this.whisperChannel?.unsubscribe();
+        this.whisperChannel = this.presence.getChannel(this.whisperChannelName);
+        this.whisperChannel.subscribe();
+      }
+    }
+  }
+}

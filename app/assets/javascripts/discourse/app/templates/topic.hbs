@@ -50,10 +50,7 @@
       >
         {{#if this.editingTopic}}
           <div class="edit-topic-title">
-            <PrivateMessageGlyph
-              @shouldShow={{this.model.isPrivateMessage}}
-              @tagName=""
-            />
+            <PrivateMessageGlyph @shouldShow={{this.model.isPrivateMessage}} />
 
             <TextField
               @id="edit-title"
@@ -101,7 +98,7 @@
               />
               <DButton
                 @action={{action "cancelEditingTopic"}}
-                @icon="times"
+                @icon="xmark"
                 @ariaLabel="composer.cancel"
                 class="btn-default cancel-edit"
               />
@@ -113,7 +110,7 @@
                   class="remove-featured-link"
                   title={{i18n "composer.remove_featured_link"}}
                 >
-                  {{d-icon "times-circle"}}
+                  {{d-icon "circle-xmark"}}
                   {{this.featuredLinkDomain}}
                 </a>
               {{/if}}
@@ -129,12 +126,10 @@
                   @href={{this.pmPath}}
                   @title="topic_statuses.personal_message.title"
                   @ariaLabel="user.messages.inbox"
-                  @tagName=""
                 />
               {{else}}
                 <PrivateMessageGlyph
                   @shouldShow={{this.model.isPrivateMessage}}
-                  @tagName=""
                 />
               {{/if}}
             {{/unless}}
@@ -156,7 +151,7 @@
                 {{on "click" this.editTopic}}
                 class="edit-topic"
                 title={{i18n "edit_topic"}}
-              >{{d-icon "pencil-alt"}}</a>
+              >{{d-icon "pencil"}}</a>
             {{/if}}
 
             <PluginOutlet
@@ -165,7 +160,13 @@
             />
           </h1>
 
-          <TopicCategory @topic={{this.model}} class="topic-category" />
+          <PluginOutlet
+            @name="topic-category-wrapper"
+            @outletArgs={{hash topic=this.model}}
+          >
+            <TopicCategory @topic={{this.model}} class="topic-category" />
+          </PluginOutlet>
+
         {{/if}}
       </TopicTitle>
 
@@ -215,6 +216,20 @@
           @selectAll={{action "selectAll"}}
         />
       </div>
+
+      {{#if (and this.showBottomTopicMap this.loadedAllPosts)}}
+        <div class="topic-map --bottom">
+          <TopicMap
+            @model={{this.model}}
+            @topicDetails={{this.model.details}}
+            @postStream={{this.model.postStream}}
+            @showPMMap={{eq this.model.archetype "private_message"}}
+            @showInvite={{route-action "showInvite"}}
+            @removeAllowedGroup={{action "removeAllowedGroup"}}
+            @removeAllowedUser={{action "removeAllowedUser"}}
+          />
+        </div>
+      {{/if}}
 
       <PluginOutlet @name="above-timeline" @connectorTagName="div" />
 
@@ -361,8 +376,6 @@
                 @toggleWiki={{action "toggleWiki"}}
                 @showTopReplies={{action "showTopReplies"}}
                 @cancelFilter={{action "cancelFilter"}}
-                @collapseSummary={{action "collapseSummary"}}
-                @showSummary={{action "showSummary"}}
                 @removeAllowedUser={{action "removeAllowedUser"}}
                 @removeAllowedGroup={{action "removeAllowedGroup"}}
                 @topVisibleChanged={{action "topVisibleChanged"}}
@@ -406,15 +419,9 @@
                         </span>
                       </div>
                       <div class="post-contents-wrapper">
-                        <ReviewableCreatedBy
-                          @user={{this.currentUser}}
-                          @tagName=""
-                        />
+                        <ReviewableCreatedBy @user={{this.currentUser}} />
                         <div class="post-contents">
-                          <ReviewableCreatedByName
-                            @user={{this.currentUser}}
-                            @tagName=""
-                          />
+                          <ReviewableCreatedByName @user={{this.currentUser}} />
                           <div class="post-body"><CookText
                               @rawText={{pending.raw}}
                             /></div>
@@ -427,7 +434,7 @@
                         />
                         <DButton
                           @label="review.delete"
-                          @icon="trash-alt"
+                          @icon="trash-can"
                           @action={{fn (action "deletePending") pending}}
                           class="btn-danger"
                         />
@@ -597,7 +604,7 @@
             {{else}}
               <DButton
                 @action={{action "retryLoading"}}
-                @icon="sync"
+                @icon="arrows-rotate"
                 @label="errors.buttons.again"
                 class="btn-primary topic-retry"
               />

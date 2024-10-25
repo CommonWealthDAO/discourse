@@ -1,4 +1,4 @@
-import { getOwner } from "@ember/application";
+import { getOwner } from "@ember/owner";
 import { render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
@@ -35,7 +35,7 @@ module("Integration | Component | Widget | post-stream", function (hooks) {
           lastTransformedPost = transformedPost;
           return {
             action: "drinkCoffee",
-            icon: "coffee",
+            icon: "mug-saucer",
             className: "hot-coffee",
             title: "coffee.title",
             position: "first",

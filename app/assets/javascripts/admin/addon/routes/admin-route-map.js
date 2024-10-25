@@ -14,10 +14,6 @@ export default function () {
         path: "/dashboard/reports",
         resetNamespace: true,
       });
-      this.route("admin.dashboardNewFeatures", {
-        path: "/dashboard/whats-new",
-        resetNamespace: true,
-      });
     });
 
     this.route(
@@ -146,6 +142,7 @@ export default function () {
       { path: "/backups", resetNamespace: true },
       function () {
         this.route("logs");
+        this.route("settings");
       }
     );
 
@@ -215,9 +212,15 @@ export default function () {
       function () {
         this.route("flags", function () {
           this.route("index", { path: "/" });
+          this.route("new");
+          this.route("edit", { path: "/:flag_id" });
+          this.route("settings");
         });
 
         this.route("about");
+        this.route("lookAndFeel", { path: "/look-and-feel" }, function () {
+          this.route("themes");
+        });
       }
     );
 
@@ -236,5 +239,13 @@ export default function () {
       path: "/whats-new",
       resetNamespace: true,
     });
+
+    this.route(
+      "adminSection",
+      { path: "/section", resetNamespace: true },
+      function () {
+        this.route("account");
+      }
+    );
   });
 }
